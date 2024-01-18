@@ -1,60 +1,62 @@
- Here are some suggested regression test cases for the Juniper Networks MX Series MX480 router:
+ Here are some sample regression test cases for the Juniper Networks MX Series MX480 router in markdown format:
 
-# Regression Test Cases for Juniper Networks MX480 Router
+## Regression Test Cases for Juniper Networks MX480 Router
 
-## Setup
-- Obtain MX480 router and connect to power and console port
-- Load latest stable JUNOS software version
-- Connect interfaces to test network 
+### Setup
 
-## Functionality Testing
+- Connect MX480 router to test network
+- Configure MX480 with baseline configuration
+- Establish console access to MX480 
 
-### Routing Protocols
-- Verify OSPF neighbor adjacencies come up properly
-- Verify BGP peering sessions establish correctly 
-- Send routes via BGP and verify routes propagated properly
-- Modify route maps and policy statements and verify expected behavior
+### Functionality Testing
 
-### Services 
-- Configure and verify DNS service
-- Configure NTP service and verify clock is synchronized 
-- Configure SNMP and verify SNMP traps are sent and received properly
+#### Routing
 
-### Interfaces
-- Configure Ethernet interfaces and verify link status
-- Configure logical interfaces such as VLANs and verify connectivity
-- Enable link aggregation/LACP and verify bundle link status
+- Verify OSPF neighbor adjacency is established
+- Verify BGP neighbor adjacency is established 
+- Send traffic across OSPF and BGP routes and verify forwarding
 
-### Security
-- Configure firewall filters and verify traffic is filtered as expected
-- Configure IPsec VPN tunnel and verify successful tunnel establishment
-- Test firewall authentication using RADIUS server
+#### Firewall Filters 
 
-### High Availability
-- Configure redundant Routing Engines and verify graceful Routing Engine switchover  
+- Configure firewall filters
+- Apply firewall filters to interfaces
+- Send permitted and denied traffic to verify filters
 
-### Monitoring
-- Verify interface counters and statistics are updating correctly
-- Use CLI commands and verify outputs
-- Verify system logs and alarms are reporting correctly
+#### Class of Service
 
-### Upgrade/Downgrade
-- Upgrade to newer JUNOS version and verify functionality 
-- Downgrade to older JUNOS version and verify functionality
+- Configure CoS policies 
+- Apply CoS policies to interfaces
+- Send traffic with different DSCP markings and verify CoS queuing  
 
-## Performance Testing
+#### VPN
 
-- Use traffic generator to transmit packets at increasing rates
-- Verify forwarding performance and latency at capacity 
-- Verify routing and protocol convergence time under load
-- Stress test with max routes, firewall filters, VPNs etc.
+- Configure IPSec VPN tunnel between MX480 and remote device
+- Send traffic across VPN tunnel and verify encryption and tunnel up status
 
-## Failure Testing
+#### Management 
 
-- Power failure and recovery
-- Link failure and recovery
-- Routing Engine failure and recovery
-- Configuration errors and recovery
-- Memory exhaustion and recovery
+- Verify SNMP traps are sent when configured
+- Verify syslog messages are sent when configured
+- Verify remote authentication via RADIUS
 
-The test cases should cover major functional areas andfailure scenarios to verify the router provides consistent performance and reliability under a varietyof conditions.
+### Performance Testing
+
+- Send traffic up to max interface bandwidth across all interfaces
+- Verify traffic forwarding rate meets datasheet specifications
+- Monitor CPU and memory utilization. Verify within supported limits.
+
+### High Availability Testing
+
+- Configure MX480 for chassis redundancy 
+- Trigger redundancy switchover
+- Verify traffic continues to flow with no loss
+
+### Negative Testing
+
+- Power off one RE and verify redundancy
+- Disconnect aggregated ethernet member links
+- Shutdown interfaces and verify behavior 
+
+### Cleanup
+- Remove MX480 test configuration
+- Verify MX480 returns to factory default state
