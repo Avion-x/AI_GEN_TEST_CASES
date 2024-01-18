@@ -1,11 +1,46 @@
+ Here are some sample unit test cases for the Juniper Networks MX Series Router MX480:
 
-Here are the Unit Test cases for the Network MSeries Router MX481:
+## Unit Test Cases for Juniper Networks MX480 Router
 
-|Test Case|Description|Expected Result|Actual Result|
-|-|-|-|-|
-|1. Connectivity|Verify that the router can establish a successful network connection|Connection established|Connection established|
-|2. IP Address Assignment|Verify that the router assigns a valid IP address to connected devices|Valid IP address assigned|Valid IP address assigned|
-|3. Network Configuration|Verify that the router's network configuration is correct|Correct network configuration|Correct network configuration|
-|4. Network Performance|Verify that the router provides reliable network performance|Sufficient bandwidth and low latency|Sufficient bandwidth and low latency|
-|5. Security|Verify that the router's security features are enabled and functioning properly|Secure network connection|Secure network connection|
-|6. Troubleshooting|Verify that the router can be troubleshot effectively|Problems identified and resolved|Problems identified and resolved|
+### System Initialization and Bootup
+
+- Verify router boots up successfully and enters operational mode 
+- Verify bootup messages are logged correctly without any errors
+- Verify all hardware components are detected correctly during bootup
+
+### Routing Protocols
+
+- Verify OSPF protocol starts properly and forms neighbor adjacencies  
+- Verify BGP protocol starts properly and peers get established
+- Verify ISIS protocol starts properly and forms adjacency with other ISIS routers
+- Verify protocol states are updated correctly when links or peers go up/down
+
+### Packet Forwarding
+
+- Verify ping works properly between interfaces on the router
+- Send test traffic between interfaces and verify forwarding works correctly
+- Verify ACLs and firewall filters applied on interfaces properly allow/block traffic
+
+### Management Interfaces 
+
+- Verify SSH access works properly on management interface
+- Verify SNMP queries return proper router info when polling OIDs
+- Verify NTP time sync works properly and router time is correct  
+
+### High Availability
+
+- Verify SRX redundancy protocol forms properly between primary and backup routers
+- Failover primary router and verify backup takes over properly
+- Verify session state is synced correctly between primary and backup
+
+### Negative Cases
+
+- Shut down interfaces and verify protocols detect it properly
+- Introduce faulty configurations and verify proper errors are reported 
+- Trigger failures like NTP failure and verify router handles it gracefully
+
+### Stress Testing
+
+- Send high rates of traffic through router and verify no packets dropped
+- Flap interfaces rapidly and verify protocols and forwarding recover properly
+- Power cycle router repeatedly and verify it comes back up properly each time
