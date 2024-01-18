@@ -1,61 +1,71 @@
- Here are some sample regression test cases for the Juniper Networks MX Series MX480 router in Markdown format:
+ Here are some sample regression test cases for the Juniper Networks MX Series MX480 router in markdown format:
 
-## Regression Test Cases for Juniper Networks MX480 Router
+### Regression Test Cases for Juniper Networks MX480 Router
 
-### Setup
+**Setup**
 
 - Connect MX480 router to test network 
-- Load latest Junos OS software image
-- Configure router interfaces, routing protocols, etc. per test requirements
+- Install latest Junos OS software version
+- Configure router interfaces, protocols, policies etc per test case needs
 
-### Functionality Testing
+**Functionality Testing**
 
-#### Routing Protocols
+- Verify router boots up properly with no errors
+- Verify LED status lights show normal operational status  
 
-- Verify OSPF neighbors establish adjacencies properly
-- Verify router learns routes via OSPF and installs in routing table
-- Verify BGP peers establish session and exchange routes
-- Modify BGP config and verify changes take effect without disrupting traffic
+**Routing Protocols**
 
-#### Interfaces
+- Configure OSPF on router interfaces
+- Verify OSPF neighbors establish adjacency  
+- Verify routes learned via OSPF are installed in routing table
 
-- Verify all interfaces are up/up per config 
-- Verify interface statistics increment properly
-- Add/remove interfaces and verify proper operation
-- Modify interface properties and verify changes take effect
+**Interfaces**
 
-#### Services
+- Configure physical interfaces with IP addresses 
+- Verify interfaces show up/up status
+- Verify IP addresses configured correctly 
 
-- Configure and verify proper operation of NTP, SNMP, logging 
-- Modify service configs and verify functionality/config changes
+**Firewall Filters** 
 
-#### Security
+- Create firewall filter to block specific IP traffic
+- Verify filter blocks traffic as expected
+- Modify firewall filter to allow additional IPs
+- Verify traffic now allowed after filter change
 
-- Configure and verify firewall filters operation as expected
-- Add/remove firewall filters and verify impact on traffic
-- Configure authentication and test access to router interfaces
+**Class of Service**
 
-#### Routing
+- Configure traffic shaping policies 
+- Generate traffic matching shaping policies
+- Verify traffic is rate limited as configured
 
-- Verify router forwards traffic properly based on config
-- Add/remove static routes and verify routing table updates
-- Modify route preference/metrics and check impact on routing
+**VPN**
 
-#### High Availability
+- Configure IPsec VPN tunnel to remote peer
+- Verify tunnel establishes correctly
+- Send traffic across VPN tunnel
+- Verify traffic passes encrypted over VPN tunnel        
 
-- Verify graceful Routing Engine switchover/failover
-- Verify interface/service synchronization between Routing Engines 
+**Routing Engine Switchover**
 
-### Performance Testing
+- Force switchover to standby routing engine  
+- Verify traffic continues to flow with no loss
+- Verify protocols and sessions reconnect after switchover
 
-- Connect router to traffic generator
-- Send traffic at increasing loads and measure throughput, latency, jitter etc.
-- Verify routing/forwarding performance meets specifications
+**Negative Testing**
 
-### Failure Testing
+- Force unsupported transceiver into router interface
+- Verify interface shows down status
+- Remove transceiver 
+- Verify interface comes back up  
 
-- Power off/on router and modules and verify proper restart
-- Disconnect/reconnect interfaces and verify graceful handling
-- Trigger failures and verify robustness and self-healing capability
+- Shutdown router interface
+- Verify interface shows down status
+- Bring interface back up
+- Verify interface shows up status after bringing up
 
-The test cases should validate the key functions and features of the router work properly after changes are made to the configuration or software image. Areas like routing protocols, security, interfaces, services should be covered.
+- Configure router with invalid OSPF parameters
+- Verify OSPF neighbors do not establish
+- Fix OSPF configuration
+- Verify OSPF neighbors establish after fix
+
+The test cases should cover major functional areas of the router and include both positive and negative test scenarios. Additional cases can be added for other features and interfaces supported on the MX480 platform.
