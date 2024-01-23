@@ -1,254 +1,278 @@
- Unfortunately I do not have access to python scripts or test cases for specific network routers. As an AI assistant without direct access to proprietary code or hardware, I cannot provide python unit test scripts for the Juniper Networks MX480 router. I can however provide a general overview of how one might approach writing unit tests for a network router in Python:
-
-### Unit Testing a Network Router in Python
-
-#### Import the unittest module
+ Unfortunately I do not have access to scripts or code for specific Cisco router models. However, here is a general template for Python unit tests for routing protocol implementations:
 
 ```python
+# test_ospf.py
+
 import unittest
-```
+from ospf import OSPFProtocol
 
-#### Create a test class that inherits from unittest.TestCase
+class OSPFTest(unittest.TestCase):
 
-```python
-class RouterTests(unittest.TestCase):
-```
-
-#### Initialize the router object under test
-
-```python 
-    def setUp(self):
-        self.router = Router() 
-```
-
-#### Test router initialization
-
-```python
-    def test_router_initialized(self):
-        self.assertNotEqual(self.router, None)
-```
-
-#### Test routing a packet
-
-```python
-    def test_route_packet(self):
-        src = "1.1.1.1"
-        dest = "2.2.2.2"
-        result = self.router.route(src, dest)
-        self.assertEqual(result, "eth1")
-```
-
-#### Test adding a route
-
-```python
-    def test_add_route(self):
-        self.router.add_route("2.2.2.0/24", "eth2")
-        result = self.router.route("1.1.1.1", "2.2.2.10")
-        self.assertEqual(result, "eth2")
-```
-
-#### Run the test case  
-
-```python
+    def test_ospf_neighbors(self):
+        ospf = OSPFProtocol()
+        ospf.add_neighbor('192.168.1.1')
+        self.assertEqual(len(ospf.neighbors), 1)
+        self.assertIn('192.168.1.1', ospf.neighbors)
+        
+    def test_ospf_routes(self):
+        ospf = OSPFProtocol()
+        ospf.add_route('192.168.1.0/24')
+        self.assertEqual(len(ospf.routes), 1)
+        self.assertIn('192.168.1.0/24', ospf.routes)
+        
 if __name__ == '__main__':
     unittest.main()
 ```
 
-This shows creating some basic test cases for router initialization, packet routing, and route addition. More comprehensive tests would be needed for a real router implementation. Here is sample Python unit test script with markdown formatting for testing MX480:
+```python
+# test_bgp.py 
+
+import unittest 
+from bgp import BGPProtocol
+
+class BGPTest(unittest.TestCase):
+
+    def test_bgp_peers(self):
+        bgp = BGPProtocol()
+        bgp.add_peer('192.168.2.1')
+        self.assertEqual(len(bgp.peers), 1)
+        self.assertIn('192.168.2.1', bgp.peers)
+
+    def test_bgp_routes(self):
+        bgp = BGPProtocol()
+        bgp.add_route('10.0.0.0/8')
+        self.assertEqual(len(bgp.routes), 1)
+        self.assertIn('10.0.0.0/8', bgp.routes)
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+```python
+# test_isis.py
+
+import unittest
+from isis import ISISProtocol
+
+class ISISTest(unittest.TestCase):
+
+    def test_isis_neighbors(self):
+        isis = ISISProtocol()
+        isis.add_neighbor('1234.5678.9123')
+        self.assertEqual(len(isis.neighbors), 1)
+        self.assertIn('1234.5678.9123', isis.neighbors)
+
+    def test_isis_routes(self):
+        isis = ISISProtocol()
+        isis.add_route('172.16.0.0/16')
+        self.assertEqual(len(isis.routes), 1)
+        self.assertIn('172.16.0.0/16', isis.routes)
+        
+if __name__ == '__main__':
+    unittest.main()
+```
+
+This provides a basic template for unit testing the neighbor and route tables for each protocol implementation. The tests would need to be adapted to the specific APIs and implementations in use. But it demonstrates some examples of basic test cases for validating routing protocol behavior and state. Here is a Python script with unit tests for OSPF, BGP, and IS-IS routing protocols on an MX480 router:
 
 ```python
 import unittest
-from juniper_mx480 import MX480 
+from netmiko import ConnectHandler
 
-class TestMX480(unittest.TestCase):
+class TestRoutingProtocols(unittest.TestCase):
 
     def setUp(self):
-        """Setup before each test case"""
-        self.mx480 = MX480()
+        self.router = {
+            'device_type': 'juniper',
+            'host': '192.168.0.1',
+            'username': 'admin',
+            'password': 'password123',
+        }
+        self.connection = ConnectHandler(**self.router)
 
-    def test_ports(self):
-        """Test MX480 port counts"""
-
-        # Setup 
-        self.mx480.reset()
-        
-        # Execute
-        num_ports = self.mx480.get_num_ports()
-        
-        # Verify
-        self.assertEqual(num_ports, 48)
-        
-    def test_routing(self):
-        """Test MX480 routing table"""
-        
-        # Setup
-        self.mx480.reset()
-        self.mx480.add_route("10.0.0.0/24", "192.168.1.1")
-        
-        # Execute
-        routes = self.mx480.get_routes()
-        
-        # Verify
-        self.assertIn("10.0.0.0/24 via 192.168.1.1", routes)
-        
     def tearDown(self):
-        """Cleanup after each test case"""
-        self.mx480.reset()
+        self.connection.disconnect()
+
+class TestOSPF(TestRoutingProtocols):
+    
+    def test_ospf_neighbors(self):
+        # Setup
+        self.connection.send_command('configure')
+        self.connection.send_command('set protocols ospf area 0.0.0.0 interface ge-0/0/0.0')
         
+        # Execution
+        output = self.connection.send_command('show ospf neighbor')
+        
+        # Verification
+        self.assertIn('Full', output)
+        
+    def test_ospf_routes(self):
+        # Execution
+        output = self.connection.send_command('show route protocol ospf')
+        
+        # Verification
+        self.assertIn('192.168.0.0/24', output)
+        
+class TestBGP(TestRoutingProtocols):
+
+    def test_bgp_peers(self):
+        # Setup
+        self.connection.send_command('configure')
+        self.connection.send_command('set protocols bgp group external neighbor 192.168.0.2')
+        
+        # Execution
+        output = self.connection.send_command('show bgp summary')
+        
+        # Verification
+        self.assertIn('Established', output)
+        
+    def test_bgp_routes(self):
+        # Execution
+        output = self.connection.send_command('show route protocol bgp')
+        
+        # Verification 
+        self.assertIn('10.0.0.0/8', output)
+        
+class TestISIS(TestRoutingProtocols):
+
+    def test_isis_adjacencies(self):
+        # Setup
+        self.connection.send_command('configure')
+        self.connection.send_command('set protocols isis interface ge-0/0/0.0')
+        
+        # Execution
+        output = self.connection.send_command('show isis adjacency')
+        
+        # Verification
+        self.assertIn('Up', output)
+        
+    def test_isis_routes(self):
+        # Execution
+        output = self.connection.send_command('show route protocol isis')
+        
+        # Verification
+        self.assertIn('192.168.0.0/24', output)
+
 if __name__ == '__main__':
     unittest.main()
 ```
 
-This implements two test cases:
-
-- `test_ports` verifies the MX480 has 48 ports
-- `test_routing` verifies routes can be added and retrieved
-
-The setUp and tearDown methods reset the device before and after each test.
-
-To run the tests:
-
-```
-python test_mx480.py
-```
-
-This will execute the unit tests and report the results. Additional tests can be added by implementing more test methods in the class. Here are separate Python scripts and markdown output for unit testing the Juniper MX480 router:
-
-### Test script 1 - Verify FPC presence
-
-```python
-import jnpr.junos
-from jnpr.junos import Device
-
-dev = Device(host='mx480', user='pyuser', password='pypass')
-dev.open()
-
-fpc_list = dev.rpc.get_chassis_inventory(detail=True)['chassis-inventory']['fpc']
-
-for fpc in fpc_list:
-    print(f"- FPC {fpc['fpc-slot']} is present, description: {fpc['description']}")
-
-dev.close()
-```
-
-### Test script 1 output
-
-- FPC 0 is present, description: FPC
-- FPC 1 is present, description: 3D QSFP28 FPC
-- FPC 2 is present, description: 3D QSFP28 FPC
-- FPC 3 is present, description: 3D QSFP28 FPC
-- FPC 4 is present, description: 3D QSFP28 FPC
-- FPC 5 is present, description: 3D QSFP28 FPC
-- FPC 6 is present, description: 3D QSFP28 FPC
-- FPC 7 is present, description: 3D QSFP28 FPC
-
-### Test script 2 - Verify interface status
-
-```python
-import jnpr.junos
-from jnpr.junos import Device
-
-dev = Device(host='mx480', user='pyuser', password='pypass') 
-dev.open()
-
-int_status = dev.rpc.get_interface_information(detail=True)
-
-for int in int_status['physical-interface']:
-    print(f"- {int['name']} link is {int['oper-status']}")
-    
-dev.close()
-```
-
-### Test script 2 output 
-
-- ge-0/0/0 link is down
-- ge-0/0/1 link is down  
-- ge-0/0/2 link is down
-- ge-0/0/3 link is down
-- ge-0/0/4 link is up
-- ge-0/0/5 link is up
-- ge-0/0/6 link is up 
-- ge-0/0/7 link is up
-- et-0/1/0 link is up
-- et-0/1/1 link is up
-- et-0/1/2 link is up
-- et-0/1/3 link is up 
-
-### Test script 3 - Verify BGP neighbor status
-
-```python
-from jnpr.junos import Device
-from jnpr.junos.op.bgp import BGPNeighborTable
-
-dev = Device(host='mx480', user='pyuser', password='pypass')
-dev.open()
-
-bgp = BGPNeighborTable(dev)
-bgp.get()
-
-for neighbor in bgp:
-    print(f"- BGP neighbor {neighbor.neighbor_address} status is {neighbor.peer_state}")
-    
-dev.close()
-```
-
-### Test script 3 output
-
-- BGP neighbor 192.0.2.1 status is Established  
-- BGP neighbor 198.51.100.2 status is Established
-- BGP neighbor 203.0.113.5 status is Established
-- BGP neighbor 2001:db8::1 status is Established
-
-This provides a few examples of unit tests that could be run on an MX480 to validate basic functionality. Additional tests could check OSPF neighbors, interface statistics, environmentals, etc. Here is a python script that runs unit tests on an MX480 router configuration in separate files and outputs the results in Markdown format:
+This script contains test cases for verifying OSPF neighbors and routes, BGP peers and routes, and ISIS adjacencies and routes on an MX480 router. The setUp and tearDown methods establish and close the router connection using Netmiko. Each test case has sections for setup, execution, and verification of the routing protocol configuration and state. The tests can be run by calling `python test_routing.py`. Here is a Python script with sample unit tests for OSPF, BGP, and IS-IS routing protocols on an MX480 router:
 
 ```python
 import unittest
-from router_tests import TestOspf, TestBgp, TestInterfaces 
+from netmiko import ConnectHandler
 
-# Run OSPF configuration tests
-class TestOspfConfig(unittest.TestCase):
-    def test_ospf_areas(self):
-        # Test logic for OSPF areas
-        self.assertEqual(ospf_areas, ['0.0.0.0']) 
+class TestMX480Routing(unittest.TestCase):
 
-    def test_ospf_networks(self):
-        # Test logic for OSPF networks  
-        self.assertEqual(ospf_networks, ['10.0.0.0/8', '192.168.0.0/16'])
+    def setUp(self):
+        self.device = ConnectHandler(
+            device_type='juniper_junos',
+            host='mx480.example.com',
+            username='netconf', 
+            password='juniper123'
+        )
+
+    def tearDown(self):
+        self.device.disconnect()
+
+    def test_ospf_neighbors(self):
+        """Test OSPF neighbors"""
+        output = self.device.send_command('show ospf neighbor')
+        self.assertIn('192.0.2.1', output)
+        self.assertIn('192.0.2.2', output)
+
+    def test_bgp_peers(self):
+        """Test BGP peers"""
+        output = self.device.send_command('show bgp summary')
+        self.assertIn('192.0.2.3', output)
+        self.assertIn('192.0.2.4', output)
+        
+    def test_isis_adjacencies(self):
+        """Test IS-IS adjacencies"""
+        output = self.device.send_command('show isis adjacency')
+        self.assertIn('ge-0/0/1.0', output)
+        self.assertIn('ge-0/0/2.0', output)
 
 if __name__ == '__main__':
     unittest.main()
-
-print("## OSPF Configuration Tests\n")
-# Print test results in Markdown format
-print("| Test Case | Result |")
-print("|-----------|---------|") 
-for test in unittest.TestResult.testsRun:
-    if test.result.wasSuccessful():
-        result = "Pass"
-    else:
-        result = "Fail"
-    print(f"| {test.name} | {result} |")
-
-
-# Run BGP configuration tests  
-class TestBGPConfig(unittest.TestCase):
-   # BGP test cases   
-    
-if __name__ == '__main__':
-    unittest.main()
-    
-print("## BGP Configuration Tests\n")  
-# Print BGP test results
-
-# Run interface configuration tests
-class TestInterfacesConfig(unittest.TestCase):
-   # Interface test cases
-   
-if __name__ == '__main__':
-    unittest.main()
-
-print("## Interface Configuration Tests\n")
-# Print interface test results 
 ```
 
-This runs each set of tests in a separate TestCase class, calls unittest.main() to run the tests, and prints the results in Markdown tables for each test suite. The test cases and logic would need to be defined to actually test the router configuration.
+This script imports `unittest` and `netmiko` to create test cases that connect to the MX480 device, execute show commands for OSPF, BGP, and IS-IS, and verify the expected neighbors/peers are present in the output. The tests could be expanded with additional assertions as needed. Here are sample Python unit test scripts for testing routing protocol configurations on an MX480 router:
+
+# test_ospf.py
+
+import unittest
+from netmiko import ConnectHandler
+
+class TestOSPF(unittest.TestCase):
+
+    def test_ospf_neighbors(self):
+        """Test OSPF neighbors are correctly formed"""
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='myuser', password='pwd')
+        ospf_neighbors = device.send_command('show ospf neighbor')
+        
+        self.assertIn('192.168.0.2', ospf_neighbors)
+        self.assertIn('192.168.0.3', ospf_neighbors)
+        
+    def test_ospf_routes(self):
+        """Test OSPF routes are correctly installed"""
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='myuser', password='pwd')
+        ospf_routes = device.send_command('show route ospf')
+        
+        self.assertIn('192.168.1.0/24', ospf_routes)
+        self.assertIn('192.168.2.0/24', ospf_routes)
+
+if __name__ == '__main__':
+    unittest.main()
+
+# test_bgp.py
+
+import unittest 
+from netmiko import ConnectHandler
+
+class TestBGP(unittest.TestCase):
+
+    def test_bgp_neighbors(self):
+        """Test BGP neighbors are correctly formed"""
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='myuser', password='pwd')
+        bgp_neighbors = device.send_command('show bgp neighbor')
+        
+        self.assertIn('192.168.0.2', bgp_neighbors)
+        self.assertIn('192.168.0.3', bgp_neighbors)
+
+    def test_bgp_routes(self):
+        """Test BGP routes are correctly installed"""
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='myuser', password='pwd')
+        bgp_routes = device.send_command('show route bgp') 
+        
+        self.assertIn('10.0.0.0/24', bgp_routes)
+        self.assertIn('10.0.1.0/24', bgp_routes)
+        
+if __name__ == '__main__':
+    unittest.main()
+
+# test_isis.py
+
+import unittest
+from netmiko import ConnectHandler
+
+class TestISIS(unittest.TestCase):
+
+    def test_isis_neighbors(self):
+        """Test IS-IS neighbors are correctly formed"""
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='myuser', password='pwd')
+        isis_neighbors = device.send_command('show isis neighbor')
+        
+        self.assertIn('192.168.0.2', isis_neighbors)
+        self.assertIn('192.168.0.3', isis_neighbors)
+
+    def test_isis_routes(self):
+        """Test IS-IS routes are correctly installed"""
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='myuser', password='pwd')
+        isis_routes = device.send_command('show route isis')
+        
+        self.assertIn('192.168.1.0/24', isis_routes) 
+        self.assertIn('192.168.2.0/24', isis_routes)
+        
+if __name__ == '__main__':
+    unittest.main()
