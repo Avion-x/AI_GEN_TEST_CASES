@@ -1,129 +1,110 @@
- Here are some sample unit test cases for the bootup process of the Juniper Networks MX480 router:
+ Here are some sample unit tests for the bootup process of the Juniper Networks MX Series MX480 router:
 
-## Test Cases for MX480 Router Bootup
+## Bootup Process Unit Tests
 
-### TC1 - Power on self test
+### Test bootup with valid junos image
 
-**Description:** Verify POST completes successfully when powered on
+- Load a valid junos image onto the Routing Engine's boot media
+- Power on the router 
+- Verify the bootup process completes successfully and the router reaches operational state
 
-**Steps:**   
+**Expected result:** Router boots up successfully to operational state
 
-1. Power off the MX480 router
-2. Power on the MX480 router
-3. Verify console prints successful POST messages
-4. Verify all LEDs show expected status  
+### Test bootup with invalid junos image 
 
-**Expected Result:** 
+- Load an invalid or corrupted junos image onto the Routing Engine's boot media
+- Power on the router
+- Verify bootup process fails with appropriate error message
 
-- Console prints successful POST messages
-- All LEDs show expected status
+**Expected result:** Router fails to boot up and displays error indicating invalid junos image
 
-### TC2 - Load boot loader 
+### Test bootup with missing junos image
 
-**Description:** Verify boot loader is loaded successfully
+- Remove any junos image from the Routing Engine's boot media 
+- Power on the router
+- Verify bootup process fails with appropriate error message
 
-**Steps:**
+**Expected result:** Router fails to boot up and displays error indicating missing junos image
 
-1. Power on the MX480 router
-2. Interrupt normal boot by pressing space bar during POST
-3. Load boot loader
-4. Verify boot loader prompt is displayed
+### Test Routing Engine redundancy during bootup
 
-**Expected Result:**  
+- Load valid junos images on both Routing Engine's boot media
+- Power on the router
+- Verify both Routing Engines boot up successfully and router achieves redundancy  
+- Power off the master Routing Engine
+- Verify redundant Routing Engine takes over as new master
 
-- Boot loader prompt is displayed after loading boot loader
+**Expected result:** Router achieves full redundancy with both Routing Engines operational after bootup. Failover to redundant Routing Engine successful when master is powered off.
 
-### TC3 - Load Junos OS 
+### Test bootup timer expiration
 
-**Description:** Verify Junos OS loads successfully
+- Set bootup timer to 60 seconds
+- Power on the router
+- Verify router reaches operational state within 60 seconds
 
-**Steps:**
+**Expected result:** Router successfully boots up within configured 60 second time limit Here are sample unit test cases for the bootup process on an MX480 router in markdown format:
 
-1. From boot loader prompt, load Junos OS
-2. Verify Junos OS boot messages are printed to console 
-3. Verify Junos OS CLI prompt is displayed after boot process completes
+## Test Cases for MX480 Bootup Process
 
-**Expected Result:**
+### TC1 - Cold Boot
 
-- Junos OS boot messages are printed to console
-- Junos CLI prompt is displayed after Junos OS loads successfully
-
-### TC4 - Reboot router
-
-**Description:** Verify router reboots successfully
-
-**Steps:** 
-
-1. From Junos OS CLI prompt, issue `request system reboot` command
-2. Verify console prints reboot messages
-3. Verify router boots back into Junos OS with CLI prompt
-
-**Expected Result:**
-
-- Console prints system reboot messages
-- Router boots back into Junos OS with CLI prompt Here are some example unit tests for the bootup process on an MX480 router in markdown format:
-
-## Test Bootup Process
-
-### Test Case 1 - Cold Boot
-
-**Setup**:
-
+**Setup:**
 - Power off the MX480 completely
-- Connect console cable to console port 
+- Connect console cable to console port for monitoring
 
-**Execution**:
+**Execution:**
+- Power on the MX480 and allow it to complete full bootup process
 
-- Power on the MX480
+**Verification:**
+- Verify console prints normal boot messages including:
+  - BIOS initialization
+  - Loading Junos OS
+  - Completing POST 
+  - Checking filesystems
+  - Loading default configuration
+  - Daemons and processes starting
+  - `JUNOS CHASSISD READY` message
 
-**Verification**:
-
-- Verify boot messages are printed on the console
-- Verify the system boots up successfully to operational mode
-
-**Teardown**:
-
-- Power off the MX480
-
-### Test Case 2 - Warm Boot
-
-**Setup**: 
-
-- Ensure MX480 is powered on and in operational mode
-- Connect console cable to console port
-
-**Execution**:
-
-- From operational mode, issue `request system reboot` 
-
-**Verification**:
-
-- Verify boot messages are printed on the console 
-- Verify the system reboots successfully back to operational mode
-
-**Teardown**:
-
+**Teardown:**
 - None
 
-### Test Case 3 - Rescue Boot 
+### TC2 - Fast Reboot
 
-**Setup**:
+**Setup:** 
+- MX480 powered on with Junos OS running
+- Connect console cable to console port for monitoring
 
-- Power on MX480 
-- Interrupt normal boot by pressing space bar at console
+**Execution:**
+- From CLI execute `request system reboot` 
 
-**Execution**: 
+**Verification:**
+- Verify console prints fast reboot messages including:
+  - Bypassing full POST
+  - Checking filesystems
+  - Reloading configuration
+  - Daemons and processes restarting
+  - `JUNOS CHASSISD READY` message  
 
-- At boot menu, select the rescue kernel option
+**Teardown:**
+- None
 
-**Verification**:
+### TC3 - Reboot to Rescue Configuration
 
-- Verify rescue kernel boots up to rescue prompt
-- Verify filesystems are mounted read-only
+**Setup:**
+- MX480 powered on with Junos OS running 
+- Connect console cable to console port for monitoring
 
-**Teardown**: 
+**Execution:**
+- From CLI execute `request system reboot rescue`
 
-- From rescue prompt, issue `reboot` to restart normal boot process Here is a sample Python unit test for the bootup process of an MX480 router, in markdown format:
+**Verification:** 
+- Verify console prints rescue reboot messages including:
+  - Loading rescue configuration
+  - Limited daemons and processes starting
+  - `JUNOS RESCUE CONFIGURATION READY` message
+
+**Teardown:** 
+- Execute `request system reboot` to reboot back to normal Junos OS Here is a detailed Python unit test for the bootup process of the Juniper MX480 router in Markdown format:
 
 ```python
 import unittest
@@ -131,77 +112,88 @@ from router import MX480
 
 class TestMX480Bootup(unittest.TestCase):
 
-    def test_bootup(self):
+    def setUp(self):
+        self.router = MX480()
+
+    def test_bootup_process(self):
         """Test MX480 bootup process"""
         
-        # Create MX480 router object
-        router = MX480()
+        # Power on and load boot loader
+        self.router.power_on()
+        self.assertEqual(self.router.get_state(), "bootloader")
         
-        # Verify components initialize correctly
-        self.assertEqual(router.mode, "Operational")
-        self.assertTrue(router.power_supply.status == "OK")
-        self.assertTrue(router.fan_tray.status == "OK")
+        # Load Junos OS kernel 
+        self.router.load_kernel()
+        self.assertEqual(self.router.get_state(), "kernel")
         
-        # Verify bootup self-tests pass
-        self.assertTrue(router.diag_self_test())
+        # Load init process and basic services
+        self.router.load_init()
+        self.assertIn("rpcd", self.router.get_services())
         
-        # Verify FPCs come online 
-        for fpc in router.fpcs:
-            self.assertEqual(fpc.status, "Online")
-            
-        # Verify Routing Engine redundancy
-        self.assertEqual(len(router.routing_engines), 2)
-        self.assertEqual(router.re_status(), "Master RE synced")
+        # Load daemons and kernel modules
+        self.router.load_daemons()
+        self.assertIn("rpd", self.router.get_daemons())
         
-        # Verify protocols and services initialize
-        self.assertTrue(router.bgp.established)
-        self.assertTrue(router.ospf.established) 
-        self.assertTrue(router.ssh_service.running)
+        # Complete bootup and ready state
+        self.router.complete_bootup() 
+        self.assertEqual(self.router.get_state(), "ready")
         
 if __name__ == '__main__':
     unittest.main()
 ```
 
-This test creates a MX480 router object and steps through the key components of the bootup process, verifying that:
+This test case verifies the major steps in the MX480 bootup process:
 
-- The router initializes in operational mode
-- Power and fan modules are OK 
-- Self-tests pass
-- FPCs come online
-- Routing Engines redundancy is established
-- Key routing protocols and services start
+- Power on and load boot loader 
+- Load Junos OS kernel
+- Load init process and basic services  
+- Load daemons and kernel modules
+- Complete bootup to reach ready state
 
-The assert methods are used to check expected state at each step. This provides a basic framework for validating the router bootup and configuration. Additional tests could be added for specific features or protocols. Here is a sample unit test in markdown format for testing the bootup process on an MX480 router:
+Each step is validated by checking the router state and services/daemons loaded at each stage. The test case provides a basic framework that can be built upon to add more detailed validation for each bootup step. Here is a sample unit test in markdown format for testing the bootup process on an MX480 router:
 
-# Bootup Process Test for MX480 Router
+## Bootup Process Test
 
-## Test Setup
+### Test Objective
 
-- Router model: MX480
-- Junos version: Junos OS Release 20.3R1
-- Test interfaces: ge-0/0/0, ge-0/0/1
+Verify that the MX480 router boots up correctly with the expected configuration.
 
-## Test Steps
+### Test Configuration
 
-1. Power on the MX480 router and connect to the console port
-2. Verify the bootup messages and that the system boots to operational mode
-3. Execute `show version` and verify Junos version
-4. Execute `show chassis hardware` and verify hardware components
-5. Execute `show interfaces terse` and verify interfaces are up
-6. Execute `show configuration` and verify base configuration
+- Router model: Juniper MX480 
+- Junos version: 19.2R1.9
+- Configured interfaces: 
+    - ge-0/0/0
+    - ge-0/0/1 
+    - xe-0/0/0
+    - xe-0/0/1
+- OSPF and BGP routing protocols configured
+- Firewall filters configured
 
-## Test Validation
+### Test Steps
 
-- Router booted to operational mode successfully
-- Junos version is as expected
-- Correct hardware components displayed
-- Test interfaces ge-0/0/0 and ge-0/0/1 are up
-- Base configuration loaded as expected
+1. Power on the MX480 router and monitor console output
+2. Verify Junos version on bootup matches expected version
+3. Check interfaces ge-0/0/0 and ge-0/0/1 status shows as up/up 
+4. Check interfaces xe-0/0/0 and xe-0/0/1 status shows as up/up
+5. Verify OSPF and BGP sessions are established 
+6. Validate firewall filters are configured 
+7. Ping external IPs to check connectivity 
+8. Examine routing table to verify routes installed correctly
 
-## Test Result
+### Expected Results
 
-- PASS. MX480 router bootup successful and configuration validated.
+- Router should boot up normally and display expected Junos version
+- All configured interfaces should come up properly 
+- OSPF and BGP sessions should establish with peers
+- Firewall filters should be present 
+- Pings to external IPs should be successful
+- Routing table should have correct routes installed
 
-## Test Cleanup 
+### Test Result
 
-- No cleanup steps necessary
+PASS / FAIL / INCONCLUSIVE
+
+### Tester Name and Date
+
+\<Name> \<Date>
