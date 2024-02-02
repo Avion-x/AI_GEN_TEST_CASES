@@ -1,126 +1,187 @@
- Here are some example unit test cases and corresponding Python test code snippets for bootup process testing of the Juniper Networks MX480 router:
+ ###STARTLIST###
 
-```markdown
-# Test Cases
+[
+    {
+        "testname": "Boot Time Test", 
+        "testcases": {
+            "testname": "Boot Time Test",
+            "objective": "To validate boot time of MX480 is within expected limit", 
+            "steps": [
+                "- Power on the MX480 router", 
+                "- Note start time",
+                "- Wait for router to come up with login prompt",
+                "- Note end time", 
+                "- Calculate difference between start and end times",
+                "- Boot time should be less than 300 seconds"
+            ],
+            "test_data": {
+                "start_time": "", 
+                "end_time": "", 
+                "boot_time_limit": 300 
+            }
+        },
+        "testscripts": {
+            "testname": "Boot Time Test Script",
+            "objective": "To automate validation of MX480 boot time",
+            "file_name": "test_boottime.py",
+            "init_scripts": "pip install datetime",
+            "script": """
+            import datetime
+            
+            start_time = datetime.datetime.now()
+            print(f"Start time: {start_time}")
+            
+            # Code to power on and boot router
+                
+            end_time = datetime.datetime.now() 
+            print(f"End time: {end_time}")
+            
+            boot_time = (end_time - start_time).seconds
+            print(f"Boot time: {boot_time} seconds")
+            
+            boot_time_limit = 300
+            assert boot_time < boot_time_limit
+            """,
+            "run_command": "python test_boottime.py", 
+            "expected_result": "Boot time logged. Assertion passes if boot time is less than 300 seconds."
+        }
+    },
+    {
+        "testname": "Power Draw Test",
+        "testcases": {
+            "testname": "Power Draw Test",
+            "objective": "Validate power draw of MX480 during bootup is within limits",
+            "steps": [
+                "- Connect power meter to MX480 power supply",
+                "- Power on MX480", 
+                "- Note power draw reading on meter when login prompt appears",
+                "- Power draw should be less than 1200 W"  
+            ],
+            "test_data": {
+                "power_draw_limit": 1200 
+            }
+        },
+        "testscripts": {
+            "testname": "Power Draw Automation Script", 
+            "objective": "Automate power draw validation during MX480 boot",
+            "file_name": "test_powerdraw.py",
+            "init_scripts": "pip install pyvisa", 
+            "script": """
+            import pyvisa
+            
+            rm = pyvisa.ResourceManager()
+            power_meter = rm.open_resource("USB0::0x1AB1::0x0588::DM3R19290138::INSTR")
+            
+            power_meter.write(":MEASure:POWer?")
+            power_draw = float(power_meter.read())
+            
+            power_draw_limit = 1200
+            assert power_draw < power_draw_limit
+            
+            print(f"Power draw: {power_draw} W") 
+            """,
+           "run_command": "python test_powerdraw.py",
+            "expected_result": "Power draw value logged. Test passes if power draw is less than 1200W."
+        }
+    }
+]
 
-**TC1 - Cold boot**  
-Verify router boots up successfully from powered off state
+###ENDLIST### ###STARTLIST###
+[
+{
+  "testname": "Boot Device Detection Test",
+  "testcases": {
+    "testname": "Boot Device Detection Test", 
+    "objective": "Verify that the router detects all connected boot devices during the boot process",
+    "steps": [
+      "- Power on the router",
+      "- Check console logs for boot device detection messages", 
+      "- Validate all connected boot devices are detected"
+    ],
+    "test_data": {
+      "boot_devices": ["USB drive", "hard disk"]
+    }
+  },
+  "testscripts": {
+    "testname": "Boot Device Detection Test",
+    "objective": "Automate validation of boot device detection",
+    "file_name": "test_boot_devices.py",
+    "init_scripts": "pip install paramiko",
+    "script": """
+import paramiko
+import re
 
-**TC2 - Warm boot**
-Verify router reboots successfully from running state 
+IP = "192.168.1.1"
+USERNAME = "admin"
+PASSWORD = "admin123"
 
-**TC3 - Boot time**  
-Verify boot time is under 5 minutes for cold boot
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(IP, username=USERNAME, password=PASSWORD)
 
-**TC4 - Console access**
-Verify console access is available within 60 seconds of power on  
+stdin, stdout, stderr = ssh.exec_command("show boot-devices")
+output = stdout.read().decode()
 
-**TC5 - Control plane processes**  
-Verify RPD, SNMPD, MGD processes reach steady state within 5 minutes of bootup
+boot_devices = ["USB drive", "hard disk"]
+for device in boot_devices:
+  assert re.search(device, output), f"{device} not detected in boot devices"
 
-```
+print("All expected boot devices detected")
+""",
+    "run_command": "python test_boot_devices.py", 
+    "expected_result": "All expected boot devices detected"
+  }
+},
+{
+  "testname": "Boot Configuration Validation Test",
+  "testcases": {
+    "testname": "Boot Configuration Validation Test",
+    "objective": "Validate boot configuration parameters", 
+    "steps": [
+      "- Retrieve current boot configuration",
+      "- Validate config values match expected values",
+      "- If mismatch, report issue"  
+    ],
+    "test_data": {
+      "expected_config": {
+        "primary": "hard-disk", 
+        "secondary": "usb"
+      }
+    }
+  },
+  "testscripts": {
+    "testname": "Boot Configuration Validation Test",
+    "objective": "Automate boot configuration validation",
+    "file_name": "test_boot_config.py",
+    "init_scripts": "pip install paramiko PyYAML",  
+    "script": """  
+import paramiko
+import yaml
 
-```python
-import unittest
-from netmiko import ConnectHandler
-import time
+IP = "192.168.1.1"
+USERNAME = "admin"
+PASSWORD = "admin123"
+  
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(IP, username=USERNAME, password=PASSWORD)
+  
+stdin, stdout, stderr = ssh.exec_command("show boot configuration")
+output = stdout.read().decode()
+config = yaml.safe_load(output)
 
-class TestMX480Bootup(unittest.TestCase):
-
-    def test_cold_boot(self):
-        # boot device and verify no exceptions
-        device = ConnectHandler(**router1_params) 
-        self.assertTrue(device is not None)
-
-    def test_warm_boot(self):
-        # reboot device and verify no exceptions
-        output = device.send_command("request system reboot")
-        device = ConnectHandler(**router1_params)
-        self.assertTrue(device is not None)
-        
-    def test_boot_time(self):
-        start = time.time()
-        device = ConnectHandler(**router1_params)
-        end = time.time() 
-        duration = end - start
-        self.assertLess(duration, 300)
-
-    def test_console_access(self):
-        # check console access
-        start = time.time() 
-        device = ConnectHandler(**router1_params)
-        end = time.time()
-        duration = end - start
-        self.assertLess(duration, 60)    
-
-    def test_processes(self):
-        # check processes 
-        output = device.send_command("show system processes extensive")
-        # check RPD, SNMPD, MGD reach steady state
-        self.assertIn("RPD", output) 
-        self.assertIn("SNMPD", output)
-        self.assertIn("MGD", output)
-        
-```
-
-The above covers some basic test cases and test code structure for validation of critical aspects of router bootup. Additional cases can be added for image load, interface initialization, protocol convergence etc. Let me know if you need any other specifics or have additional questions! Here are some example Python unit test cases and implementations for testing the bootup process of the Juniper MX480 router:
-
-```python
-import unittest
-from router import MX480
-
-class MX480BootupTestCase(unittest.TestCase):
-
-    def test_power_on(self):
-        """Test powering on the router"""
-        router = MX480()
-        router.power_on()
-        self.assertTrue(router.is_powered_on()) 
-
-    def test_load_bios(self):
-        """Test BIOS loading"""
-        router = MX480()
-        router.power_on()
-        self.assertTrue(router.bios_loaded())
-
-    def test_boot_loader(self):
-        """Test boot loader"""
-        router = MX480()
-        router.power_on() 
-        self.assertTrue(router.bootloader_loaded())
-
-    def test_kernel_load(self):
-        """Test kernel loading"""
-        router = MX480()
-        router.power_on()
-        router.wait_for_boot()
-        self.assertTrue(router.check_kernel_loaded())
-
-    def test_init_process(self):
-        """Test init process""" 
-        router = MX480()
-        router.power_on()  
-        router.wait_for_boot()
-        self.assertTrue(router.init_complete())
-
-    def test_os_bootup(self):
-        """Test OS bootup"""
-        router = MX480()
-        router.power_on()
-        router.wait_for_boot() 
-        self.assertTrue(router.os_ready())
-
-if __name__ == '__main__':
-    unittest.main()
-```
-
-This shows some example test cases that could be used to validate the different stages of the MX480 bootup process:
-
-- Power on 
-- BIOS load
-- Bootloader load
-- Kernel load
-- Init process 
-- OS bootup complete
-
-The test cases use a Router class to abstract the router interactions and make assertions at each boot stage. These could be expanded and built upon to thoroughly test the full boot sequence.
+expected_config = yaml.safe_load(f\"\"\"
+primary: hard-disk  
+secondary: usb
+\"\"\")
+  
+assert config == expected_config, "Boot configuration mismatch"
+  
+print("Boot configuration validated successfully")
+""",
+    "run_command": "python test_boot_config.py",
+    "expected_result": "Boot configuration validated successfully" 
+  }
+}
+]
+###ENDLIST###
