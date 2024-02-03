@@ -1,203 +1,201 @@
- Here are some example unit tests for bootup process cases for the Juniper Networks MX480 router in Markdown format:
+ Here are some example unit tests for bootup process cases for the Juniper Networks MX480 router in markdown format:
 
-## Bootup Process Test Cases for MX480 Router
+## Bootup Process Unit Tests
 
-### Test Bootup with Default Configuration
+### Test bootup with valid config
 
-- Power on the MX480 router
-- Verify the system boots up successfully to the CLI prompt
-- Verify default factory configuration is loaded 
+- Load valid boot configuration file
+- Power on device 
+- Verify device boots up successfully
+- Verify correct boot messages are logged
+- Verify configuration is loaded correctly
 
-### Test Bootup with Custom Configuration
+**Expected Result**: Device boots up successfully with correct config
 
-- Power on the MX480 router
-- Interrupt the boot process and load a custom configuration file
-- Verify the system boots up successfully with the custom configuration
+### Test bootup with invalid config 
 
-### Test Bootup with Corrupted Configuration
+- Load invalid boot config file with errors
+- Power on device
+- Verify device detects errors during bootup
+- Verify error messages are logged 
+- Verify device boots to safe mode with factory default config
 
-- Power on the MX480 router
-- Interrupt the boot process and load a corrupted configuration file
-- Verify the system detects the corrupted configuration and boots to factory default
+**Expected Result**: Device detects errors, logs messages, and boots to safe mode
 
-### Test Bootup with USB Storage
+### Test bootup with corrupted config
 
-- Insert a USB storage device containing a configuration file
-- Power on the MX480 router
-- Verify the system detects the USB device and loads the configuration
-- Verify the system boots up successfully with the USB configuration
+- Load corrupted boot config file
+- Power on device 
+- Verify device detects corrupt file
+- Verify error messages are logged
+- Verify device boots to safe mode with factory default config
 
-### Test Bootup with Redundant Routing Engines
+**Expected Result**: Device detects corrupt file, logs errors, and boots to safe mode
 
-- Power on the MX480 with redundant REs
-- Verify both REs boot up successfully and sync configurations
-- Failover to standby RE and verify successful switchover 
+### Test bootup with missing config 
 
-### Test Bootup with Damaged Routing Engine
+- Remove/delete boot config file
+- Power on device
+- Verify device detects missing config file 
+- Verify warning messages are logged
+- Verify device boots to safe mode with factory default config
 
-- Power on MX480 with a damaged RE
-- Verify the system detects the faulty RE and boots up on the secondary RE
-- Verify system operates correctly with only the secondary RE Here are some example unit test cases for the bootup process on an MX480 router in Markdown format:
+**Expected Result**: Device detects missing file, logs warnings, and boots to safe mode
 
-## Test Cases for MX480 Bootup Process
+### Test bootup with bad image
 
-### TC1 - Power on MX480
+- Load device with invalid boot image
+- Power on device
+- Verify device detects invalid boot image
+- Verify error messages are logged
+- Verify device enters maintenance mode/recovery mode
 
-**Setup:**
-- Connect power cables to MX480.
+**Expected Result**: Device detects bad image, logs errors, and enters recovery mode Here are some example unit test cases for the bootup process on an MX480 router in markdown format:
 
-**Execution:** 
-- Turn on power switch to power on MX480.
+## Test Case 1 - Cold Boot
 
-**Verification:**
-- Check power LED is lit on front panel.
-- Check fans start spinning.
-- Check boot messages are printed on console showing u-boot loading.
+### Setup
+- Power off the MX480 router
 
-**Teardown:**
-- None
+### Execution
+- Power on the MX480 router and allow it to complete the cold boot process
 
-### TC2 - Load u-boot
+### Verification
+- Verify the MX480 completes POST and boots to operational mode
+- Verify all expected interfaces come up operationally 
+- Verify control plane protocols like OSPF, BGP etc. establish adjacency with neighbors
+- Verify data plane forwarding works as expected
 
-**Setup:**
-- Power on MX480.
+### Teardown
+- None required
 
-**Execution:**  
-- Allow u-boot to load automatically.
+## Test Case 2 - Warm Boot
 
-**Verification:**
-- Check u-boot version is printed on console.
-- Check prompt changes to u-boot CLI.
+### Setup 
+- MX480 router powered on and in operational state
 
-**Teardown:**
-- None
+### Execution
+- Issue `request system reboot` command on MX480 to trigger warm reboot
 
-### TC3 - Load Junos from internal flash
+### Verification
+- Verify router reboots within expected time frame
+- Verify router maintains existing interface configurations
+- Verify control plane protocols like OSPF, BGP reconnect without flap
+- Verify data plane forwarding state is maintained during reboot
 
-**Setup:**  
-- Power on MX480 with valid Junos image loaded into internal flash.
+### Teardown
+- None required
 
-**Execution:**
-- At u-boot prompt, run `boot flash` command.
+## Test Case 3 - Router Supervisor Switchover
 
-**Verification:**
-- Check Junos boot messages are printed on console.
-- Check Junos CLI prompt appears correctly.
-- Run `show version` and verify Junos version running.
+### Setup
+- MX480 in operational state with redundant Routing Engines
 
-**Teardown:**
-- None
+### Execution
+- Trigger switchover from master to backup Routing Engine
 
-### TC4 - Load Junos from external USB
+### Verification
+- Verify switchover occurs within expected timeframe
+- Verify minimal traffic loss during switchover
+- Verify protocols and data plane state sync from old master to new master
+- Verify new master Routing Engine takes over management plane
 
-**Setup:**
-- Power on MX480.
-- Insert USB stick with valid Junos image into USB port.
-
-**Execution:**  
-- At u-boot prompt, run `boot usb` command.
-
-**Verification:**
-- Check Junos boots from USB stick.
-- Verify correct Junos version running. 
-
-**Teardown:**
-- Remove USB stick.
-
-Let me know if you need any clarification or have additional test cases to cover! Here is a sample Python unit test for the bootup process of the Juniper MX480 router:
+### Teardown  
+- Trigger failback to restore original master Routing Engine Here is a detailed Python unit test for the bootup process of the MX480 router in Markdown format:
 
 ```python
 import unittest
-from netmiko import ConnectHandler
+from junos_connection import JunosConnection
 
 class TestMX480Bootup(unittest.TestCase):
 
     def setUp(self):
-        self.device = ConnectHandler(
-            device_type='juniper',
-            host='mx480.example.com',
-            username='admin',
-            password='password123'
-        )
-
-    def test_console_login_prompt(self):
-        output = self.device.send_command('\n', expect_string='login:')
-        self.assertIn('login:', output)
-
-    def test_cli_login(self):
-        output = self.device.send_command('admin', expect_string='Password:')
-        self.assertIn('Password:', output)
-        output = self.device.send_command('password123')
-        self.assertIn('#', output)
-
-    def test_bootstrap_config(self):
-        output = self.device.send_command('show configuration | display set')
-        self.assertIn('system host-name mx480', output)
-        self.assertIn('interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24', output)
-
-    def test_commit_confirmed(self):
-        cmds = [
-            'set system ntp server time.example.com',
-            'commit confirmed 5'
-        ]
-        output = self.device.send_config_set(cmds)
-        self.assertIn('commit confirmed will be automatically rolled back in 5 minutes unless confirmed', output)
-
-    def test_commit_check(self):
-        cmds = [
-            'delete system ntp server time.example.com',
-            'commit check'   
-        ]
-        output = self.device.send_config_set(cmds)
-        self.assertIn('Configuration check succeeds', output)
-
+        self.dev = JunosConnection(host='192.168.1.1', user='pyuser', password='pypass')
+        self.dev.open()
+    
+    def test_bootup(self):
+        print("## Bootup Process for MX480")
+        
+        print("### Power on Device")
+        # Power on and wait for device to boot
+        
+        print("### Check FPCs") 
+        # Check FPCs are powered on and operational
+        
+        fpc_status = self.dev.rpc.get_chassis_fpc()
+        self.assertEqual(fpc_status['fpc-information']['fpc'][0]['state'], 'Online')
+        
+        print("### Check Routing Engines")
+        # Verify both Routing Engines are running and in master/backup state
+        
+        re_status = self.dev.rpc.get_route_engine_information()
+        self.assertEqual(re_status['route-engine-information'][0]['mastership-state'], 'master')
+        self.assertEqual(re_status['route-engine-information'][1]['mastership-state'], 'backup')
+        
+        print("### Check Interfaces")
+        # Verify interfaces are operational
+        
+        interfaces = self.dev.rpc.get_interface_information()
+        ge_0_0_0 = interfaces['physical-interface'][0]
+        self.assertEqual(ge_0_0_0['oper-status'], 'up')
+        
+        print("### Check Protocols")
+        # Check required routing protocols are up
+        
+        bgp_summary = self.dev.rpc.get_bgp_summary_information()
+        self.assertGreater(bgp_summary['bgp-peer-count'], 0)
+        
+        ospf_neighbor = self.dev.rpc.get_ospf_neighbor_information()
+        self.assertGreater(ospf_neighbor['ospf-neighbor-count'], 0)
+        
     def tearDown(self):
-        self.device.disconnect()
+        self.dev.close()
         
 if __name__ == '__main__':
     unittest.main()
 ```
 
-This covers some basic tests like checking the console login prompt, CLI login, validating the bootstrap configuration, commit confirmed and commit check. The tests use the Netmiko library to connect to the device over SSH and execute commands. Here is a sample unit test in markdown format for testing the bootup process on an MX480 router:
+This test cases initializes a connection to the device, and then runs various `rpc` calls to validate:
+
+- FPCs are online
+- Routing engines are in master/backup state  
+- An interface is operationally up
+- BGP and OSPF protocols are up
+
+It prints some markdown headers and text to provide context on each step. The `setUp` and `tearDown` methods establish and close the connection. The assertions validate the desired state of the device during bootup. Here is a sample unit test in markdown format for testing the bootup process on an MX480 router:
 
 ## Test Bootup Process on MX480 Router
 
 ### Test Setup
 
-- MX480 router with Junos OS Release 15.1X53-D60.4
-- Console connection to MX480
-- Power off MX480 
+- MX480 router with Junos OS Release 15.1R7.9
+- Connect console port to test workstation
+- Power off router 
 
 ### Test Steps
 
-1. Power on MX480 and connect to console
-2. Verify Junos OS boots up correctly 
-    - Check for normal boot messages 
-    - No errors or exceptions displayed
+1. Power on the MX480 router and monitor console
+2. Verify Junos OS boots up successfully 
+   - Look for `FreeBSD/MIPS (mx480)` in boot messages
+   - Look for `JUNOS Software Release` message
 3. Verify FPCs come online
-    - `show chassis fpc pic-status`
-    - Verify all FPCs show "Online" status 
+   - Look for FPC initialization messages 
+   - Verify all FPCs are `Online` when operational
 4. Verify Routing Engines come online 
-    - `show chassis routing-engine` 
-    - Verify both Routing Engines show "Online" status
-5. Verify MX480 interfaces come online
-    - `show interfaces terse`
-    - Verify all expected interfaces show "Up" status
-6. Verify routing protocol sessions get established
-    - `show bgp summary` 
-    - Verify BGP peers are active
-    - `show ospf neighbor` 
-    - Verify OSPF neighbors are full
-7. Verify key services come up
-    - `show system processes`
-    - Verify key processes like chassisd, rpd, dcd, etc are running
+   - Look for `re0` and `re1` initialization messages
+   - Verify both REs are `Online` when operational
+5. Verify default configuration loaded
+   - Run `show configuration`
+   - Verify factory default configuration is present
+6. Verify no error messages during boot 
+7. Verify interfaces initialized successfully
+   - Look for ge-0/0/0 link up message
+   - Run `show interfaces terse`
+   - Verify all expected interfaces are up
 
 ### Test Result
 
-- [ ] MX480 booted up successfully 
-- [ ] No errors or issues observed
-- [ ] All FPCs, Routing Engines, interfaces came online 
-- [ ] Routing protocols established peers/neighbors 
-- [ ] Key services came up correctly
+- PASS if router boots up successfully with no errors
+- FAIL if any issues found during bootup 
 
-**Test Pass**
+Let me know if you would like me to modify or expand this unit test.
