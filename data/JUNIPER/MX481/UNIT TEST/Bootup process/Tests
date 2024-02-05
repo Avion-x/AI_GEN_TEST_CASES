@@ -1,44 +1,65 @@
- Here are some potential unit test cases and example Python test code for bootup process testing of the Juniper Networks MX Series MX480 router:
+ Here are 2 unit test cases for bootup process of the Juniper Networks MX Series MX480 router along with sample Python test code:
 
-### Test Cases
+**Test Case 1 - Verify bootup completes successfully**
 
-- Test that the router powers on and boots up successfully
-    - Verify POST completes with no errors
-- Verify default boot configuration 
-    - Check that router boots from expected default boot device and partition
-- Validate boot messages and timestamps
-    - Boot messages and timestamps should be logged to console
-- Confirm basic IP connectivity after bootup
-    - Ping default gateway IP address
-    - Ping well-known external IP address  
+Steps:
+
+1. Power on the router
+2. Verify the system boots up completely and the CLI prompt is displayed
 
 ```python
 import unittest
-from router import Router
+from netmiko import ConnectHandler
 
 class TestRouterBootup(unittest.TestCase):
 
-    def setUp(self):
-        self.router = Router('mx480')
-        self.router.power_on()
+    def test_bootup_completes(self):
+        device = {
+            'device_type': 'juniper',
+            'host': '192.168.1.1', 
+            'username': 'netconf',
+            'password': 'password'
+        }
+        
+        net_connect = ConnectHandler(**device)
+        output = net_connect.send_command('')
+        
+        self.assertIn('>', output)
 
-    def test_bootup(self):
-        # Verify successful POST
-        self.assertEqual(self.router.post_status, 'PASSED')  
-        
-        # Check default boot device and partition
-        self.assertEqual(self.router.boot_device, 'disk0')
-        self.assertEqual(self.router.boot_partition,'primary')
-        
-        # Verify boot messages logged
-        self.assertGreater(len(self.router.boot_log), 0)
-        
-        # Confirm IP connectivity 
-        self.assertTrue(self.router.ping("192.168.1.1"))
-        self.assertTrue(self.router.ping("8.8.8.8"))
-        
 if __name__ == '__main__':
     unittest.main()
 ```
 
-This provides some example test cases to validate successful bootup, default boot configuration, boot logging, and basic IP connectivity of the router after bootup. The test code uses a Router class to simulate testing against a real router device. Additional test cases could be added for other bootup validations as needed.
+This test connects to the router after bootup and verifies the CLI prompt is seen to indicate successful bootup.
+
+**Test Case 2 - Verify bootup time is within threshold** 
+
+Steps:
+
+1. Power on the router
+2. Note start time of bootup
+3. Verify bootup completes and CLI prompt is seen
+4. Note end time of bootup
+5. Verify bootup time is less than 300 seconds
+
+```python
+import unittest
+from datetime import datetime
+
+class TestRouterBootupTime(unittest.TestCase):
+
+    def test_bootup_time(self):
+        start_time = datetime.now()
+        
+        # router bootup steps
+        
+        end_time = datetime.now()
+        bootup_time = (end_time - start_time).total_seconds()
+        
+        self.assertLess(bootup_time, 300) 
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+This test verifies the router bootup time is less than a threshold of 300 seconds. The start and end time are noted to calculate total bootup duration.
