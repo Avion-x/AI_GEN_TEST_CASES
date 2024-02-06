@@ -1,154 +1,166 @@
- Here are 2 Unit Test Cases and respective python test cases for Bootup process for Network MSeries Router MX480:
+ Here is the Python list with 2 Unit Test Cases for Bootup process for MX480 Router along with respective test scripts:
 
 ###STARTLIST###
 [
 {
-  "testname": "Test Bootup with Valid Configuration",
+  "testname": "Test Bootup with valid configuration",  
   "testcase": {
-    "testname": "Test Bootup with Valid Configuration",
-    "objective": "Validate router boots up properly with valid startup configuration",
-    "steps": [
-      "1. Power on the router",
-      "2. Verify console displays valid bootup logs without errors",     
-      "3. Verify router finishes booting up within expected time"
-    ]
+    "testname": "Test Bootup with valid configuration",
+    "objective": "Validate router bootup successfully with valid startup configuration",
+    "steps": ["Power on the router", "Verify router bootup completes successfully"]    
   },
   "testscript": {
-    "testname": "Test Bootup with Valid Configuration",
-    "objective": "Validate router boots up properly with valid startup configuration",   
+    "testname": "Test Bootup with valid configuration",
+    "objective": "Validate router bootup successfully with valid startup configuration", 
     "file_name": "test_bootup_valid_config.py",
-    "init_scripts": "\"\"",  
-    "script": \"\"\"
-    import re
-
-    BOOTUP_TIME = 300 # seconds
-    bootup_log = \"\"\"
-    ... <valid bootup log> ...
-    \"\"\"
-
-    def test_bootup():
-        finish_time = re.search(r\"Finished loading ([0-9]+) seconds\", bootup_log)
-        assert finish_time, "No bootup finish time found"
-        finish_time = int(finish_time.group(1))   
-        assert finish_time <= BOOTUP_TIME, "Bootup took too long"
-
-    if __name__ == "__main__":
-        test_bootup()
-    \"\"\",
+    "init_scripts": "'''pip install napalm netmiko''',\nimport unittest",
+    "script": "'''\nimport napalm\n\ndef test_bootup(hostname, username, password):\n    driver = napalm.get_network_driver('eos')\n    router = driver(hostname=hostname, username=username, password=password)\n    router.open()\n    assert router.is_alive() == True\n    router.close()\n''',\n\nclass TestRouterBootup(unittest.TestCase):\n    def test_bootup_valid_config(self):\n        test_bootup('192.168.1.1', 'admin', 'password')\n",
     "run_command": "python test_bootup_valid_config.py",
-    "expected_result": "No assertions triggered, test case passed"
+    "expected_result": "OK"
   }
 },
+
 {
-  "testname": "Test Bootup with Invalid Configuration", 
+  "testname": "Test Bootup with invalid configuration",
   "testcase": {
-    "testname": "Test Bootup with Invalid Configuration",
-    "objective": "Validate error handling when attempting to boot with invalid startup config",
-    "steps": [
-      "1. Power on the router with invalid configuration",
-      "2. Verify console displays config validation errors",
-      "3. Verify router falls back to default configuration" 
-    ]
+    "testname": "Test Bootup with invalid configuration",   
+    "objective": "Validate bootup failure due to invalid startup configuration",
+    "steps": ["Power on the router", "Verify router boot fails"]
   },
   "testscript": {
-    "testname": "Test Bootup with Invalid Configuration",
-    "objective": "Validate error handling when attempting to boot with invalid startup config",
+    "testname": "Test Bootup with invalid configuration",
+    "objective": "Validate bootup failure due to invalid startup configuration",
     "file_name": "test_bootup_invalid_config.py",
-    "init_scripts": "\"\"",
-    "script": \"\"\"
-    import re
-    
-    ERROR_STRING = "Failed to parse configuration"
-    FALLBACK_STRING = "...Loading default configuration..."
-
-    bootup_log = \"\"\" 
-    ... <invalid config bootup log> ...
-    \"\"\"
-
-    def test_invalid_config():
-        assert ERROR_STRING in bootup_log, "No config error message"  
-        assert FALLBACK_STRING in bootup_log, "No fallback to default config"
-
-    if __name__ == "__main__":
-        test_invalid_config()
-    \"\"\",
+    "init_scripts": "'''pip install napalm''', \nimport unittest",
+    "script": "'''\nimport napalm\nimport unittest\nfrom napalm.base.exceptions import ConnectionException\n\ndef test_bootup(hostname, username, password):\n    driver = napalm.get_network_driver('eos')\n    try:\n        router = driver(hostname=hostname, username=username, password=password)\n        router.open()\n    except ConnectionException:\n        return True\n    return False\n''',\n\nclass TestRouterBootup(unittest.TestCase):\n    def test_bootup_invalid_config(self):\n        result = test_bootup('192.168.1.1', 'admin', 'password')\n        assert result == True\n",  
     "run_command": "python test_bootup_invalid_config.py",
-    "expected_result": "No assertions triggered, test case passed"
+    "expected_result": "OK"
   }
-}]
-###ENDLIST### Here is a Python list with JSON objects for test cases and test scripts for the Bootup process of the MX480:
+}
+]
 
+###ENDLIST### Here is the Python list with unit test cases and test scripts for Bootup process of the MX480 router encapsulated as JSON objects:
+
+```python
 ###STARTLIST###
 [
   {
-    "testname": "Test Bootup Sequence", 
+    "testname": "Test Bootup Sequence",
     "testcase": {
       "testname": "Test Bootup Sequence",
-      "objective": "Validate the device goes through the expected bootup sequence",
+      "objective": "Validate that the MX480 router goes through the expected bootup sequence",
       "steps": [
-        "Power on the device",
-        "Verify boot rom version",
-        "Validate boot loader version", 
-        "Check kernel version",
-        "Validate system initialization"
+        "Power on the MX480 router",
+        "Verify all fans spin up", 
+        "Validate boot messages are printed on console",
+        "Validate OS bootup completion messages"
       ]
     },
     "testscript": {
       "testname": "Test Bootup Sequence",
       "objective": "Script to validate bootup sequence",  
       "file_name": "test_bootup.py",
-      "init_scripts": "pip install unittest",
+      "init_scripts": ["pip install paramiko"],
       "script": """
-        import unittest
+        import paramiko
         
-        class TestBootup(unittest.TestCase):
-          def test_bootup(self):
-            # Test steps to validate bootup sequence
-            self.assertEqual(boot_rom_version, "1.0") 
-            self.assertEqual(boot_loader_version, "2.0")
-            self.assertEqual(kernel_version, "3.0")
-            self.assertTrue(system_initialized)
-          
-      """,
+        IP = '192.168.1.1'
+        USERNAME = 'testuser'
+        PASSWORD = 'test123'
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(IP, username=USERNAME, password=PASSWORD)
+        
+        channel = ssh.invoke_shell()  
+        stdin = channel.makefile('wb')
+        stdout = channel.makefile('rb')
+        
+        stdin.write('show chassis hardware\\n')
+        bootup_output = stdout.read()
+        
+        if 'Fans checked, all okay' in str(bootup_output) and 
+            'PFE checks passed' in str(bootup_output):
+          print('Test passed')
+        else:
+          print('Test failed')
+        
+        ssh.close()
+    """,
       "run_command": "python test_bootup.py",
-      "expected_result": "OK"
+      "expected_result": "Test passed"
     }
   },
+  
   {
-    "testname": "Test Bootup Time",
+    "testname": "Test Image Install", 
     "testcase": {
-      "testname": "Test Bootup Time",
-      "objective": "Check if device boots up within expected time",
-      "steps": [
-        "Power on the device", 
-        "Note start time",
-        "Check if login prompt appears",
-        "Note end time",
-        "Validate bootup time is less than 120 seconds"  
+      "testname": "Test Image Install",
+      "objective": "Validate that a new Junos image can be installed successfully",
+      "steps": [  
+        "Copy image file to router", 
+        "Install image",
+        "Reboot router",
+        "Verify new image version"       
       ]
     },
     "testscript": {
-      "testname": "Test Bootup Time",
-      "objective": "Script to validate bootup time",
-      "file_name": "test_boottime.py",
-      "init_scripts": "pip install time",
+      "testname": "Test Image Install",
+      "objective": "Script to test Junos image install",
+      "file_name": "test_image_install.py",  
+      "init_scripts": ["pip install paramiko"],
       "script": """
-        import time
+        import paramiko
         
-        start = time.time()
-        # Code to power on device
+        IP = '192.168.1.1' 
+        USERNAME = 'testuser'
+        PASSWORD = 'test123'
+        IMAGE_FILE = 'junos-image.tgz'
         
-        end = time.time() 
-        duration = end - start
+        ssh = paramiko.SSHClient() 
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(IP, username=USERNAME, password=PASSWORD)
         
-        assert duration < 120
+        scp = ssh.open_sftp()
+        scp.put(IMAGE_FILE, '/var/tmp/junos-image.tgz')
+        scp.close()
         
-      """,
-      "run_command": "python test_boottime.py", 
-      "expected_result": "OK"
+        channel = ssh.invoke_shell()
+        stdin = channel.makefile('wb')  
+        stdin.write('request system software add /var/tmp/junos-image.tgz\\n')
+        stdin.write('request system reboot\\n')
+        
+        ssh.close()
+        
+        # Wait for device reboot
+        
+        ssh.connect(IP, username=USERNAME, password=PASSWORD)      
+        channel = ssh.invoke_shell()      
+        stdin = channel.makefile('wb')
+        stdin.write('show version | match Junos\\n')
+        stdout = channel.makefile('rb')
+        
+        new_version = stdout.read().strip().split()[-1]
+        if new_version == 'X.X-Y':
+          print('Test passed')
+        else:
+          print('Test failed')
+          
+        ssh.close()
+    """,
+      "run_command": "python test_image_install.py",    
+      "expected_result": "Test passed"
     }
-  }
+  }  
 ]
 ###ENDLIST###
+```
 
-The above Python list contains two test cases with their respective test scripts encapsulated as JSON objects. The first test case validates the bootup sequence while the second one checks the bootup time. Each test script has the required fields including objective, test steps, and expected result. The scripts are minimal and focused on the test objective. Please let me know if you need any changes or have additional test cases to include.
+The above Python list contains two test cases with their respective test scripts encapsulated as JSON objects:
+
+1. Test Bootup Sequence: Validates router goes through expected bootup process 
+2. Test Image Install: Validates installation of new Junos image
+
+Each test case and test script is properly formatted as per the instructions. The test scripts utilize paramiko for SSH connectivity to router, execute commands and validate the test result.
+
+Let me know if you need any changes or have additional test cases to be added.
