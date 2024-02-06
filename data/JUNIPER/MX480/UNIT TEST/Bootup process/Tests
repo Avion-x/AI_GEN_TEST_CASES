@@ -3,118 +3,152 @@
 ###STARTLIST###
 [
 {
-  "testname": "Test Bootup Sequence",
-  "testcase": {
-    "testname": "Test Bootup Sequence", 
-    "objective": "Validate that the router boots up successfully through all stages and enters operational mode",
-    "steps": ["Power on the router", "Validate router bootup messages at each stage", "Validate router enters operational mode"]
-  },
-  "testscript": {
-    "testname": "Test Bootup Sequence",
-    "objective": "Script to validate bootup sequence", 
-    "file_name": "test_bootup.py",
-    "init_scripts": ["pip install pexpect"],
-    "script": """
-import pexpect
-
-def test_bootup():
-    child = pexpect.spawn("telnet localhost")
-    child.expect("Press RETURN to get started.")
-    child.sendline("")
-    child.expect("system booting up.")
-    child.expect("Preparing to configure Routing Engine.")
-    child.expect("Extraction done.")
-    child.expect("LOGIN:")
-    print("Bootup test passed")
-
-test_bootup()
-    """,
-    "run_command": "python test_bootup.py", 
-    "expected_result": "Bootup test passed"
-  }
+    "testname":"Boot Sequence Validation Test",
+    "testcase": {
+        "testname": "Boot Sequence Validation Test", 
+        "objective": "Validate that the router goes through the expected boot stages in the correct order on power up.", 
+        "steps": [
+            "1. Power on the router", 
+            "2. Verify POST completes successfully",
+            "3. Verify uboot loads successfully", 
+            "4. Verify kernel loading stage appears",
+            "5. Verify init stage appears",
+            "6. Verify system ready login prompt appears"
+        ]
+    },
+    "testscript": {
+        "testname": "Boot Sequence Validation Test",
+        "objective": "Script to validate boot sequence",
+        "file_name": "test_bootup.py",  
+        "init_scripts": [
+            "pip install pexpect==4.8.0"  
+        ],
+        "script": """
+            import pexpect
+            import re
+            
+            def test_boot():
+                output = pexpect.run('reboot')
+                
+                match = re.search(r'(POST)(.*)(uboot)(.*)(kernel)(.*)(init)(.*)(login)', str(output))
+                stages = match.groups()
+                
+                assert len(stages) == 8
+                assert all(stage for stage in stages)
+                
+                print('Test passed')
+                
+        """,
+        
+        "run_command": "python test_bootup.py",
+        "expected_result": "Test passed"  
+    }
 },
-{
-  "testname": "Test Image Version", 
-  "testcase": {
-    "testname": "Test Image Version",
-    "objective": "Validate that the router boots up with the correct Junos image version",
-    "steps": ["Power on the router", "Execute 'show version' command", "Validate Junos version matches expected version"] 
-  },
-  "testscript": {
-    "testname": "Test Image Version",
-    "objective": "Script to validate Junos version",
-    "file_name": "test_version.py",
-    "init_scripts": ["pip install pexpect"],
-    "script": """  
-import pexpect
 
-def test_version():
-  child = pexpect.spawn("telnet localhost")
-  child.expect("login:")
-  child.sendline("admin")
-  child.expect("Password:")
-  child.sendline("password")
-  child.expect("> ")
-  child.sendline("show version")
-  child.expect("Junos: 19.3R1.8") 
-  print("Image version test passed")
-    
-test_version()
-    """,
-    "run_command": "python test_version.py",
-    "expected_result": "Image version test passed"
-  }
-}
+{
+    "testname":"Total Boot Time Validation Test", 
+    "testcase": {
+        "testname": "Total Boot Time Validation Test",
+        "objective": "Validate that the total boot time is under 120 seconds.",
+        "steps": [
+            "1. Power on the router", 
+            "2. Note start time",
+            "3. Verify system ready login prompt appears",
+            "4. Note end time",
+            "5. Verify total time is under 120 seconds"
+        ],
+        "data": {
+            "threshold_time": 120 
+        }
+    },
+    "testscript": {
+        "testname": "Total Boot Time Validation Test",  
+        "objective": "Script to validate total boot time",
+        "file_name": "test_boottime.py",
+        "init_scripts": [
+            "pip install time"
+        ],
+        "script": """  
+            import time
+            import pexpect
+            
+            def test_boot_time():
+                start = time.time()
+                output = pexpect.run('reboot') 
+                end = time.time()
+                elapsed = end - start
+                
+                assert elapsed < THRESHOLD_TIME, f'Excess boot time: {elapsed}' 
+                print('Total boot time validation passed')
+                
+        """,
+        
+        "run_command": "THRESHOLD_TIME=120 python test_boottime.py",  
+        "expected_result": "Total boot time validation passed"
+    }
+}  
 ]
-###ENDLIST### Here is the Python list with test cases and test scripts for Bootup process of the MX480 router:
+###ENDLIST###
+
+The test cases validate the boot sequence and total boot time for the MX480 router. The associated test scripts leverage pexpect to automatically reboot and monitor the router, validating the key aspects of the boot process. Each test case and script is encapsulated as its own JSON object within a Python list. Here are the unit test cases and test scripts for Bootup process of the MX480 in Python 2 format:
 
 ###STARTLIST###
 [
   {
-    "testname": "Test Bootup Sequence", 
+    "testname": "Test Bootup Time", 
+    "testcase": {
+      "testname": "Test Bootup Time",
+      "objective": "Validate bootup time is within expected limit",
+      "steps": [
+        "Power on the MX480", 
+        "Note start time",
+        "Wait for device ready prompt",
+        "Note end time",
+        "Validate bootup time is less than 5 minutes"
+      ]
+    },
+    "testscript": {
+      "testname": "Test Bootup Time",
+      "objective": "Validate bootup time is within expected limit", 
+      "file_name": "test_bootup_time.py",
+      "init_scripts": "import time\nimport unittest",
+      "script": """
+        start = time.time()
+        # Code to power on and boot device
+        end = time.time()
+        bootup_time = end - start
+        self.assertLess(bootup_time, 300)
+      """,
+      "run_command": "python test_bootup_time.py",
+      "expected_result": "OK"
+    }
+  },
+  {
+    "testname": "Test Bootup Sequence",
     "testcase": {
       "testname": "Test Bootup Sequence",
-      "objective": "Validate bootup process and ensure all components initialize properly",
+      "objective": "Validate bootup sequence steps occur in correct order",
       "steps": [
-        "Verify POWER OK LED turns on after power cable connected",
-        "Verify SYSTEM OK LED turns on after boot initialization", 
-        "Verify all fans spinning and LEDs lit after 60 seconds",
-        "Verify can SSH into router after 90 seconds"
+        "Power on the MX480",
+        "Validate BIOS initialization messages are printed",
+        "Validate OS loader messages printed", 
+        "Validate kernel initialization messages printed",
+        "Validate system services initialized messages printed",
+        "Validate login prompt ready"  
       ]
     },
     "testscript": {
       "testname": "Test Bootup Sequence",
-      "objective": "Script to validate bootup LED state changes",
-      "file_name": "test_bootup.py",
-      "init_scripts": "pip install paramiko",
+      "objective": "Validate bootup sequence steps occur in correct order",
+      "file_name": "test_bootup_sequence.py",
+      "init_scripts": "import re",
       "script": """
-        import time
-        import paramiko
-        
-        IP = '192.168.1.1'
-        USERNAME = 'admin'
-        PASSWORD = 'Jnpr123'
-        
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        
-        start = time.time()
-        booted = False
-        while time.time() - start < 120:
-            try:
-                client.connect(IP, username=USERNAME, password=PASSWORD)
-                booted = True
-                break
-            except:
-                time.sleep(10)
-                
-        if booted:
-            print("SUCCESS: System bootup completed")
-        else:
-            print("FAILED: System failed to boot")
+        bootup_log = self.get_bootup_log() # Code to get bootup log
+        # Validate bootup sequence order using regex
+        self.assertRegex(bootup_log, r".*BIOS.*OS Loader.*Kernel.*Services.*login:")  
       """,
-      "run_command": "python test_bootup.py",
-      "expected_result": "SUCCESS: System bootup completed"
+      "run_command": "python test_bootup_sequence.py", 
+      "expected_result": "OK"
     }
   }
 ]
