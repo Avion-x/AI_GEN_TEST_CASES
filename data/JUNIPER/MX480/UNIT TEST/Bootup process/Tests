@@ -1,155 +1,154 @@
- Here are 2 Unit Test Cases and their respective python test cases for Bootup process cases for the Network MSeries Router MX480:
+ Here are 2 Unit Test Cases and respective python test cases for Bootup process for Network MSeries Router MX480:
 
 ###STARTLIST###
 [
 {
-    "testname":"Boot Sequence Validation Test",
-    "testcase": {
-        "testname": "Boot Sequence Validation Test", 
-        "objective": "Validate that the router goes through the expected boot stages in the correct order on power up.", 
-        "steps": [
-            "1. Power on the router", 
-            "2. Verify POST completes successfully",
-            "3. Verify uboot loads successfully", 
-            "4. Verify kernel loading stage appears",
-            "5. Verify init stage appears",
-            "6. Verify system ready login prompt appears"
-        ]
-    },
-    "testscript": {
-        "testname": "Boot Sequence Validation Test",
-        "objective": "Script to validate boot sequence",
-        "file_name": "test_bootup.py",  
-        "init_scripts": [
-            "pip install pexpect==4.8.0"  
-        ],
-        "script": """
-            import pexpect
-            import re
-            
-            def test_boot():
-                output = pexpect.run('reboot')
-                
-                match = re.search(r'(POST)(.*)(uboot)(.*)(kernel)(.*)(init)(.*)(login)', str(output))
-                stages = match.groups()
-                
-                assert len(stages) == 8
-                assert all(stage for stage in stages)
-                
-                print('Test passed')
-                
-        """,
-        
-        "run_command": "python test_bootup.py",
-        "expected_result": "Test passed"  
-    }
+  "testname": "Test Bootup with Valid Configuration",
+  "testcase": {
+    "testname": "Test Bootup with Valid Configuration",
+    "objective": "Validate router boots up properly with valid startup configuration",
+    "steps": [
+      "1. Power on the router",
+      "2. Verify console displays valid bootup logs without errors",     
+      "3. Verify router finishes booting up within expected time"
+    ]
+  },
+  "testscript": {
+    "testname": "Test Bootup with Valid Configuration",
+    "objective": "Validate router boots up properly with valid startup configuration",   
+    "file_name": "test_bootup_valid_config.py",
+    "init_scripts": "\"\"",  
+    "script": \"\"\"
+    import re
+
+    BOOTUP_TIME = 300 # seconds
+    bootup_log = \"\"\"
+    ... <valid bootup log> ...
+    \"\"\"
+
+    def test_bootup():
+        finish_time = re.search(r\"Finished loading ([0-9]+) seconds\", bootup_log)
+        assert finish_time, "No bootup finish time found"
+        finish_time = int(finish_time.group(1))   
+        assert finish_time <= BOOTUP_TIME, "Bootup took too long"
+
+    if __name__ == "__main__":
+        test_bootup()
+    \"\"\",
+    "run_command": "python test_bootup_valid_config.py",
+    "expected_result": "No assertions triggered, test case passed"
+  }
 },
-
 {
-    "testname":"Total Boot Time Validation Test", 
-    "testcase": {
-        "testname": "Total Boot Time Validation Test",
-        "objective": "Validate that the total boot time is under 120 seconds.",
-        "steps": [
-            "1. Power on the router", 
-            "2. Note start time",
-            "3. Verify system ready login prompt appears",
-            "4. Note end time",
-            "5. Verify total time is under 120 seconds"
-        ],
-        "data": {
-            "threshold_time": 120 
-        }
-    },
-    "testscript": {
-        "testname": "Total Boot Time Validation Test",  
-        "objective": "Script to validate total boot time",
-        "file_name": "test_boottime.py",
-        "init_scripts": [
-            "pip install time"
-        ],
-        "script": """  
-            import time
-            import pexpect
-            
-            def test_boot_time():
-                start = time.time()
-                output = pexpect.run('reboot') 
-                end = time.time()
-                elapsed = end - start
-                
-                assert elapsed < THRESHOLD_TIME, f'Excess boot time: {elapsed}' 
-                print('Total boot time validation passed')
-                
-        """,
-        
-        "run_command": "THRESHOLD_TIME=120 python test_boottime.py",  
-        "expected_result": "Total boot time validation passed"
-    }
-}  
-]
-###ENDLIST###
+  "testname": "Test Bootup with Invalid Configuration", 
+  "testcase": {
+    "testname": "Test Bootup with Invalid Configuration",
+    "objective": "Validate error handling when attempting to boot with invalid startup config",
+    "steps": [
+      "1. Power on the router with invalid configuration",
+      "2. Verify console displays config validation errors",
+      "3. Verify router falls back to default configuration" 
+    ]
+  },
+  "testscript": {
+    "testname": "Test Bootup with Invalid Configuration",
+    "objective": "Validate error handling when attempting to boot with invalid startup config",
+    "file_name": "test_bootup_invalid_config.py",
+    "init_scripts": "\"\"",
+    "script": \"\"\"
+    import re
+    
+    ERROR_STRING = "Failed to parse configuration"
+    FALLBACK_STRING = "...Loading default configuration..."
 
-The test cases validate the boot sequence and total boot time for the MX480 router. The associated test scripts leverage pexpect to automatically reboot and monitor the router, validating the key aspects of the boot process. Each test case and script is encapsulated as its own JSON object within a Python list. Here are the unit test cases and test scripts for Bootup process of the MX480 in Python 2 format:
+    bootup_log = \"\"\" 
+    ... <invalid config bootup log> ...
+    \"\"\"
+
+    def test_invalid_config():
+        assert ERROR_STRING in bootup_log, "No config error message"  
+        assert FALLBACK_STRING in bootup_log, "No fallback to default config"
+
+    if __name__ == "__main__":
+        test_invalid_config()
+    \"\"\",
+    "run_command": "python test_bootup_invalid_config.py",
+    "expected_result": "No assertions triggered, test case passed"
+  }
+}]
+###ENDLIST### Here is a Python list with JSON objects for test cases and test scripts for the Bootup process of the MX480:
 
 ###STARTLIST###
 [
   {
-    "testname": "Test Bootup Time", 
+    "testname": "Test Bootup Sequence", 
     "testcase": {
-      "testname": "Test Bootup Time",
-      "objective": "Validate bootup time is within expected limit",
+      "testname": "Test Bootup Sequence",
+      "objective": "Validate the device goes through the expected bootup sequence",
       "steps": [
-        "Power on the MX480", 
-        "Note start time",
-        "Wait for device ready prompt",
-        "Note end time",
-        "Validate bootup time is less than 5 minutes"
+        "Power on the device",
+        "Verify boot rom version",
+        "Validate boot loader version", 
+        "Check kernel version",
+        "Validate system initialization"
       ]
     },
     "testscript": {
-      "testname": "Test Bootup Time",
-      "objective": "Validate bootup time is within expected limit", 
-      "file_name": "test_bootup_time.py",
-      "init_scripts": "import time\nimport unittest",
+      "testname": "Test Bootup Sequence",
+      "objective": "Script to validate bootup sequence",  
+      "file_name": "test_bootup.py",
+      "init_scripts": "pip install unittest",
       "script": """
-        start = time.time()
-        # Code to power on and boot device
-        end = time.time()
-        bootup_time = end - start
-        self.assertLess(bootup_time, 300)
+        import unittest
+        
+        class TestBootup(unittest.TestCase):
+          def test_bootup(self):
+            # Test steps to validate bootup sequence
+            self.assertEqual(boot_rom_version, "1.0") 
+            self.assertEqual(boot_loader_version, "2.0")
+            self.assertEqual(kernel_version, "3.0")
+            self.assertTrue(system_initialized)
+          
       """,
-      "run_command": "python test_bootup_time.py",
+      "run_command": "python test_bootup.py",
       "expected_result": "OK"
     }
   },
   {
-    "testname": "Test Bootup Sequence",
+    "testname": "Test Bootup Time",
     "testcase": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Validate bootup sequence steps occur in correct order",
+      "testname": "Test Bootup Time",
+      "objective": "Check if device boots up within expected time",
       "steps": [
-        "Power on the MX480",
-        "Validate BIOS initialization messages are printed",
-        "Validate OS loader messages printed", 
-        "Validate kernel initialization messages printed",
-        "Validate system services initialized messages printed",
-        "Validate login prompt ready"  
+        "Power on the device", 
+        "Note start time",
+        "Check if login prompt appears",
+        "Note end time",
+        "Validate bootup time is less than 120 seconds"  
       ]
     },
     "testscript": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Validate bootup sequence steps occur in correct order",
-      "file_name": "test_bootup_sequence.py",
-      "init_scripts": "import re",
+      "testname": "Test Bootup Time",
+      "objective": "Script to validate bootup time",
+      "file_name": "test_boottime.py",
+      "init_scripts": "pip install time",
       "script": """
-        bootup_log = self.get_bootup_log() # Code to get bootup log
-        # Validate bootup sequence order using regex
-        self.assertRegex(bootup_log, r".*BIOS.*OS Loader.*Kernel.*Services.*login:")  
+        import time
+        
+        start = time.time()
+        # Code to power on device
+        
+        end = time.time() 
+        duration = end - start
+        
+        assert duration < 120
+        
       """,
-      "run_command": "python test_bootup_sequence.py", 
+      "run_command": "python test_boottime.py", 
       "expected_result": "OK"
     }
   }
 ]
 ###ENDLIST###
+
+The above Python list contains two test cases with their respective test scripts encapsulated as JSON objects. The first test case validates the bootup sequence while the second one checks the bootup time. Each test script has the required fields including objective, test steps, and expected result. The scripts are minimal and focused on the test objective. Please let me know if you need any changes or have additional test cases to include.
