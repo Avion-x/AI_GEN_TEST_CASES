@@ -1,240 +1,145 @@
- Here are 2 unit test cases and corresponding Python test code for bootup process of MX480 router:
+ Here are 2 Unit Test Cases and respective python test cases for Bootup process for Network MSeries Router MX480:
 
-## Test Case 1 - Cold Boot
-Verify router boots up successfully from powered off state
-
-```python
+###STARTLIST###
+[
+  {
+    "testname": "Test Bootup Time", 
+    "testcase": {
+      "testname": "Test Bootup Time",
+      "objective": "Validate bootup time is under 120 seconds",
+      "steps": [
+        "Power on the router", 
+        "Note start time",
+        "Wait for router to complete bootup",
+        "Note end time",
+        "Validate bootup time is under 120 seconds"
+      ],
+      "test_data": {
+        "max_bootup_time": 120
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Time",
+      "objective": "Validate bootup time is under 120 seconds", 
+      "file_name": "test_bootup_time.py",
+      "init_scripts": "import time\nimport unittest",
+      "script": """
+import time
 import unittest
-from router import MX480
 
-class TestMX480Bootup(unittest.TestCase):
+max_bootup_time = 120
 
-    def test_cold_boot(self):
-        router = MX480()
-        router.power_off()
-        router.power_on()
-        self.assertEqual(router.get_state(), 'ACTIVE')
-```
-
-## Test Case 2 - Warm Boot 
-Verify router reboot successfully from active state
-
-```python 
-import unittest
-from router import MX480
-
-class TestMX480Bootup(unittest.TestCase):
-
-    def test_warm_boot(self):
-        router = MX480()
-        self.assertEqual(router.get_state(), 'ACTIVE') 
-        router.reboot()
-        self.assertEqual(router.get_state(), 'ACTIVE')
-``` Here are 2 unit test cases for the bootup process for MX480 router with Python test code:
-
-## Test Case 1: Normal Bootup
-
-### Setup
-- Power off the MX480 router
-- Connect console cable to the router
-- Start console capture
-
-### Execution
-- Power on the MX480 router
-- Wait for bootup to complete 
-
-### Verification
-- Verify console output contains:
-    - `Booting kernel` 
-    - `Starting kernel ...`
-    - `Initiating ESXi boot...`
-    - `Booting ESXi`
-    - No errors or exceptions logged
-- Verify router interfaces are up after bootup
-- Verify management connectivity to router
-
-### Teardown
-- Stop console capture
-- Disconnect console cable
-
-```python
-import unittest
-from router import Router
-
-class MX480BootupTest(unittest.TestCase):
-
-    def test_normal_bootup(self):
-        router = Router("MX480")
+class TestBootupTime(unittest.TestCase):
+    def test_bootup_under_120_sec(self):
+        start_time = time.time()
+        # Code to power on router
+        bootup_completed = False
+        while not bootup_completed:
+            # Code to check if router bootup is complete
+            bootup_completed = True
+        end_time = time.time()
         
-        # Setup
-        router.power_off()
-        router.connect_console()
-        router.start_console_capture()
-        
-        # Execution
-        router.power_on()
-        router.wait_for_bootup()
-        
-        # Verification
-        self.assertIn("Booting kernel", router.console_output)
-        self.assertIn("Starting kernel...", router.console_output)
-        self.assertIn("Initiating ESXi boot...", router.console_output)
-        self.assertIn("Booting ESXi", router.console_output)
-        self.assertFalse(router.has_errors())
-        
-        self.assertTrue(router.interfaces_up())
-        self.assertTrue(router.management_active())
-       
-        # Teardown
-        router.stop_console_capture()
-        router.disconnect_console()
-
-```
-
-## Test Case 2: Bootup with Corrupted Firmware
-
-### Setup
-- Power off the MX480 router
-- Connect console cable to the router
-- Start console capture
-- Corrupt the firmware image on the router
-
-### Execution
-- Power on the MX480 router
-- Wait for bootup to complete
-
-### Verification
-- Verify console output contains:
-    - `Booting kernel`
-    - `Starting kernel...`
-    - `Firmware corruption detected` 
-    - `Halting system...`
-- Verify router did not fully bootup
-- Verify no management connectivity to router
-
-### Teardown 
-- Stop console capture
-- Disconnect console cable
-- Restore firmware image
-
-```python
+        bootup_time = end_time - start_time
+        self.assertLess(bootup_time, max_bootup_time)
+""",
+      "run_command": "python test_bootup_time.py",
+      "expected_result": "OK"
+    }
+  },
+  {
+    "testname": "Test Hardware Inventory",
+    "testcase": {
+      "testname": "Test Hardware Inventory",
+      "objective": "Validate hardware inventory report contains expected components after bootup",
+      "steps": [
+        "Power on the router",
+        "Wait for router to complete bootup",
+        "Run 'show hardware inventory' command", 
+        "Validate report contains expected components like fans, power supplies, ports etc."  
+      ],
+      "test_data": {
+        "expected_components": ["FanTray", "PowerSupply", "MIC"]  
+      }
+    },
+    "testscript": {
+      "testname": "Test Hardware Inventory",    
+      "objective": "Validate hardware inventory contains expected components after bootup",
+      "file_name": "test_hardware_inventory.py",
+      "init_scripts": "import unittest\nfrom router import Router",
+      "script": """  
 import unittest
 from router import Router
 
-class MX480BootupTest(unittest.TestCase):
+expected_components = ["FanTray", "PowerSupply", "MIC"]
 
-    def test_corrupted_firmware_bootup(self):
-        router = Router("MX480")
-        
-        # Setup
-        router.power_off() 
-        router.connect_console()
-        router.start_console_capture()
-        router.corrupt_firmware()
-        
-        # Execution
+class TestHardwareInventory(unittest.TestCase):
+    def test_hardware_inventory(self):
+        router = Router()
         router.power_on()
         router.wait_for_bootup()
         
-        # Verification
-        self.assertIn("Booting kernel", router.console_output)
-        self.assertIn("Starting kernel...", router.console_output)
-        self.assertIn("Firmware corruption detected", router.console_output)
-        self.assertIn("Halting system...", router.console_output)
+        inventory = router.run_command("show hardware inventory")
+        for component in expected_components:
+            self.assertIn(component, inventory)  
+""",
+      "run_command": "python test_hardware_inventory.py", 
+      "expected_result": "OK"
+    }
+  }
+]
+###ENDLIST### Here is the Python list with JSON test case objects for MX480 bootup process:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Boot Sequence", 
+    "testcase": {
+      "objective": "Validate that the MX480 goes through the correct bootup sequence",
+      "steps": [
+        "Power on the MX480", 
+        "Validate bootrom version",
+        "Validate uboot version", 
+        "Validate linux kernel version",
+        "Validate successful boot to login prompt"  
+      ],
+      "test_data": {
+        "expected_bootrom_version": "1.0",
+        "expected_uboot_version": "2021.10",
+        "expected_kernel_version": "5.4.0-juniper",
+        "login_prompt": "login:"
+      }
+    },
+    "testscript": {
+      "testname": "Test Boot Sequence",
+      "objective": "Automate validation of MX480 boot sequence",  
+      "file_name": "test_mx480_boot.py",
+      "init_scripts": "pip install pexpect",
+      "script": """
+        import pexpect
         
-        self.assertFalse(router.interfaces_up())
-        self.assertFalse(router.management_active())
+        bootrom_version = "1.0"
+        uboot_version = "2021.10" 
+        kernel_version = "5.4.0-juniper"
         
-        # Teardown
-        router.stop_console_capture()
-        router.disconnect_console()
-        router.restore_firmware()
-``` Here are some sample Python 2 unit test cases and code for testing the bootup process of the Juniper MX480 router:
-
-```python
-import unittest
-from netmiko import ConnectHandler
-
-class TestMX480Bootup(unittest.TestCase):
-
-    def setUp(self):
-        self.mx480 = {
-            'device_type': 'juniper',
-            'host': 'mx480.example.com',
-            'username': 'testuser',
-            'password': 'testpass'
-        }
-    
-    def test_console_access(self):
-        net_connect = ConnectHandler(**self.mx480)
-        output = net_connect.send_command("show version")
-        self.assertIn("Junos:", output)
-
-    def test_check_interfaces(self):
-        net_connect = ConnectHandler(**self.mx480)
-        output = net_connect.send_command("show interfaces terse")
-        self.assertNotIn("Interface               Admin Link Proto    Local                 Remote", output)
-
-    def test_check_routing_engine(self):
-        net_connect = ConnectHandler(**self.mx480)
-        output = net_connect.send_command("show chassis routing-engine")
-        self.assertIn("Routing Engine status:", output)
-        self.assertIn("Current state:", output)
-        self.assertIn("Temperature:", output)
-    
-    def test_check_linecards(self):
-        net_connect = ConnectHandler(**self.mx480)
-        output = net_connect.send_command("show chassis fpc")
-        self.assertIn("Slot 0 information:", output)
-        self.assertIn("PIC 0 information:", output)
-
-if __name__ == '__main__':
-    unittest.main()
-```
-
-This contains some sample test cases that connect to the MX480 router over SSH using Netmiko, execute various `show` commands, and assert that the expected output is present to validate the device is booted up properly. Tests check basic console access, interfaces, routing engine, and linecards. These could be expanded on with additional cases. Here are 2 unit test cases and corresponding Python test code snippets for testing the bootup process on an MX480 router:
-
-### Test Case 1: Verify bootstrap config loads properly
-
-```python
-import unittest
-from netmiko import ConnectHandler
-
-class TestBootstrapConfig(unittest.TestCase):
-
-    def test_bootstrap_config(self):
-        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='netconf', password='juniper123')
-        output = device.send_command('show configuration | display set') 
-        self.assertIn('system host-name mx480', output)
-        self.assertIn('interfaces ge-0/0/0 unit 0 family inet address 192.168.0.1/24', output)
-        device.disconnect()
-
-if __name__ == '__main__':
-    unittest.main()
-```
-
-This test case connects to the router, runs 'show configuration' command and verifies the hostname and interface configuration exists as expected in the bootstrap config.
-
-### Test Case 2: Verify protocols configured properly after bootup
-
-```python
-import unittest
-from netmiko import ConnectHandler
-
-class TestProtocolsAfterBootup(unittest.TestCase):
-
-    def test_ospf_bgp_status(self):
-        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='netconf', password='juniper123')
-        ospf_status = device.send_command('show ospf neighbor')
-        bgp_status = device.send_command('show bgp summary')
+        child = pexpect.spawn("telnet mx480")
+        child.expect("bootrom version: (?P<ver>.*)")
+        bootrom_ver = child.match.group("ver")
+        assert bootrom_ver == bootrom_version
         
-        self.assertIn('OSPF is Enabled', ospf_status) 
-        self.assertIn('BGP is Enabled', bgp_status)
+        child.expect("U-Boot 20(?P<ver>.*)")
+        uboot_ver = child.match.group("ver")
+        assert uboot_ver == uboot_version
         
-        device.disconnect()
+        child.expect("Linux version (?P<ver>.*)")
+        kernel_ver = child.match.group("ver")        
+        assert kernel_ver == kernel_version
         
-if __name__ == '__main__':
-    unittest.main()
-```
-
-This test case connects after bootup and verifies that OSPF and BGP protocols are up and running by checking their status.
+        child.expect("login:")
+        print("Login prompt found")
+      """,
+      "run_command": "python test_mx480_boot.py",
+      "expected_result": "All version checks passed. Login prompt found."
+    }
+  }
+]
+###ENDLIST###
