@@ -1,103 +1,113 @@
- Here are 2 Unit Test Cases and respective python test cases for Bootup process for Network MSeries Router MX480:
-
-###STARTLIST###
-[
-{"testname":"Test Bootup Process",
- "testcase":{
-  "testname":"Test Bootup Process",
-  "objective":"Validate router boots up correctly",
-  "steps":["Verify power LED turns green", "Verify system LED turns green", "Verify fans spin up", "Verify router outputs console login prompt"]
- },
- "testscript":{
-  "testname":"Test Bootup Process", 
-  "objective":"Validate router boots up correctly",
-  "file_name":"test_bootup.py",
-  "init_scripts":"import unittest",
-  "script":"\nimport sys\n\ndef test_bootup(capsys):\n    print('Power LED is green')\n    print('System LED is green')\n    print('Fans have spun up')\n    print('Login prompt received')\n    out, err = capsys.readouterr()\n    assert out == \"Power LED is green\\nSystem LED is green\\nFans have spun up\\nLogin prompt received\\n\"","
-  "run_command":"python test_bootup.py",
-  "expected_result":"All print statements are output, test passes"
- }
-},
-{"testname":"Test Bootup Failure",
- "testcase":{
-  "testname":"Test Bootup Failure",
-   "objective":"Validate bootup failure is detected",
-   "steps":["Verify power LED does not turn green", "Verify system LED does not turn green", "Verify fans do not spin up", "Verify no console login prompt"]
- },
- "testscript":{
-  "testname":"Test Bootup Failure",
-  "objective":"Validate bootup failure is detected",  
-  "file_name":"test_bootup_fail.py",
-  "init_scripts":"import unittest",
-  "script":"\nimport sys\n\ndef test_bootup(capsys):\n    print('Power LED is off')\n    print('System LED is off')\n    print('Fans have not spun up')\n    print('No login prompt received')\n    out, err = capsys.readouterr()\n    assert out == \"Power LED is off\\nSystem LED is off\\nFans have not spun up\\nNo login prompt received\\n\"","
-  "run_command":"python test_bootup_fail.py",
-  "expected_result":"All print statements are output, test passes" 
- }
-}]
-###ENDLIST### Here are the unit test cases and test scripts for Bootup process of the MX480 in Python 2 format:
+ Here are 2 Unit Test Cases with Python test scripts for Bootup process for MX480 router:
 
 ###STARTLIST###
 [
   {
-    "testname": "test_bootup",
+    "testname": "Test Bootup Time",
     "testcase": {
-      "testname": "test_bootup",
-      "objective": "Validate bootup process completes successfully", 
+      "testname": "Test Bootup Time",
+      "objective": "Verify bootup time is within specs",
       "steps": [
-        "Power on the device",
-        "Verify console displays boot messages",
-        "Validate device transitions to operational state"
-      ]
+        "Power on the router", 
+        "Start a timer when power applied",
+        "Stop timer when login prompt appears",
+        "Verify bootup time is less than 5 minutes"
+      ],
+      "test_data": {
+        "max_bootup_time": 300 
+      }
     },
     "testscript": {
-      "testname": "test_bootup",
-      "objective": "Script to validate bootup process",
-      "file_name": "test_bootup.py",
-      "init_scripts": [
-        "pip install pytest"  
-      ],
+      "testname": "Test Bootup Time",  
+      "objective": "Verify bootup time is within specs",
+      "file_name": "test_bootup_time.py",
+      "init_scripts": ["import time"],
       "script": """
-        import pytest
-        
-        def test_bootup():
-          print("Powered on device")
-          print("Displayed boot messages")  
-          assert True, "Device did not transition to operational state"
+        start_time = time.time()
+        # Code to power on router
+        # Code to print login prompt 
+        end_time = time.time()
+        bootup_time = end_time - start_time
+        assert bootup_time < 300
       """,
-      "run_command": "pytest test_bootup.py",
-      "expected_result": "1 passed"
+      "run_command": "python test_bootup_time.py",
+      "expected_result": "Test passes if bootup time is less than 5 minutes"
     }
   },
   {
-    "testname": "test_bootup_failure",
+    "testname": "Test Bootup Sequence", 
     "testcase": {
-      "testname": "test_bootup_failure", 
-      "objective": "Validate boot failure is detected",
-      "steps": [ 
-        "Simulate failure during boot",
-        "Verify failure message is displayed", 
-        "Validate device transitions to failed state"
+      "testname": "Test Bootup Sequence",
+      "objective": "Verify components boot up in correct sequence",
+      "steps": [
+        "Power on the router", 
+        "Verify power supply fans spin first",
+        "Verify route engine powers on",
+        "Verify line cards boot", 
+        "Validate correct boot sequence"  
+      ],
+      "test_data": {
+        "boot_sequence": [
+          "Power supply fans",
+          "Route engine",  
+          "Line cards"
+        ]
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Verify components boot up in correct sequence",
+      "file_name": "test_bootup_sequence.py", 
+      "init_scripts": [],
+      "script": """ 
+        boot_sequence = [] 
+      
+        # Code to monitor/log component bootup sequence  
+      
+        assert boot_sequence == ["Power supply fans", "Route engine", "Line cards"]
+      """,
+      "run_command": "python test_bootup_sequence.py",
+      "expected_result": "Test passes if components boot in sequence: fans, route engine, line cards"
+    }
+  }
+]
+###ENDLIST### Here is the Python list with test cases and test scripts for Bootup process of the MX480 router enclosed within the delimiters:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Bootup Sequence", 
+    "testcase": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Validate bootup process and ensure all components initialize properly",
+      "steps": [
+        "POWERS LED turns green", 
+        "STATUS LED turns green", 
+        "FPCs are powered up and all LEDs turn green"
       ]
     },
     "testscript": {
-      "testname": "test_bootup_failure",
-      "objective": "Script to validate boot failure",
-      "file_name": "test_bootup_failure.py", 
-      "init_scripts": [
-        "pip install pytest"
-      ],
+      "testname": "Test Bootup Sequence",
+      "objective": "Script to validate bootup process by checking syslog messages",  
+      "file_name": "test_bootup.py",
+      "init_scripts": "import re",
       "script": """
-        import pytest
+        with open('syslog.log') as f:
+          syslog = f.read()
+          
+        def test_led_status():
+          pow_led = re.search('POWERS LED turned green', syslog)
+          stat_led = re.search('STATUS LED turned green', syslog)
+          assert pow_led and stat_led
         
-        def test_boot_failure():
-          print("Simulated boot failure")  
-          print("Displayed failure message")
-          with pytest.raises(AssertionError):
-            assert True, "Device transitioned to operational state" 
+        def test_fpc_status():
+          for fpc in range(8):
+            fpc_pat = 'FPC{} powered up'.format(fpc) 
+            assert re.search(fpc_pat, syslog)
       """,
-      "run_command": "pytest test_bootup_failure.py",
-      "expected_result": "1 passed"   
+      "run_command": "python test_bootup.py",
+      "expected_result": "All assertions should pass"
     }
-  } 
+  }
 ]
 ###ENDLIST###
