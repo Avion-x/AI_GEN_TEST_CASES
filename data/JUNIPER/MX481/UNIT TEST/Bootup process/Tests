@@ -1,65 +1,36 @@
- Here are 2 unit test cases for bootup process of the Juniper Networks MX Series MX480 router along with sample Python test code:
+ Here are 2 unit test cases and their respective Python test code for bootup process of MX481 router:
 
-**Test Case 1 - Verify bootup completes successfully**
-
-Steps:
-
-1. Power on the router
-2. Verify the system boots up completely and the CLI prompt is displayed
+## Test Case 1 - Normal Bootup
+Verify router boots up successfully and reaches operational state.
 
 ```python
 import unittest
-from netmiko import ConnectHandler
+from router import MX481
 
-class TestRouterBootup(unittest.TestCase):
+class TestMX481Bootup(unittest.TestCase):
 
-    def test_bootup_completes(self):
-        device = {
-            'device_type': 'juniper',
-            'host': '192.168.1.1', 
-            'username': 'netconf',
-            'password': 'password'
-        }
+    def test_normal_bootup(self):
+        router = MX481()
+        router.power_on()
         
-        net_connect = ConnectHandler(**device)
-        output = net_connect.send_command('')
-        
-        self.assertIn('>', output)
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(router.get_state(), 'operational')
 ```
 
-This test connects to the router after bootup and verifies the CLI prompt is seen to indicate successful bootup.
+## Test Case 2 - Bootup with faulty component
+Verify router detects faulty component during bootup and raises alarm. 
 
-**Test Case 2 - Verify bootup time is within threshold** 
-
-Steps:
-
-1. Power on the router
-2. Note start time of bootup
-3. Verify bootup completes and CLI prompt is seen
-4. Note end time of bootup
-5. Verify bootup time is less than 300 seconds
-
-```python
+```python  
 import unittest
-from datetime import datetime
+from router import MX481
 
-class TestRouterBootupTime(unittest.TestCase):
+class TestMX481Bootup(unittest.TestCase):
 
-    def test_bootup_time(self):
-        start_time = datetime.now()
+    def test_faulty_component_bootup(self):
+        router = MX481()
+        router.set_faulty_component('fan')
         
-        # router bootup steps
+        with self.assertRaises(AlarmError):
+            router.power_on()
         
-        end_time = datetime.now()
-        bootup_time = (end_time - start_time).total_seconds()
-        
-        self.assertLess(bootup_time, 300) 
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(router.get_state(),'fault')
 ```
-
-This test verifies the router bootup time is less than a threshold of 300 seconds. The start and end time are noted to calculate total bootup duration.
