@@ -1,113 +1,112 @@
- Here are 2 Unit Test Cases with Python test scripts for Bootup process for MX480 router:
+ Here are 2 Unit Test Cases and corresponding python test scripts for Bootup process cases for MX480 Router:
 
 ###STARTLIST###
 [
-  {
-    "testname": "Test Bootup Time",
-    "testcase": {
-      "testname": "Test Bootup Time",
-      "objective": "Verify bootup time is within specs",
-      "steps": [
-        "Power on the router", 
-        "Start a timer when power applied",
-        "Stop timer when login prompt appears",
-        "Verify bootup time is less than 5 minutes"
-      ],
-      "test_data": {
-        "max_bootup_time": 300 
-      }
-    },
-    "testscript": {
-      "testname": "Test Bootup Time",  
-      "objective": "Verify bootup time is within specs",
-      "file_name": "test_bootup_time.py",
-      "init_scripts": ["import time"],
-      "script": """
-        start_time = time.time()
-        # Code to power on router
-        # Code to print login prompt 
-        end_time = time.time()
-        bootup_time = end_time - start_time
-        assert bootup_time < 300
-      """,
-      "run_command": "python test_bootup_time.py",
-      "expected_result": "Test passes if bootup time is less than 5 minutes"
-    }
+{
+  "testname": "Test Bootup Sequence",
+  "testcase": {
+    "testname": "Test Bootup Sequence",
+    "objective": "Validate router goes through proper bootup sequence", 
+    "steps": ["Power on router", "Verify fans spin up", "Verify boot messages on console", "Verify router reaches user exec prompt"]
   },
-  {
-    "testname": "Test Bootup Sequence", 
-    "testcase": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Verify components boot up in correct sequence",
-      "steps": [
-        "Power on the router", 
-        "Verify power supply fans spin first",
-        "Verify route engine powers on",
-        "Verify line cards boot", 
-        "Validate correct boot sequence"  
-      ],
-      "test_data": {
-        "boot_sequence": [
-          "Power supply fans",
-          "Route engine",  
-          "Line cards"
-        ]
-      }
-    },
-    "testscript": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Verify components boot up in correct sequence",
-      "file_name": "test_bootup_sequence.py", 
-      "init_scripts": [],
-      "script": """ 
-        boot_sequence = [] 
-      
-        # Code to monitor/log component bootup sequence  
-      
-        assert boot_sequence == ["Power supply fans", "Route engine", "Line cards"]
-      """,
-      "run_command": "python test_bootup_sequence.py",
-      "expected_result": "Test passes if components boot in sequence: fans, route engine, line cards"
-    }
-  }
-]
-###ENDLIST### Here is the Python list with test cases and test scripts for Bootup process of the MX480 router enclosed within the delimiters:
+  "testscript": {
+    "testname": "Test Bootup Sequence",
+    "objective": "Validate router goes through proper bootup sequence",
+    "file_name": "test_bootup.py",
+    "init_scripts": [
+      "pip install pytest"
+    ],
+    "script": """
+import pytest
 
+def test_bootup():
+    # Steps to validate bootup via console output
+    assert fans_spin_up == True  
+    assert boot_messages_printed == True 
+    assert reached_user_exec_prompt == True
+""",
+    "run_command": "pytest test_bootup.py", 
+    "expected_result": "2 passed, 0 failed"
+  }
+},
+{
+  "testname": "Test Bootup Time", 
+  "testcase": {
+    "testname": "Test Bootup Time",
+    "objective": "Validate bootup time is under 5 minutes",
+    "steps": ["Power on router", "Note start time", "Verify router reaches user exec prompt", "Note end time", "Subtract end time from start time"] 
+  },
+  "testscript": {
+    "testname": "Test Bootup Time",
+    "objective": "Validate bootup time is under 5 minutes",
+    "file_name": "test_bootup_time.py", 
+    "init_scripts": [
+      "pip install pytest"
+    ],
+    "script": """  
+import time
+import pytest
+
+def test_bootup_time():
+    start_time = time.time()  
+    # Router bootup steps  
+    end_time = time.time()   
+    bootup_time = end_time - start_time  
+    assert bootup_time <= 300 # seconds
+""",
+    "run_command": "pytest test_bootup_time.py",
+    "expected_result": "1 passed, 0 failed"
+  }
+}
+]
+###ENDLIST### Here is the Python 2 unit test case list for Bootup process of the MX480 router:
+
+```python
 ###STARTLIST###
 [
   {
-    "testname": "Test Bootup Sequence", 
+    "testname": "test_bootup", 
     "testcase": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Validate bootup process and ensure all components initialize properly",
+      "testname": "test_bootup",
+      "objective": "Validate bootup process completes successfully",
       "steps": [
-        "POWERS LED turns green", 
-        "STATUS LED turns green", 
-        "FPCs are powered up and all LEDs turn green"
+        "Power on the router",
+        "Verify bootup messages are printed on console", 
+        "Validate router transitions to operational state"
       ]
     },
     "testscript": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Script to validate bootup process by checking syslog messages",  
+      "testname": "test_bootup",
+      "objective": "Script to validate bootup process",
       "file_name": "test_bootup.py",
-      "init_scripts": "import re",
+      "init_scripts": "import re\nimport sys\nimport subprocess",
       "script": """
-        with open('syslog.log') as f:
-          syslog = f.read()
-          
-        def test_led_status():
-          pow_led = re.search('POWERS LED turned green', syslog)
-          stat_led = re.search('STATUS LED turned green', syslog)
-          assert pow_led and stat_led
-        
-        def test_fpc_status():
-          for fpc in range(8):
-            fpc_pat = 'FPC{} powered up'.format(fpc) 
-            assert re.search(fpc_pat, syslog)
+        def test_bootup():
+            # Steps to power on router
+            power_on_router()
+            
+            # Verify boot messages using regex
+            bootup_messages = get_console_log()
+            assert re.search("Booting kernel", bootup_messages)
+            
+            # Check operational state
+            op_state = get_operational_state()  
+            assert op_state == "operational"
       """,
       "run_command": "python test_bootup.py",
-      "expected_result": "All assertions should pass"
+      "expected_result": "Bootup completed successfully"
     }
   }
-]
+]  
 ###ENDLIST###
+```
+
+The above test case checks the bootup process by:
+
+1. Powering on the router
+2. Validating bootup messages on console using regex 
+3. Checking if router transitions to operational state
+
+The corresponding test script imports necessary packages, defines the test logic, run command and expected result.
+
+I have encapsulated the test case and script within their own JSON objects inside a Python list. Let me know if you need any other test cases!
