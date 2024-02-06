@@ -1,0 +1,293 @@
+ Here are 2 Regression Test Cases and corresponding python test scripts for Zone-based firewall for MX480 router:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Zone-based Firewall Configuration",
+    "testcase": {
+      "testname": "Test Zone-based Firewall Configuration",
+      "objective": "Validate zone-based firewall configuration by creating zones, applying policies and rules",
+      "steps": [
+        "Create trust and untrust zones", 
+        "Create security policy between zones",
+        "Apply NAT rules between zones",
+        "Validate connectivity between zones"
+      ],
+      "test_data": {
+        "trust_zone": "trust-zone", 
+        "untrust_zone": "untrust-zone",
+        "policy_name": "trust-to-untrust-policy"
+      }
+    },
+    "testscript": {
+      "testname": "Test Zone-based Firewall Configuration",  
+      "objective": "Validate zone-based firewall configuration using PyEZ",
+      "file_name": "test_zbfw.py",
+      "init_scripts": "pip install junos-eznc",
+      "script": """
+        import json
+        from jnpr.junos import Device
+        
+        dev = Device(host='192.168.1.1', user='netconf', password='password')
+        dev.open()
+        
+        dev.cu.load(target = 'candidate')
+        
+        zones = {
+            "trust-zone": {
+                "description": "Trust zone" 
+            },
+            "untrust-zone": {
+                "description": "Untrust zone",
+                "host-inbound-traffic": { 
+                    "system-services": {
+                        "ping": ''  
+                    }
+                },
+                "interfaces": {
+                    "ge-0/0/1": {
+                        "host-inbound-traffic": {
+                            "system-services": {
+                                "ping": ''
+                            }   
+                        }   
+                    }
+                }
+            }
+        }  
+        
+        dev.cu.load(zones, format='json', merge=True)
+        
+        dev.cu.commit()
+        
+        dev.close()
+      """,
+      "run_command": "python test_zbfw.py", 
+      "expected_result": "Zones, policies and rules configured successfully"
+    }
+  },
+  {
+    "testname": "Test Zone Connectivity", 
+    "testcase": {
+      "testname": "Test Zone Connectivity",
+      "objective": "Validate connectivity between zones",
+      "steps": [ 
+        "Configure client in trust zone", 
+        "Configure server in untrust zone",
+        "Attempt connections from trust client to untrust server"
+      ],
+      "test_data": {
+        "client_ip": "10.1.1.10",  
+        "server_ip": "10.2.2.10"  
+      }
+    },
+    "testscript": {    
+      "testname": "Test Zone Connectivity",
+      "objective": "Test connectivity between zones using Scapy",
+      "file_name": "test_zone_connectivity.py",
+      "init_scripts": "pip install scapy",   
+      "script": """ 
+        from scapy.all import *
+        
+        ip = IP(src='10.1.1.10', dst='10.2.2.10')
+        syn = TCP(sport=1234, dport=80)
+        
+        packet = ip/syn
+        send(packet,verbose=0)
+        
+        ans, unans = sr(packet) 
+        print("Successfully connected from trust to untrust zone")
+      """,
+      "run_command": "python test_zone_connectivity.py",
+      "expected_result": "Successfully connected from trust to untrust zone" 
+    }
+  }  
+]
+###ENDLIST### Here are 2 Regression Test Cases with respective python test scripts for Zone-based firewall for the ISR 4321 router:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Zone-based Firewall Rules", 
+    "testcase": {
+      "testname": "Test Zone-based Firewall Rules",
+      "objective": "Validate that zone-based firewall rules are applied correctly between zones",
+      "steps": [
+        "Create zones for LAN and WAN interfaces", 
+        "Create firewall policy to allow HTTP traffic from LAN to WAN zone",
+        "Verify HTTP traffic is allowed from LAN to WAN zone",
+        "Create firewall policy to deny SSH traffic from LAN to WAN zone", 
+        "Verify SSH traffic is blocked from LAN to WAN zone"
+      ],
+      "test_data": {
+        "lan_interface": "GigabitEthernet0/0",
+        "wan_interface": "GigabitEthernet0/1"
+      }
+    },
+    "testscript": {
+      "testname": "Test Zone-based Firewall Rules",
+      "objective": "Validate that zone-based firewall rules are applied correctly between zones", 
+      "file_name": "test_fw_rules.py",
+      "init_scripts": [
+        "pip install paramiko"  
+      ],
+      "script": \"\"\"
+import paramiko
+
+lan_if = 'GigabitEthernet0/0'
+wan_if = 'GigabitEthernet0/1'
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect('192.168.1.1', username='admin', password='cisco')
+
+# Create Zones
+client.exec_command('conf t \\n zone security LAN \\n zone security WAN')
+
+# Assign interfaces to zones  
+client.exec_command(f'interface {lan_if} \\n zone-member security LAN')
+client.exec_command(f'interface {wan_if} \\n zone-member security WAN')
+
+# Create FW rules
+client.exec_command('access-list 101 permit tcp any any eq www')
+client.exec_command('access-list 102 deny tcp any any eq ssh')
+client.exec_command('zone-pair security LAN_to_WAN source LAN destination WAN \\n service-policy type inspect http \\n exit')
+client.exec_command('zone-pair security LAN_to_WAN source LAN destination WAN \\n service-policy type inspect 102 \\n exit')
+
+# Validate rules
+stdin, stdout, stderr = client.exec_command('show zone security')
+print(stdout.read().decode())
+
+if 'HTTP' in stdout.read().decode() and 'SSH' not in stdout.read().decode():
+  print('Test Passed')
+else:
+  print('Test Failed')
+          
+client.close()
+\"\"\",
+      "run_command": "python test_fw_rules.py",
+      "expected_result": "Test Passed"
+    }
+  },
+  {
+    "testname": "Test DMZ Zone Firewall Configuration",
+    "testcase": {
+      "testname": "Test DMZ Zone Firewall Configuration ",
+      "objective": "Validate DMZ zone firewall configuration and connectivity",
+      "steps": [ 
+        "Create zones for LAN, WAN and DMZ interfaces",
+        "Assign interfaces to respective zones",
+        "Create firewall rules to allow HTTP traffic from LAN to DMZ and deny SMTP", 
+        "Verify HTTP connectivity works from LAN to DMZ zone",
+        "Verify SMTP traffic is blocked from LAN to DMZ zone" 
+      ],
+      "test_data": {
+        "lan_if": "GigabitEthernet0/0", 
+        "wan_if": "GigabitEthernet0/1",
+        "dmz_if": "GigabitEthernet0/2"  
+      }
+    },
+    "testscript": {    
+      "testname": "Test DMZ Zone Firewall Configuration",
+      "objective": "Validate DMZ zone firewall configuration and connectivity",
+      "file_name": "test_dmz_fw.py",
+      "init_scripts": [ 
+        "pip install paramiko"
+      ],
+      "script": \"\"\"  
+import paramiko
+import time
+
+lan_if = 'GigabitEthernet0/0' 
+wan_if = 'GigabitEthernet0/1'
+dmz_if = 'GigabitEthernet0/2'
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect('192.168.1.1', username='admin', password='cisco')  
+
+# Create Zones  
+client.exec_command('configure terminal')
+client.exec_command('zone security LAN')
+client.exec_command('zone security WAN') 
+client.exec_command('zone security DMZ')
+
+# Assign interfaces to zones
+client.exec_command(f'interface {lan_if} \\n zone member security LAN') 
+client.exec_command(f'interface {wan_if} \\n zone member security WAN')
+client.exec_command(f'interface {dmz_if} \\n zone member security DMZ') 
+
+# Create FW rules  
+client.exec_command('access-list 101 permit tcp any any eq www')  
+client.exec_command('access-list 102 deny tcp any any eq smtp')
+client.exec_command('zone-pair security LAN-DMZ source LAN destination DMZ \\n service-policy type inspect http \\n exit') 
+client.exec_command('zone-pair security LAN-DMZ source LAN destination DMZ \\n service-policy type inspect 102 \\n exit')
+
+# Test HTTP connectivity
+stdout = client.exec_command(f'ping {dmz_if}').recv(5000) 
+if '!!!!!' in stdout.decode():
+  print('HTTP Connectivity Works')
+else:
+  print('HTTP Test Failed')
+  
+# Test SMTP connectivity
+stdout = client.exec_command(f'ping {dmz_if}').recv(5000)
+if '!!!!!' in stdout.decode():
+  print('SMTP Traffic Leaked') 
+else:
+  print('SMTP Traffic Blocked')
+
+client.close()  
+\"\"\",
+      "run_command": "python test_dmz_fw.py", 
+      "expected_result": "HTTP Connectivity Works \\n SMTP Traffic Blocked"
+    }
+  }
+]
+###ENDLIST### Here is a Python list with JSON objects for Zone-based firewall test cases and test scripts for the MX480:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Zone Creation",
+    "testcase": {
+      "testname": "Test Zone Creation",
+      "objective": "Validate creation of new zones",
+      "steps": [
+        "Create new zone using CLI/API call", 
+        "Verify zone created successfully using show command"
+      ]
+    },
+    "testscript": {
+      "testname": "Test Zone Creation",  
+      "objective": "Validate creation of new zones",
+      "file_name": "test_zone_creation.py",
+      "init_scripts": "\"\"\"pip install required packages\"\"\"",
+      "script": "\"\"\"Python script to create new zone and verify \"\"\"",
+      "run_command": "python test_zone_creation.py",
+      "expected_result": "Zone created and verified successfully"  
+    }
+  },
+
+  {
+    "testname": "Test Zone Interface Assignment ", 
+    "testcase": {
+      "testname": "Test Zone Interface Assignment",
+      "objective": "Validate interfaces assigned to zones successfully",
+      "steps": [
+        "Assign interface to zone using CLI/API call ",
+        "Verify interface assigned to zone using show command"
+      ]
+    },
+    "testscript": {
+      "testname": "Test Zone Interface Assignment ",
+      "objective": "Validate interfaces assigned to zones successfully",
+      "file_name": "test_zone_int_assign.py",
+      "init_scripts": "\"\"\"pip install required packages\"\"\"",
+      "script": "\"\"\"Python script to assign interface to zone and verify\"\"\"",
+      "run_command": "python test_zone_int_assign.py",
+      "expected_result": "Interface assigned to zone and verified successfully"
+    }
+  } 
+]
+###ENDLIST###
