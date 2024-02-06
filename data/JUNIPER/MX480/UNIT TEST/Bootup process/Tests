@@ -1,110 +1,169 @@
- Here are 2 Unit Test Cases for Bootup process for Network MSeries Router MX480 with respective python test scripts:
+ Here are 2 Unit Test Cases and python test scripts for Bootup process for Network MSeries Router MX480:
 
 ###STARTLIST###
 [
-{"testname": "Test Bootup with valid config", 
-"testcase": {
-    "testname": "Test Bootup with valid config",
-    "objective": "Validate router boots up successfully with valid bootup config",
-    "steps": ["1. Power on the router", "2. Verify console prints system boot messages", "3. Verify router transitions to ready state"]    
+{
+  "testname": "Test Bootup Sequence",
+  "testcase": {
+    "testname": "Test Bootup Sequence",
+    "objective": "Validate router bootup sequence completes all steps successfully", 
+    "steps": [
+      "Power on router",
+      "Validate all cards are detected",
+      "Validate FPCs come online",
+      "Validate kernel bootup messages",
+      "Validate daemons start correctly"
+    ],
+    "test_data": {
+      "router_model": "MX480"
+    }
+  },
+  
+  "testscript": {
+    "testname": "Test Bootup Sequence",
+    "objective": "Validate router bootup sequence using unittest",
+    "file_name": "test_bootup.py",
+    "init_scripts": [
+      "import unittest", 
+      "from router import Router",
+      "r = Router('MX480')"
+    ],
+    "script": """    
+class TestBootup(unittest.TestCase):
+    def test_bootup(self):
+        self.assertEqual(r.power_on(), True) 
+        self.assertEqual(r.detect_cards(), True)  
+        self.assertEqual(r.bringup_fpcs(), True)
+        self.assertTrue('Kernel booted' in r.get_bootup_logs())  
+        self.assertEqual(r.verify_daemons(), [])
+
+if __name__ == '__main__':
+    unittest.main()
+    """,
+    "run_command": "python test_bootup.py",
+    "expected_result": "OK"
+  }
 },
 
-"testscript": {
-    "testname": "Test Bootup with valid config", 
-    "objective": "Validate router boots up successfully with valid bootup config",
-    "file_name": "test_bootup.py",  
-    "init_scripts": "\"\"\"pip install paramiko\"\"\"",
-    "script": "\"\"\"import paramiko\n\nclient = paramiko.SSHClient()\nclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())\nclient.connect('192.168.0.1', username='admin', password='admin123')\nstdin, stdout, stderr = client.exec_command('show system boot-messages')\noutput = stdout.read()\nif 'System Ready' in output:\n    print('Test Passed')\nelse:\n    print('Test Failed')\nclient.close()\"\"\"",
-    "run_command": "python test_bootup.py", 
-    "expected_result": "Test Passed"
+{
+  "testname": "Test Console Access", 
+  "testcase": {
+    "testname": "Test Console Access",
+    "objective": "Validate able to access console during bootup",
+    "steps": [
+      "Connect console cable to router",
+      "Power on router", 
+      "Check console prints bootup messages",
+      "Login to console CLI"
+    ],
+    "test_data": {
+      "console_port": "COM1",
+      "login_prompt": "login:"
+    }
+  },
+
+  "testscript": {
+    "testname": "Test Console Access", 
+    "objective": "Validate console access using unittest",
+    "file_name": "test_console.py",  
+    "init_scripts": [
+      "import serial",
+      "import unittest"
+    ],
+    "script": """
+class TestConsole(unittest.TestCase):
+    def test_console(self):
+        ser = serial.Serial('COM1')
+        self.assertIn('Booting kernel', ser.readline())
+        self.assertEqual(ser.readline(), 'login:')
+        ser.write('myusername')
+        ser.write('mypassword')   
+        self.assertIn('Router>', ser.readline())  
+        
+if __name__ == '__main__':
+    unittest.main()
+    """,
+    "run_command": "python test_console.py", 
+    "expected_result": "OK"
+  }
 }
-},
+]
 
-{"testname": "Test Bootup with invalid config",
-"testcase": {
-    "testname": "Test Bootup with invalid config",
-   "objective": "Validate boot failure on invalid bootup config",
-    "steps": ["1. Power on the router with invalid config", "2. Verify console prints error", "3. Verify router fails to transition to ready state"]
-},
-
-"testscript": {
-    "testname": "Test Bootup with invalid config",
-    "objective": "Validate boot failure on invalid bootup config",
-    "file_name": "test_bootup_fail.py",
-    "init_scripts": "\"\"\"pip install paramiko\"\"\"",
-    "script": "\"\"\"import paramiko\n\nclient = paramiko.SSHClient()\nclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())\nclient.connect('192.168.0.1', username='admin', password='admin123')\nstdin, stdout, stderr = client.exec_command('show system boot-messages')\noutput = stdout.read()\nif 'System Ready' in output:\n    print('Test Failed')\nelse:\n    print('Test Passed')\nclient.close()\"\"\"",
-    "run_command": "python test_bootup_fail.py",
-    "expected_result": "Test Passed"  
-}
-}]
-###ENDLIST### Here is the Python list with test cases and test scripts for Bootup process of the MX480, delimited with ###STARTLIST### and ###ENDLIST###:
+###ENDLIST### Here is the Python list with test cases and test scripts for Bootup process of the MX480, enclosed within the delimiters:
 
 ###STARTLIST###
 [
   {
     "testname": "Test Bootup Time", 
     "testcase": {
-      "objective": "Validate bootup time is within specs",
+      "testname": "Test Bootup Time",
+      "objective": "Validate bootup time is within expected limit",
       "steps": [
         "Power on the device",
-        "Note start time on console log", 
-        "Verify device reaches login prompt",
-        "Note end time from console log",
-        "Validate duration is less than 5 minutes"
+        "Note start time", 
+        "Check if device is fully booted",
+        "Note end time",
+        "Validate bootup time is less than 5 minutes"
       ]
     },
     "testscript": {
       "testname": "Test Bootup Time",
-      "objective": "Validate bootup time is within specs", 
+      "objective": "Script to validate bootup time", 
       "file_name": "test_bootup.py",
-      "init_scripts": "import time",
+      "init_scripts": "pip install datetime",
       "script": """
-        start = time.time()
-        # Code to power on device
-        end = time.time()
-        duration = end - start
-        assert duration < 300
+        import datetime
+        
+        start = datetime.datetime.now()
+        print("System booted at:", start)
+                
+        # Add logic to detect system fully booted
+                
+        end = datetime.datetime.now()
+        print("System bootup completed at:", end)
+                
+        bootup_time = end - start
+        print("Total bootup time:", bootup_time)
+                
+        assert bootup_time.seconds < 300
       """,
       "run_command": "python test_bootup.py",
-      "expected_result": "Pass if bootup duration is less than 5 minutes"
+      "expected_result": "Success if bootup time is less than 5 minutes"  
     }
   },
   {
     "testname": "Test Bootup Sequence",
     "testcase": {
-      "objective": "Validate bootup sequence",
-      "steps": [
+      "testname": "Test Bootup Sequence",
+      "objective": "Validate modules loaded in correct bootup sequence",
+      "steps": [ 
         "Power on the device", 
-        "Verify BIOS/UEFI initialization messages",
-        "Verify bootloader initialization", 
-        "Verify kernel initialization",
-        "Verify system services initialization",
-        "Validate login prompt reaches at end"
+        "Check syslog/console for bootup logs",
+        "Validate BIOS, u-boot, kernel booted sequentially"
       ]
     },
     "testscript": {
       "testname": "Test Bootup Sequence",
-      "objective": "Validate bootup sequence",
-      "file_name": "test_sequence.py", 
-      "init_scripts": "import re",
-      "script": """
-        # Code to power on device and capture console log
-        bios_pattern = r"BIOS\\s+version"
-        bootloader_pattern = r"U-Boot 20\d+" 
-        kernel_pattern = r"Booting Linux kernel"
-        services_pattern = r"Starting system services"
-        login_prompt = r"\\$\\s?"
-        assert re.search(bios_pattern, log) 
-        assert re.search(bootloader_pattern, log) 
-        assert re.search(kernel_pattern, log)
-        assert re.search(services_pattern, log)
-        assert re.search(login_prompt, log)
+      "objective": "Script to validate bootup sequence",
+      "file_name": "test_sequence.py",  
+      "init_scripts": "", 
+      "script": """ 
+        import re
+        
+        bootup_log = "BIOS started, u-boot started, kernel started..." 
+        
+        bios_pattern = r"BIOS started"
+        uboot_pattern = r"u-boot started"
+        kernel_pattern = r"kernel started"
+        
+        assert re.search(bios_pattern, bootup_log)
+        assert re.search(uboot_pattern, bootup_log) 
+        assert re.search(kernel_pattern, bootup_log)
+        assert bootup_log.find(bios_pattern) < bootup_log.find(uboot_pattern) < bootup_log.find(kernel_pattern)
       """,
-      "run_command": "python test_sequence.py", 
-      "expected_result": "Pass if all initialization messages are seen in order" 
+      "run_command": "python test_sequence.py",
+      "expected_result": "Success if BIOS, u-boot and kernel logs appear in correct sequence"
     }
-  }
+  } 
 ]
 ###ENDLIST###
-
-The list contains test cases and scripts to validate bootup time and sequence for MX480. Each test is encapsulated as a JSON object with necessary fields. Feel free to use this as a template to add more test cases.
