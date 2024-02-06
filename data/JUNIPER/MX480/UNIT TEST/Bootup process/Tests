@@ -1,246 +1,240 @@
- Here are 2 unit test cases and corresponding Python test code for testing the bootup process on a Juniper Networks MX480 router:
+ Here are 2 unit test cases and corresponding Python test code for bootup process of MX480 router:
 
-## Test Case 1 - Verify bootup completes successfully
-
-**Steps:**
-
-1. Power on the MX480 router
-2. Verify the system boots up completely and the CLI prompt is available
-
-**Expected Result:** 
-
-- Router boots up successfully and CLI prompt is available
-
-**Python Code:**
+## Test Case 1 - Cold Boot
+Verify router boots up successfully from powered off state
 
 ```python
 import unittest
-from netmiko import ConnectHandler
+from router import MX480
 
 class TestMX480Bootup(unittest.TestCase):
 
-    def test_bootup_completes(self):
-        device = {
-            'device_type': 'juniper',
-            'host': 'mx480_ip', 
-            'username': 'testuser',
-            'password': 'testpass' 
-        }
-        
-        net_connect = ConnectHandler(**device)
-        output = net_connect.send_command('show version')
-        
-        self.assertIn('JUNOS Software Release', output)
-
-if __name__ == '__main__':
-    unittest.main()
+    def test_cold_boot(self):
+        router = MX480()
+        router.power_off()
+        router.power_on()
+        self.assertEqual(router.get_state(), 'ACTIVE')
 ```
 
-## Test Case 2 - Verify bootup failure
-
-**Steps:**
-
-1. Power off the MX480 router
-2. Disconnect the power cable from the router 
-3. Power on the router
-
-**Expected Result:**
-
-- Router fails to boot up and no CLI is available
-
-**Python Code:**
-
-```python
-import unittest
-from netmiko import ConnectHandler
-
-class TestMX480Bootup(unittest.TestCase):
-
-    def test_bootup_failure(self):
-        device = {
-            'device_type': 'juniper',
-            'host': 'mx480_ip',
-            'username': 'testuser',
-            'password': 'testpass'  
-        }
-        
-        net_connect = ConnectHandler(**device)
-        output = net_connect.send_command('show version')
-        
-        self.assertNotIn('JUNOS Software Release', output)
-
-if __name__ == '__main__':
-    unittest.main()
-``` Here are 2 unit test cases for the bootup process on an MX480 router with Python test code:
-
-## Test Case 1 - Normal Bootup
-
-**Setup:**
-- Connect console cable to MX480
-- Power on MX480
-
-**Execution:**
-- Wait for boot messages on console
-
-**Verification:**
-- Verify boot messages include:
-    - BIOS initialization messages
-    - GRUB menu displayed 
-    - Junos OS kernel booting messages
-    - Daemons starting messages
-    - `Ready` prompt appears
-
-**Teardown:**
-- None
-
-**Python Code:**
-
-```python
-import re
-import pexpect
-
-def test_normal_boot():
-    console = pexpect.spawn('telnet <MX480_IP>')
-    console.expect('GRUB menu')
-    console.expect('Junos kernel booting', timeout=180)
-    console.expect('Daemons starting', timeout=120)
-    console.expect('Ready')
-    console.close()
-```
-
-## Test Case 2 - Bootup with Corrupt Filesystem
-
-**Setup:** 
-- Connect console cable to MX480
-- Corrupt filesystem by deleting key Junos OS files
-- Power on MX480
-
-**Execution:**
-- Wait for boot messages on console 
-
-**Verification:**
-- Verify boot process stops at filesystem check stage
-- Error messages related to corrupt filesystem displayed
-- Router does not complete bootup and stays at filesystem prompt
-
-**Teardown:**
-- Recover filesystem by reinstalling Junos OS 
-
-**Python Code:**
-
-```python
-import re
-import pexpect
-
-def test_corrupt_filesystem_boot():
-    console = pexpect.spawn('telnet <MX480_IP>')
-    console.expect('Filesystem check failed!')
-    console.expect_exact('Unable to mount filesystem')
-    console.expect_exact('/ # ') 
-    console.close()
-``` Here are some sample Python 2 unit test cases and implementations for testing the bootup process of the MX480 router:
-
-```python
-import unittest
-
-class TestMX480Bootup(unittest.TestCase):
-
-    def test_power_on_self_test(self):
-        """Test power on self test passes"""
-        # Call mock function that represents POST
-        # Assert POST passed successfully
-
-    def test_load_boot_config(self):
-        """Test boot config is loaded properly"""        
-        # Call mock function that loads boot config
-        # Assert boot config loaded from expected location
-        # Assert required config sections loaded 
-
-    def test_interfaces_initialized(self):
-        """Test interfaces are initialized properly"""        
-        # Mock interface initialization
-        # Assert all expected interfaces initialized
-        # Assert interfaces initialized with expected default config
-
-    def test_routing_protocols_started(self):
-        """Test routing protocols started properly"""
-        # Mock starting of routing protocols
-        # Assert all expected routing protocols started
-        # Assert routing protocols started with correct configs
-
-    def test_system_ready_state(self):
-        """Test system transitions to ready state"""
-        # Mock system ready state
-        # Assert system is in expected ready state
-        # Assert all expected services are running
-
-if __name__ == '__main__':
-    unittest.main()
-```
-
-The key points are:
-
-- Each test case focuses on a specific aspect of the bootup process
-- Mock functions are used instead of actual device/OS calls
-- Assertions validate the expected state after each step
-- All critical aspects like POST, loading configs, interface init, routing protocols, system state are validated
-- The tests can be easily expanded to cover additional bootup functionality
-
-The unittest framework takes care of running each test case and reporting overall results. Here are 2 unit test cases and their respective Python test code snippets for testing the bootup process on an MX480 router:
-
-### Test Case 1: 
-
-Verify that the router boots up successfully and reaches operational state.
-
-```python
-import unittest
-from netmiko import ConnectHandler
-
-class TestRouterBoot(unittest.TestCase):
-
-    def test_bootup(self):
-        device = {
-            'device_type': 'juniper',
-            'ip': '192.168.1.1', 
-            'username': 'testuser',
-            'password': 'test123'
-        }
-        
-        conn = ConnectHandler(**device)
-        output = conn.send_command('show system status')
-        
-        self.assertIn('Current state: Operational', output)
-        
-if __name__ == '__main__':
-    unittest.main()
-```
-
-### Test Case 2: 
-
-Verify that all expected hardware components are detected during bootup.
+## Test Case 2 - Warm Boot 
+Verify router reboot successfully from active state
 
 ```python 
 import unittest
+from router import MX480
+
+class TestMX480Bootup(unittest.TestCase):
+
+    def test_warm_boot(self):
+        router = MX480()
+        self.assertEqual(router.get_state(), 'ACTIVE') 
+        router.reboot()
+        self.assertEqual(router.get_state(), 'ACTIVE')
+``` Here are 2 unit test cases for the bootup process for MX480 router with Python test code:
+
+## Test Case 1: Normal Bootup
+
+### Setup
+- Power off the MX480 router
+- Connect console cable to the router
+- Start console capture
+
+### Execution
+- Power on the MX480 router
+- Wait for bootup to complete 
+
+### Verification
+- Verify console output contains:
+    - `Booting kernel` 
+    - `Starting kernel ...`
+    - `Initiating ESXi boot...`
+    - `Booting ESXi`
+    - No errors or exceptions logged
+- Verify router interfaces are up after bootup
+- Verify management connectivity to router
+
+### Teardown
+- Stop console capture
+- Disconnect console cable
+
+```python
+import unittest
+from router import Router
+
+class MX480BootupTest(unittest.TestCase):
+
+    def test_normal_bootup(self):
+        router = Router("MX480")
+        
+        # Setup
+        router.power_off()
+        router.connect_console()
+        router.start_console_capture()
+        
+        # Execution
+        router.power_on()
+        router.wait_for_bootup()
+        
+        # Verification
+        self.assertIn("Booting kernel", router.console_output)
+        self.assertIn("Starting kernel...", router.console_output)
+        self.assertIn("Initiating ESXi boot...", router.console_output)
+        self.assertIn("Booting ESXi", router.console_output)
+        self.assertFalse(router.has_errors())
+        
+        self.assertTrue(router.interfaces_up())
+        self.assertTrue(router.management_active())
+       
+        # Teardown
+        router.stop_console_capture()
+        router.disconnect_console()
+
+```
+
+## Test Case 2: Bootup with Corrupted Firmware
+
+### Setup
+- Power off the MX480 router
+- Connect console cable to the router
+- Start console capture
+- Corrupt the firmware image on the router
+
+### Execution
+- Power on the MX480 router
+- Wait for bootup to complete
+
+### Verification
+- Verify console output contains:
+    - `Booting kernel`
+    - `Starting kernel...`
+    - `Firmware corruption detected` 
+    - `Halting system...`
+- Verify router did not fully bootup
+- Verify no management connectivity to router
+
+### Teardown 
+- Stop console capture
+- Disconnect console cable
+- Restore firmware image
+
+```python
+import unittest
+from router import Router
+
+class MX480BootupTest(unittest.TestCase):
+
+    def test_corrupted_firmware_bootup(self):
+        router = Router("MX480")
+        
+        # Setup
+        router.power_off() 
+        router.connect_console()
+        router.start_console_capture()
+        router.corrupt_firmware()
+        
+        # Execution
+        router.power_on()
+        router.wait_for_bootup()
+        
+        # Verification
+        self.assertIn("Booting kernel", router.console_output)
+        self.assertIn("Starting kernel...", router.console_output)
+        self.assertIn("Firmware corruption detected", router.console_output)
+        self.assertIn("Halting system...", router.console_output)
+        
+        self.assertFalse(router.interfaces_up())
+        self.assertFalse(router.management_active())
+        
+        # Teardown
+        router.stop_console_capture()
+        router.disconnect_console()
+        router.restore_firmware()
+``` Here are some sample Python 2 unit test cases and code for testing the bootup process of the Juniper MX480 router:
+
+```python
+import unittest
 from netmiko import ConnectHandler
 
-class TestRouterBoot(unittest.TestCase):
+class TestMX480Bootup(unittest.TestCase):
 
-    def test_hardware_detection(self):
-        expected_components = ['MPC Type 1', 'MIC Type 2']
-        
-        device = {
+    def setUp(self):
+        self.mx480 = {
             'device_type': 'juniper',
-            'ip': '192.168.1.1',
-            'username': 'testuser', 
-            'password': 'test123' 
+            'host': 'mx480.example.com',
+            'username': 'testuser',
+            'password': 'testpass'
         }
-        
-        conn = ConnectHandler(**device)
-        output = conn.send_command('show chassis hardware')
-        
-        for component in expected_components:
-            self.assertIn(component, output)
-            
+    
+    def test_console_access(self):
+        net_connect = ConnectHandler(**self.mx480)
+        output = net_connect.send_command("show version")
+        self.assertIn("Junos:", output)
+
+    def test_check_interfaces(self):
+        net_connect = ConnectHandler(**self.mx480)
+        output = net_connect.send_command("show interfaces terse")
+        self.assertNotIn("Interface               Admin Link Proto    Local                 Remote", output)
+
+    def test_check_routing_engine(self):
+        net_connect = ConnectHandler(**self.mx480)
+        output = net_connect.send_command("show chassis routing-engine")
+        self.assertIn("Routing Engine status:", output)
+        self.assertIn("Current state:", output)
+        self.assertIn("Temperature:", output)
+    
+    def test_check_linecards(self):
+        net_connect = ConnectHandler(**self.mx480)
+        output = net_connect.send_command("show chassis fpc")
+        self.assertIn("Slot 0 information:", output)
+        self.assertIn("PIC 0 information:", output)
+
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()
 ```
+
+This contains some sample test cases that connect to the MX480 router over SSH using Netmiko, execute various `show` commands, and assert that the expected output is present to validate the device is booted up properly. Tests check basic console access, interfaces, routing engine, and linecards. These could be expanded on with additional cases. Here are 2 unit test cases and corresponding Python test code snippets for testing the bootup process on an MX480 router:
+
+### Test Case 1: Verify bootstrap config loads properly
+
+```python
+import unittest
+from netmiko import ConnectHandler
+
+class TestBootstrapConfig(unittest.TestCase):
+
+    def test_bootstrap_config(self):
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='netconf', password='juniper123')
+        output = device.send_command('show configuration | display set') 
+        self.assertIn('system host-name mx480', output)
+        self.assertIn('interfaces ge-0/0/0 unit 0 family inet address 192.168.0.1/24', output)
+        device.disconnect()
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+This test case connects to the router, runs 'show configuration' command and verifies the hostname and interface configuration exists as expected in the bootstrap config.
+
+### Test Case 2: Verify protocols configured properly after bootup
+
+```python
+import unittest
+from netmiko import ConnectHandler
+
+class TestProtocolsAfterBootup(unittest.TestCase):
+
+    def test_ospf_bgp_status(self):
+        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='netconf', password='juniper123')
+        ospf_status = device.send_command('show ospf neighbor')
+        bgp_status = device.send_command('show bgp summary')
+        
+        self.assertIn('OSPF is Enabled', ospf_status) 
+        self.assertIn('BGP is Enabled', bgp_status)
+        
+        device.disconnect()
+        
+if __name__ == '__main__':
+    unittest.main()
+```
+
+This test case connects after bootup and verifies that OSPF and BGP protocols are up and running by checking their status.
