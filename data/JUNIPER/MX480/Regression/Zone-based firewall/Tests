@@ -1,156 +1,212 @@
- Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for MX480 router:
+ Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for MX480 in the requested format:
+
+###STARTLIST###
+[
+{
+    "testname": "Zone Firewall Allow ICMP", 
+    "testcase": {
+        "testname": "Zone Firewall Allow ICMP",
+        "objective": "Validate that ICMP traffic is allowed between zones when explicitly permitted by a policy",
+        "steps": [
+            "1. Configure zone-based firewall with zone A and zone B", 
+            "2. Create firewall policy to allow ICMP from zone A to zone B",
+            "3. Send ICMP traffic from zone A interface to zone B interface",
+            "4. Verify ICMP traffic is successful"
+        ],
+        "testdata": {
+            "zoneA_interface": "ge-0/0/0",
+            "zoneB_interface": "ge-0/0/1",
+            "icmp_type": "echo-request"
+        }
+    },
+    "testscript": {
+        "testname": "Zone Firewall Allow ICMP", 
+        "objective": "Test script to validate ICMP allow firewall policy",
+        "filename": "test_icmp_allow.py",
+        "init_scripts": [
+            "pip install ipaddr",
+            "pip install jnpr"        
+        ],
+        "script": """
+            import unittest
+            from jnpr.junos import Device
+            from jnpr.junos.exception import ConnectError
+
+            def test_icmp_allowed(dev):
+                # Configure firewall policy
+                dev.cli("set firewall...)
+                # Send ICMP traffic from zoneA to zoneB
+                # Use scapy or other packet crafting library
+                # Verify ICMP received successfully
+                
+                assertTrue(icmp_received)
+                
+            class Test_Zone_Firewall(unittest.TestCase):
+
+                def test_icmp_allow_policy(self):
+                    dev = Device(host='1.1.1.1', user='regress', password='MaRtInI')  
+                    dev.open()
+                    test_icmp_allowed(dev)
+                    dev.close()
+                    
+            if __name__ == '__main__':
+                unittest.main()
+        """,
+        "run_command": "python test_icmp_allow.py",
+        "expected_result": "OK"
+    }
+},
+{
+    "testname": "Zone Firewall Block Traffic",
+    "testcase": {
+        "testname": "Zone Firewall Block Traffic",
+        "objective": "Validate that traffic between zones with no policy is blocked",
+        "steps": [
+            "1. Configure zone A and zone B with zone-based firewall",
+            "2. Send TCP traffic from zone A interface to zone B interface", 
+            "3. Verify traffic is blocked"
+        ],
+        "testdata": {  
+            "zoneA_interface": "ge-0/0/0",
+            "zoneB_interface": "ge-0/0/1" 
+        }
+    },
+    "testscript": {
+        "testname": "Zone Firewall Block Traffic",
+        "objective": "Test script to verify traffic is blocked without policy",
+        "filename": "test_block_traffic.py", 
+        "init_scripts": [
+            "pip install scapy",
+            "pip install jnpr"         
+        ],
+        "script": """
+            import unittest
+            from scapy.all import *
+            from jnpr.junos import Device
+
+            def test_traffic_blocked(dev):
+                # Send TCP packet from zoneA to zoneB
+                pkt = IP(src='1.1.1.1', dst='2.2.2.2')/TCP()   
+                send(pkt, iface=dev.zoneA_iface)
+                
+                # Verify no response
+                assertFalse(answered(pkt))
+                
+            class Test_Zone_Firewall(unittest.TestCase):
+
+                def test_blocked_traffic(self):
+                    dev = Device(host='1.1.1.1', user='regress', password='MaRtInI')
+                    dev.open()  
+                    test_traffic_blocked(dev)
+                    dev.close()
+                    
+            if __name__ == '__main__':  
+                unittest.main()   
+        """,
+        "run_command": "python test_block_traffic.py",
+        "expected_result": "OK"
+    }
+} 
+]
+###ENDLIST### Here is the Python list with test case and test script JSON objects for Zone-based firewall regression testing on MX480:
 
 ###STARTLIST###
 [
   {
-    "testname": "Test Zone-based Firewall Default Zone",
+    "testname": "Test Zone Firewall Rule Creation",
     "testcase": {
-      "testname": "Test Zone-based Firewall Default Zone", 
-      "objective": "Validate default zone is enabled and has expected configuration",
+      "testname": "Test Zone Firewall Rule Creation", 
+      "objective": "Validate creation of zone firewall rules",
       "steps": [
-        "Verify default zone exists with name 'trust'", 
-        "Verify default zone has icmp protocol enabled",
-        "Verify default zone has ssh protocol enabled"
+        "Create zone firewall rule between zones", 
+        "Verify rule creation successful"
       ],
       "test_data": {
-        "default_zone_name": "trust",
-        "enabled_protocols": ["icmp", "ssh"]  
+        "src_zone": "zone1",
+        "dest_zone": "zone2",
+        "protocol": "tcp", 
+        "source": "1.1.1.0/24",
+        "destination": "2.2.2.0/24",
+        "port": 80
       }
     },
     "testscript": {
-      "testname": "Test Zone-based Firewall Default Zone",
-      "objective": "Validate default zone configuration using PyEZ",
-      "file_name": "test_default_zone.py",
-      "init_scripts": "pip install junos-eznc",
+      "testname": "Test Zone Firewall Rule Creation",
+      "objective": "Automate validation of zone firewall rule creation",
+      "file_name": "test_zone_rule_create.py",
+      "init_scripts": [
+        "pip install juniper-eznc"
+      ],
       "script": """
-        import jnpr.junos  
-       
-        dev = jnpr.junos.Device(host='192.168.1.1', user='netconf', password='p@ssw0rd')  
-        dev.open()
-        
-        default_zone = dev.rpc.get_config(filter_xml='<configuration><security><zones><name>trust</name></zones></security></configuration>')
-        
-        assert default_zone.findtext('.//name') == 'trust'
-        assert len(default_zone.findall('.//protocols/protocol')) == 2
-        assert default_zone.find('.//protocols/protocol[name="icmp"]') is not None 
-        assert default_zone.find('.//protocols/protocol[name="ssh"]') is not None
+import json
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+
+# Test data
+test_data = json.loads('''{test_data}''')
+
+dev = Device(host='mx480', user='regress', password='MaRtInI') 
+dev.open()
+
+cu = Config(dev)
+cu.lock()
+
+cu.load('set firewall family inet filter test-filter term test-term from source-address {source} destination-address {destination} protocol {protocol} port {port}'.format(**test_data), format='set')
+
+cu.commit()
+cu.unlock()
+
+dev.close()
       """,
-      "run_command": "python test_default_zone.py",
-      "expected_result": "All assertions should pass, validating default zone configuration"
+      "run_command": "python test_zone_rule_create.py",
+      "expected_result": "Zone firewall rule created successfully" 
     }
   },
   {
-    "testname": "Test New Zone Creation", 
+    "testname": "Test Zone Pair Creation",
     "testcase": {
-      "testname": "Test New Zone Creation",
-      "objective": "Validate new zone can be created and configured",
-      "steps": [ 
-        "Configure new zone named 'Guest'",
-        "Add icmp protocol to Guest zone", 
-        "Commit configuration",
-        "Verify Guest zone exists",
-        "Verify icmp protocol enabled for Guest zone"   
+      "testname": "Test Zone Pair Creation",
+      "objective": "Validate creation of zone pair",
+      "steps": [
+        "Configure zone pair between zones",
+        "Verify zone pair creation successful"  
       ],
       "test_data": {
-        "new_zone_name": "Guest", 
-        "new_zone_protocols": ["icmp"]
+        "src_zone": "zone1",
+        "dest_zone": "zone2"
       }
     },
     "testscript": {
-      "testname": "Test New Zone Creation", 
-      "objective": "Validate new zone creation using PyEZ",
-      "file_name": "test_new_zone.py", 
-      "init_scripts": "pip install junos-eznc",
+      "testname": "Test Zone Pair Creation",
+      "objective": "Automate validation of zone pair creation",  
+      "file_name": "test_zone_pair_create.py",
+      "init_scripts": [
+        "pip install juniper-eznc"
+      ],
       "script": """  
-        import jnpr.junos
-        
-        dev = jnpr.junos.Device(host='192.168.1.1', user='netconf', password='p@ssw0rd')
-        dev.open()
-        
-        new_zone_xml = \<security\>
-                        \<zones\>  
-                          \<name\>Guest\</name\>
-                          \<protocols\>    
-                            \<protocol\>
-                              \<name\>icmp\</name\> 
-                            \</protocol\>
-                          \</protocols\>
-                        \</zones\>
-                      \</security\>
+import json
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
 
-        dev.cu.load(new_zone_xml, format="xml")
-        
-        new_zone = dev.rpc.get_config(filter_xml='<configuration><security><zones><name>Guest</name></zones></security></configuration>')
-        
-        assert new_zone.findtext('.//name') == 'Guest'
-        assert len(new_zone.findall('.//protocols/protocol')) == 1 
-        assert new_zone.find('.//protocols/protocol[name="icmp"]') is not None
+# Test data  
+test_data = json.loads('''{test_data}''')
+      
+dev = Device(host='mx480', user='regress', password='MaRtInI')
+dev.open()  
+
+cu = Config(dev)
+cu.lock()
+
+cu.load('set security zones security-zone {src_zone} host-inbound-traffic system-services all set security zones security-zone {src_zone} interfaces ae0.0 host-inbound-traffic protocols all set security zones security-zone {dest_zone} host-inbound-traffic system-services all set security zones security-zone {dest_zone} interfaces ae1.0 host-inbound-traffic protocols all set security policies from-zone {src_zone} to-zone {dest_zone} policy test-policy match source-address any destination-address any application any'.format(**test_data), format='set')
+
+cu.commit()
+cu.unlock()  
+
+dev.close()
       """,
-      "run_command": "python test_new_zone.py",  
-      "expected_result": "All assertions should pass, validating new zone creation and configuration"
+      "run_command": "python test_zone_pair_create.py",
+      "expected_result": "Zone pair created successfully"
     }
   } 
 ]
-###ENDLIST### Here is a Python list with JSON objects for Zone-based firewall test cases and test scripts for the MX480:
-
-```python
-###STARTLIST###
-[
-	{
-		"testname": "Test Zone Firewall Rules",
-		"testcase": {
-			"testname": "Test Zone Firewall Rules",
-			"objective": "Validate that zone firewall rules are correctly enforced",
-			"steps": [
-				"Create zones trust and untrust", 
-				"Create firewall allow rule from trust to untrust",
-				"Verify connectivity from trust to untrust",
-				"Create firewall deny rule from untrust to trust",
-				"Verify no connectivity from untrust to trust"
-			]
-		},
-		"testscript": {
-			"testname": "Test Zone Firewall Rules", 
-			"objective": "Automated script to validate zone firewall rules",
-			"file_name": "test_zone_fw.py",
-			"init_scripts": "pip install meraki",
-			"script": """
-				import meraki
-
-				# Create zones, rules, and test connectivity
-			""",
-			"run_command": "python test_zone_fw.py",
-			"expected_result": "Connectivity matches expected behavior based on defined rules"
-		}
-	},
-	{
-		"testname": "Test Zone Bandwidth Rules",
-		"testcase": {
-			"testname": "Test Zone Bandwidth Rules",
-			"objective": "Validate that zone bandwidth rules are correctly enforced",
-			"steps": [
-				"Create zones trust and untrust",
-				"Create bandwidth rule limiting untrust to trust to 50 Mbps",  
-				"Initiate multiple transfers from untrust to trust",
-				"Verify cumulative transfer rate does not exceed 50 Mbps"
-			]
-		},
-		"testscript": {
-			"testname": "Test Zone Bandwidth Rules",
-			"objective": "Automated script to validate zone bandwidth rules",
-			"file_name": "test_zone_bw.py",
-			"init_scripts": "pip install speedtest-cli",
-			"script": """
-				import speedtest
-				
-				# Create zones, rules, and test bandwidth
-			""",
-			"run_command": "python test_zone_bw.py", 
-			"expected_result": "Cumulative transfer rate does not exceed defined rule"
-		}
-	}
-]
 ###ENDLIST###
-```
-
-The above provides a template for test cases and test scripts focused on zone-based firewall rules and bandwidth limiting rules. Additional test cases and scripts can be added by appending more JSON objects to the Python list. Each script imports necessary libraries, creates test configuration, executes connectivity or bandwidth tests, and validates expected behavior.
