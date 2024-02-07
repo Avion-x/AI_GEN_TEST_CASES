@@ -1,93 +1,121 @@
- Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for Network MSeries Router MX480:
+ Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for the Network MSeries Router MX480:
 
 ###STARTLIST###
 [
 {
-    "testname": "Test Zone-based firewall policy configuration",
-    "testcase": {
-        "testname": "Test Zone-based firewall policy configuration",
-        "objective": "Validate zone-based firewall policy can be configured with expected rules between zones",
-        "steps": [
-            "1. Configure zone-based firewall with test policy between zones", 
-            "2. Verify configured policy rules are present as expected"
-        ],
-        "test_data": {
-            "zones": ["Z1", "Z2"],
-            "policy_rules": [{"name": "Rule1", "source": "Z1", "destination": "Z2"}]        
-        }
-    },
-    "testscript": {
-        "testname": "Test Zone-based firewall policy configuration",  
-        "objective": "Validate zone-based firewall policy can be configured with expected rules between zones",
-        "file_name": "test_zbfw_policy.py",
-        "init_scripts": "pip install paramiko netmiko",  
-        "script": """
-            import paramiko
-            
-            ZONES = ${json.dumps(zones)}
-            RULES = ${json.dumps(policy_rules)}
-            
-            client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
-            client.connect(host, username=user, password=password)
-            
-            for zone in ZONES:
-                cmd = f"set security zones security-zone {zone}"
-                stdin, stdout, stderr = client.exec_command(cmd)
-            
-            for rule in RULES:
-                cmd = f"set security policies from-zone {rule['source']} to-zone {rule['destination']} policy {rule['name']}"    
-                stdin, stdout, stderr = client.exec_command(cmd)
-                
-            client.close()
-        """,
-        "run_command": "python test_zbfw_policy.py",
-        "expected_result": "Zone-based firewall policy configured with defined test rules between zones"
+  "testname": "Validate Zone-based Firewall Configuration",
+  "testcase": {
+    "testname": "Validate Zone-based Firewall Configuration",
+    "objective": "Validate that the zone-based firewall is configured correctly by testing connectivity between zones",
+    "steps": [
+      "Set up zones and zone-based firewall policies",
+      "Verify intra-zone connectivity within trust, untrust and mgmt zones", 
+      "Verify no connectivity between trust and untrust zones due to firewall policy"
+    ],
+    "test_data": {
+      "zones": ["trust", "untrust", "mgmt"],
+      "zone_interfaces": { 
+        "trust": ["ge-0/0/1", "ge-0/0/2"],
+        "untrust": ["ge-0/0/3"], 
+        "mgmt": ["fxp0"]
+      }
     }
+  },
+
+  "testscript": {
+    "testname": "Validate Zone-based Firewall Configuration", 
+    "objective": "Validate zone-based firewall configuration by testing connectivity",
+    "file_name": "test_zone_firewall.py",
+    "init_scripts": "pip install paramiko jxmlease",
+    
+    "script": """
+    import paramiko
+    import jxmlease
+    
+    ZONE_DATA = # Populated test data dictionary
+    
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(router_ip, username='pyuser', password='JNPR@123')
+    
+    def test_intrazone_connectivity(zone):
+      interfaces = ZONE_DATA["zone_interfaces"][zone]
+      for intf1 in interfaces:
+        for intf2 in interfaces:
+          ping = client.exec_command(f"ping {intf2} interface {intf1}")
+          assert "!!!!!" not in ping
+    
+    def test_interzone_connectivity():
+      trust_intfs = ZONE_DATA["zone_interfaces"]["trust"]
+      untrust_intfs = ZONE_DATA["zone_interfaces"]["untrust"]
+      
+      for t_intf in trust_intfs:
+        for u_intf in untrust_intfs:
+          ping = client.exec_command(f"ping {u_intf} interface {t_intf}") 
+          assert "!!!!!" in ping
+      
+    if __name__ == "__main__":
+        test_intrazone_connectivity("trust") 
+        test_intrazone_connectivity("untrust")
+        test_intrazone_connectivity("mgmt")
+        
+        test_interzone_connectivity()
+    """,
+    
+    "run_command": "python test_zone_firewall.py",
+    "expected_result": "All test cases should pass validating zone connectivity"
+    
+  }
 },
+
 {
-    "testname": "Test Zone-based firewall session table",
-    "testcase": {
-        "testname": "Test Zone-based firewall session table",
-        "objective": "Validate session table displays expected sessions based on policy rules",
-        "steps": [
-            "1. Configure test traffic between zones",
-            "2. Verify session table displays expected sessions" 
-        ],
-        "test_data": {
-            "zones": ["Z1", "Z2"], 
-            "policy_rules": [{"name": "Rule1", "source": "Z1", "destination": "Z2"}]
-        }
-    },
-    "testscript": {
-        "testname": "Test Zone-based firewall session table",
-        "objective": "Validate session table displays expected sessions based on policy rules", 
-        "file_name": "test_zbfw_sessions.py",
-        "init_scripts": "pip install paramiko",
-        "script": """
-            import paramiko
-            
-            ZONES = ${json.dumps(zones)}
-            RULES = ${json.dumps(policy_rules)}
-            
-            client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(host, username=user, password=password)
-            
-            # Configure test traffic between zones
-            
-            cmd = "show security flow session"
-            stdin, stdout, stderr = client.exec_command(cmd)
-            sessions = stdout.read()
-            
-            client.close()
-            
-            # Verify expected sessions are present
-        """,
-        "run_command": "python test_zbfw_sessions.py", 
-        "expected_result": "Session table displays expected sessions based on defined policy rules"
+  "testname": "Test Application Firewall Configuration",
+  
+  "testcase": {
+    "testname": "Test Application Firewall Configuration ",
+    "objective": "Validate application firewall policies are correctly enforced",
+    "steps": [
+      "Configure application firewall policies to block certain applications",
+      "Initiate traffic to blocked applications and verify it is dropped" 
+    ],
+    "test_data": {
+      "blocked_apps": ["gaming", "social-networking"], 
+      "appfw_policy": "BLOCK-APPS" 
     }
+  },
+  
+  "testscript": {
+  
+    "testname": "Test Application Firewall Configuration",
+    "objective": "Validate application firewall blocks certain applications",
+  
+    "file_name": "test_appfw.py",
+    "init_scripts": "pip install paramiko nmap jxmlease",
+  
+    "script": """
+    import paramiko
+    import nmap
+    import jxmlease
+    
+    POLICY = # Populated application firewall policy 
+    
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+    client.connect(router_ip, username='pyuser', password='JNPR@123')
+    
+    def test_app_blocked(app):
+      traffic = nmap.PortScanner().scan(target, ports=[80, 443])
+      assert traffic["stats"]["packet_filter"] == "dropped"
+
+    if __name__ == "__main__":
+      test_app_blocked("gaming") 
+      test_app_blocked("social-networking")
+    """,
+  
+    "run_command": "python test_appfw.py",
+    "expected_result": "Traffic to blocked apps should be dropped"
+  
+  }
+
 }]
 ###ENDLIST###
-
-The test cases validate zone-based firewall policy configuration and session tracking based on defined test data. The associated test scripts leverage Paramiko SSH library to connect and execute commands on the MX480 router to configure policies, generate traffic, and validate expected behavior.
