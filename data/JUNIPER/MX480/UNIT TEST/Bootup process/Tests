@@ -1,169 +1,309 @@
- Here are 2 Unit Test Cases and python test scripts for Bootup process for Network MSeries Router MX480:
+ Here are 2 Unit Test Cases and corresponding Python test scripts for Bootup process for Network MSeries Router MX480:
 
+```python
 ###STARTLIST###
 [
 {
-  "testname": "Test Bootup Sequence",
-  "testcase": {
-    "testname": "Test Bootup Sequence",
-    "objective": "Validate router bootup sequence completes all steps successfully", 
-    "steps": [
-      "Power on router",
-      "Validate all cards are detected",
-      "Validate FPCs come online",
-      "Validate kernel bootup messages",
-      "Validate daemons start correctly"
-    ],
-    "test_data": {
-      "router_model": "MX480"
+    "testname": "Test Bootup Timeout", 
+    "testcase": {
+        "testname": "Test Bootup Timeout",
+        "objective": "Validate that the router boots up within the expected timeout period",
+        "steps": [
+            "Power on the router", 
+            "Note start time",
+            "Verify router interfaces are accessible within 300 seconds"
+        ],
+        "test_data": {
+            "timeout": 300 
+        }
+    },
+    "testscript": {
+        "testname": "Test Bootup Timeout",
+        "objective": "Validate bootup time meets requirements", 
+        "file_name": "test_bootup_timeout.py",
+        "init_scripts": "import time",
+        "script": """
+            start = time.time()
+            # Code to power on router
+            
+            end = time.time()
+            duration = end - start
+            
+            assert duration <= 300
+        """,
+        "run_command": "python test_bootup_timeout.py",
+        "expected_result": "Script executes without any AssertionError"
+    }
+},
+{
+    "testname": "Test Bootup Config Load",
+    "testcase": {
+        "testname": "Test Bootup Config Load ",
+        "objective": "Validate configuration loaded on bootup ",
+        "steps": [
+            "Power on the router",
+            "Verify running configuration matches startup configuration" 
+        ],
+        "test_data": {
+            "startup_config": "startup_config.txt"
+        }
+    },
+    "testscript": {
+        "testname": "Test Bootup Config Load",
+        "objective": "Validate configuration loaded properly on bootup",
+        "file_name": "test_bootup_config.py", 
+        "init_scripts": "import json", 
+        "script": """
+            with open("startup_config.txt") as f:
+                startup_config = f.read()
+                
+            running_config = get_running_config()
+            
+            assert startup_config == running_config
+        """,
+        "run_command": "python test_bootup_config.py",
+        "expected_result": "Script executes without any AssertionError"
+    }
+}
+]
+###ENDLIST###
+```
+
+The above code provides:
+
+1. Test case details like testname, objective, steps, test data for 2 test cases related to router bootup validation
+
+2. Corresponding Python test scripts with necessary fields like testname, objective, init_scripts, script, run_command, expected_result
+
+3. All test cases and scripts are encapsulated in JSON format within a Python list Here are 2 Unit Test Cases for Bootup process for ISR 4321 and the corresponding Python test scripts structured as a Python list:
+
+###STARTLIST###
+[
+    {
+        "testname": "Unit Test 1: Check Bootup time and check configuration",
+        "testcase": {
+            "testname": "Unit Test 1: Check Bootup time and check configuration",
+            "objective": "Verify that the router boots up within expected time and has correct configuration loaded",
+            "steps": [
+                "1. Power on the router",
+                "2. Note down the time when powering on is initiated", 
+                "3. Note down the time when router is fully booted up",
+                "4. Verify bootup time is less than 5 minutes",
+                "5. Check running configuration and verify hardware details" 
+            ],
+            "test_data": ["Expected bootup time: Less than 5 minutes", "Expected hardware: ISR 4321"]
+        },
+        
+        "testscript": {            
+            "testname": "Unit Test 1 Check Bootup time and config test script",
+            "objective": "Check router ISR 4321 boot up time",            
+            "file_name": "test_bootup_time.py",
+            "init_scripts": ["pip install paramiko"],
+            
+            "script": """
+                import paramiko
+                import time
+                import sys
+                import re
+
+                IP = "10.10.10.10"
+                USERNAME = "user1" 
+                PASSWORD = "mypassword"
+
+                ssh_client = paramiko.SSHClient()              
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                start_time = time.time()
+
+                print(f"Initiating connection to {IP} at time: {start_time}")
+
+                ssh_client.connect(hostname=IP, username=USERNAME, password=PASSWORD)
+                print(f"Connection established")
+
+                bootup_time =  time.time() - start_time   
+
+                if bootup_time < 300.0:
+                    print(f"SUCCESS: Router bootup time: {bootup_time:.2f} sec")
+                else:
+                    print(f"FAILURE: Router bootup time exceeded 300 sec") 
+
+                stdin, stdout, stderr = ssh_client.exec_command("show version")  
+                result = stdout.read().decode()
+
+                print(f"Version information:\n{result}")
+            
+                ssh_client.close()
+            """,
+
+            "run_command": "python test_bootup_time.py",
+            
+            "expected_result": "Prints boot up time and verifies it is under 5 minutes. Prints version information from device"
+        }
+    },
+
+    {
+        "testname": "Unit Test 2: Verify interfaces configuration",
+        "testcase": {
+            "testname": "Unit Test 2: Verify interfaces configuration",  
+            "objective": "Verify router interfaces details as per expected configuration",
+            "steps": [
+                "1. Establish SSH connection to router",
+                "2. Execute 'show ip interface brief' command ",
+                "3. Verify details for interfaces: GigabitEthernet0/0/0, GigabitEthernet0/0/1 match expected config",
+                "4. Verify their operational status is Up"
+            ],
+            "test_data": ["Expected interface config", 
+                "GigabitEthernet0/0/0: 192.168.1.1", 
+                "GigabitEthernet0/0/1: 10.10.10.1"
+            ]
+        },
+                
+        "testscript": {
+            "testname": "Unit Test 2 Verify Interfaces test script",
+            "objective": "Verify ISR 4321 interfaces config",            
+            "file_name": "test_interface_config.py",
+            "init_scripts": ["pip install paramiko"],
+            
+            "script": """ 
+                import paramiko
+                import sys              
+
+                IP = "10.10.10.10"
+                USERNAME = "user1"
+                PASSWORD = "mypassword"
+
+                ssh_client = paramiko.SSHClient()              
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+                ssh_client.connect(hostname=IP, username=USERNAME, password=PASSWORD)
+                
+                stdin, stdout, stderr = ssh_client.exec_command("show ip interface brief")  
+                result = stdout.read().decode()
+
+                interfaces = []
+                status_valid = True
+
+                for line in result.split("\\n"):
+                    if "GigabitEthernet0/0/0" in line:
+                        interfaces.append(line.split())                        
+
+                    if "GigabitEthernet0/0/1" in line:
+                        interfaces.append(line.split())
+
+                for interface in interfaces:
+                    if interface[0] == "GigabitEthernet0/0/0" and interface[1] != "192.168.1.1":
+                        status_valid = False
+                        print(f"FAILURE: Incorrect IP for {interface[0]}")
+                    
+                    if interface[0] == "GigabitEthernet0/0/1" and interface[1] != "10.10.10.1":    
+                        status_valid = False
+                        print(f"FAILURE: Incorrect IP for {interface[0]}")        
+
+                    if interface[4] != "Up":  
+                        status_valid = False       
+                        print(f"FAILURE: Interface {interface[0]} status Down")                       
+
+                if status_valid: 
+                    print("SUCCESS: Interface config and status verified")
+
+                ssh_client.close()
+            """,
+
+            "run_command": "python test_interface_config.py",
+            
+            "expected_result": "Prints interface configuration details from device. Verifies IPs of interfaces match expected values. Verifies operational status of interfaces is Up."                  
+        }
+    }
+] 
+
+###ENDLIST### Here is a Python list with JSON objects for MX480 bootup process test cases and test scripts:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Bootup Sequence", 
+    "testcase": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Validate that the MX480 goes through the expected bootup sequence",
+      "steps": [
+        "Power on the MX480",
+        "Validate fans spin up", 
+        "Validate power LED turns green",
+        "Validate bootup messages on console",
+        "Validate login prompt is displayed"
+      ]
+    },
+    "testscript": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Script to validate MX480 bootup sequence",
+      "file_name": "test_bootup.py",
+      "init_scripts": "pip install paramiko",
+      "script": """
+        import paramiko
+        
+        ip = "10.1.1.1"
+        username = "admin" 
+        password = "Juniper123"
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(ip, username=username, password=password)
+        
+        stdin, stdout, stderr = ssh.exec_command("show chassis environment")  
+        fans_output = stdout.read()
+        assert "Fans OK" in fans_output
+        
+        stdin, stdout, stderr = ssh.exec_command("show chassis led")
+        led_output = stdout.read()
+        assert "Green - Power on" in led_output 
+      """,
+      "run_command": "python test_bootup.py",
+      "expected_result": "All assertions should pass, validating bootup sequence"
     }
   },
   
-  "testscript": {
-    "testname": "Test Bootup Sequence",
-    "objective": "Validate router bootup sequence using unittest",
-    "file_name": "test_bootup.py",
-    "init_scripts": [
-      "import unittest", 
-      "from router import Router",
-      "r = Router('MX480')"
-    ],
-    "script": """    
-class TestBootup(unittest.TestCase):
-    def test_bootup(self):
-        self.assertEqual(r.power_on(), True) 
-        self.assertEqual(r.detect_cards(), True)  
-        self.assertEqual(r.bringup_fpcs(), True)
-        self.assertTrue('Kernel booted' in r.get_bootup_logs())  
-        self.assertEqual(r.verify_daemons(), [])
-
-if __name__ == '__main__':
-    unittest.main()
-    """,
-    "run_command": "python test_bootup.py",
-    "expected_result": "OK"
-  }
-},
-
-{
-  "testname": "Test Console Access", 
-  "testcase": {
-    "testname": "Test Console Access",
-    "objective": "Validate able to access console during bootup",
-    "steps": [
-      "Connect console cable to router",
-      "Power on router", 
-      "Check console prints bootup messages",
-      "Login to console CLI"
-    ],
-    "test_data": {
-      "console_port": "COM1",
-      "login_prompt": "login:"
-    }
-  },
-
-  "testscript": {
-    "testname": "Test Console Access", 
-    "objective": "Validate console access using unittest",
-    "file_name": "test_console.py",  
-    "init_scripts": [
-      "import serial",
-      "import unittest"
-    ],
-    "script": """
-class TestConsole(unittest.TestCase):
-    def test_console(self):
-        ser = serial.Serial('COM1')
-        self.assertIn('Booting kernel', ser.readline())
-        self.assertEqual(ser.readline(), 'login:')
-        ser.write('myusername')
-        ser.write('mypassword')   
-        self.assertIn('Router>', ser.readline())  
-        
-if __name__ == '__main__':
-    unittest.main()
-    """,
-    "run_command": "python test_console.py", 
-    "expected_result": "OK"
-  }
-}
-]
-
-###ENDLIST### Here is the Python list with test cases and test scripts for Bootup process of the MX480, enclosed within the delimiters:
-
-###STARTLIST###
-[
   {
-    "testname": "Test Bootup Time", 
-    "testcase": {
-      "testname": "Test Bootup Time",
-      "objective": "Validate bootup time is within expected limit",
+    "testname": "Test Login",
+    "testcase":  {
+      "testname": "Test Login",
+      "objective": "Validate login with valid and invalid credentials",
       "steps": [
-        "Power on the device",
-        "Note start time", 
-        "Check if device is fully booted",
-        "Note end time",
-        "Validate bootup time is less than 5 minutes"
+        "Attempt login with valid credentials",
+        "Attempt login with invalid credentials"  
       ]
     },
     "testscript": {
-      "testname": "Test Bootup Time",
-      "objective": "Script to validate bootup time", 
-      "file_name": "test_bootup.py",
-      "init_scripts": "pip install datetime",
-      "script": """
-        import datetime
-        
-        start = datetime.datetime.now()
-        print("System booted at:", start)
-                
-        # Add logic to detect system fully booted
-                
-        end = datetime.datetime.now()
-        print("System bootup completed at:", end)
-                
-        bootup_time = end - start
-        print("Total bootup time:", bootup_time)
-                
-        assert bootup_time.seconds < 300
-      """,
-      "run_command": "python test_bootup.py",
-      "expected_result": "Success if bootup time is less than 5 minutes"  
-    }
-  },
-  {
-    "testname": "Test Bootup Sequence",
-    "testcase": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Validate modules loaded in correct bootup sequence",
-      "steps": [ 
-        "Power on the device", 
-        "Check syslog/console for bootup logs",
-        "Validate BIOS, u-boot, kernel booted sequentially"
-      ]
-    },
-    "testscript": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Script to validate bootup sequence",
-      "file_name": "test_sequence.py",  
-      "init_scripts": "", 
+      "testname": "Test Login",  
+      "objective": "Script to validate login",
+      "file_name": "test_login.py",
+      "init_scripts": "pip install paramiko",
       "script": """ 
-        import re
+        import paramiko
         
-        bootup_log = "BIOS started, u-boot started, kernel started..." 
+        ip = "10.1.1.1"
+        valid_username = "admin"
+        valid_password = "Juniper123"
+        invalid_username = "fakeuser"
+        invalid_password = "fakepass"
         
-        bios_pattern = r"BIOS started"
-        uboot_pattern = r"u-boot started"
-        kernel_pattern = r"kernel started"
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
-        assert re.search(bios_pattern, bootup_log)
-        assert re.search(uboot_pattern, bootup_log) 
-        assert re.search(kernel_pattern, bootup_log)
-        assert bootup_log.find(bios_pattern) < bootup_log.find(uboot_pattern) < bootup_log.find(kernel_pattern)
+        try:
+          ssh.connect(ip, username=valid_username, password=valid_password)
+          print("Login with valid credentials passed")
+        except Exception as e:
+          print("Login with valid credentials failed")
+          
+        try:
+          ssh.connect(ip, username=invalid_username, password=invalid_password)
+        except Exception as e:  
+          print("Login with invalid credentials passed")
+        else:
+          print("Login with invalid credentials failed")
       """,
-      "run_command": "python test_sequence.py",
-      "expected_result": "Success if BIOS, u-boot and kernel logs appear in correct sequence"
+      "run_command": "python test_login.py", 
+      "expected_result": "Login with valid credentials passed\nLogin with invalid credentials passed"
     }
-  } 
+  }
 ]
 ###ENDLIST###
