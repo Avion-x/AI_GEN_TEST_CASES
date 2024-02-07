@@ -1,121 +1,57 @@
- Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for the Network MSeries Router MX480:
+ Here are 2 regression test cases with python test scripts for Zone-based firewall on MX480 router:
 
 ###STARTLIST###
 [
 {
-  "testname": "Validate Zone-based Firewall Configuration",
+  "testname": "test_interzone_policies",
   "testcase": {
-    "testname": "Validate Zone-based Firewall Configuration",
-    "objective": "Validate that the zone-based firewall is configured correctly by testing connectivity between zones",
+    "testname": "test_interzone_policies",
+    "objective": "Validate interzone security policies are correctly enforced between zones",
     "steps": [
-      "Set up zones and zone-based firewall policies",
-      "Verify intra-zone connectivity within trust, untrust and mgmt zones", 
-      "Verify no connectivity between trust and untrust zones due to firewall policy"
+      "1. Configure zones A and B with interzone policy to allow traffic from A to B", 
+      "2. Verify hosts in zone A can access resources in zone B",
+      "3. Verify hosts in zone B cannot initiate connections to zone A"
     ],
     "test_data": {
-      "zones": ["trust", "untrust", "mgmt"],
-      "zone_interfaces": { 
-        "trust": ["ge-0/0/1", "ge-0/0/2"],
-        "untrust": ["ge-0/0/3"], 
-        "mgmt": ["fxp0"]
-      }
+      "zoneA_network": "192.168.1.0/24",
+      "zoneB_network": "192.168.2.0/24" 
     }
   },
-
   "testscript": {
-    "testname": "Validate Zone-based Firewall Configuration", 
-    "objective": "Validate zone-based firewall configuration by testing connectivity",
-    "file_name": "test_zone_firewall.py",
-    "init_scripts": "pip install paramiko jxmlease",
-    
-    "script": """
-    import paramiko
-    import jxmlease
-    
-    ZONE_DATA = # Populated test data dictionary
-    
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(router_ip, username='pyuser', password='JNPR@123')
-    
-    def test_intrazone_connectivity(zone):
-      interfaces = ZONE_DATA["zone_interfaces"][zone]
-      for intf1 in interfaces:
-        for intf2 in interfaces:
-          ping = client.exec_command(f"ping {intf2} interface {intf1}")
-          assert "!!!!!" not in ping
-    
-    def test_interzone_connectivity():
-      trust_intfs = ZONE_DATA["zone_interfaces"]["trust"]
-      untrust_intfs = ZONE_DATA["zone_interfaces"]["untrust"]
-      
-      for t_intf in trust_intfs:
-        for u_intf in untrust_intfs:
-          ping = client.exec_command(f"ping {u_intf} interface {t_intf}") 
-          assert "!!!!!" in ping
-      
-    if __name__ == "__main__":
-        test_intrazone_connectivity("trust") 
-        test_intrazone_connectivity("untrust")
-        test_intrazone_connectivity("mgmt")
-        
-        test_interzone_connectivity()
-    """,
-    
-    "run_command": "python test_zone_firewall.py",
-    "expected_result": "All test cases should pass validating zone connectivity"
-    
+    "testname": "test_interzone_policies",
+    "objective": "Automated test script to validate interzone policies",
+    "file_name": "test_interzone_policies.py",
+    "init_scripts": "\"\"\"\npip install paramiko\n\"\"\"",
+    "script": "\"\"\"\nimport paramiko\n\n# SSH Connect\nclient = paramiko.SSHClient()\n\n# Verify zone A to zone B connectivity\nstdin, stdout, stderr = client.exec_command('ping 192.168.2.1')\nassert ' 0% packet loss' in stdout.read()\n\n# Verify no connectivity from zone B to zone A\nstdin, stdout, stderr = client.exec_command('ping 192.168.1.1')\nassert '100% packet loss' in stdout.read()\n\"\"\"",
+    "run_command": "python test_interzone_policies.py",
+    "expected_result": "Script asserts the expected interzone connectivity based on policies"
   }
 },
-
 {
-  "testname": "Test Application Firewall Configuration",
-  
+  "testname": "test_security_policy",
   "testcase": {
-    "testname": "Test Application Firewall Configuration ",
-    "objective": "Validate application firewall policies are correctly enforced",
+    "testname": "test_security_policy",  
+    "objective": "Validate firewall correctly blocks/allows traffic based on security policy rules",
     "steps": [
-      "Configure application firewall policies to block certain applications",
-      "Initiate traffic to blocked applications and verify it is dropped" 
+      "1. Configure security policy to block FTP traffic from zone A",
+      "2. Verify FTP connection from zone A is blocked",  
+      "3. Verify HTTP connection from zone A still works"
     ],
     "test_data": {
-      "blocked_apps": ["gaming", "social-networking"], 
-      "appfw_policy": "BLOCK-APPS" 
+      "zoneA_network":"192.168.1.0/24",
+      "zoneB_network":"192.168.2.0/24"
     }
   },
-  
+
   "testscript": {
-  
-    "testname": "Test Application Firewall Configuration",
-    "objective": "Validate application firewall blocks certain applications",
-  
-    "file_name": "test_appfw.py",
-    "init_scripts": "pip install paramiko nmap jxmlease",
-  
-    "script": """
-    import paramiko
-    import nmap
-    import jxmlease
-    
-    POLICY = # Populated application firewall policy 
-    
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
-    client.connect(router_ip, username='pyuser', password='JNPR@123')
-    
-    def test_app_blocked(app):
-      traffic = nmap.PortScanner().scan(target, ports=[80, 443])
-      assert traffic["stats"]["packet_filter"] == "dropped"
-
-    if __name__ == "__main__":
-      test_app_blocked("gaming") 
-      test_app_blocked("social-networking")
-    """,
-  
-    "run_command": "python test_appfw.py",
-    "expected_result": "Traffic to blocked apps should be dropped"
-  
+    "testname": "test_security_policy",
+    "objective": "Automated test script to validate security policy rules",
+    "file_name": "test_security_policy.py",
+    "init_scripts": "\"\"\"\npip install paramiko ftplib\n\"\"\"",
+    "script": "\"\"\"\nimport paramiko \nimport ftplib\n\n# Set up test FTP connection\nftp = ftplib.FTP()\nftp.connect('192.168.2.100')\n\n# Verify FTP is blocked\nassertRaises ftp.login('testuser','testpass')\n     \n# Verify HTTP still works  \nstdin, stdout, stderr = client.exec_command('wget 192.168.2.200')\nassert 'saved' in stdout.read()\n\"\"\"",
+    "run_command": "python test_security_policy.py", 
+    "expected_result": "Script asserts FTP traffic is blocked but HTTP works based on policy rules"
   }
-
-}]
+} 
+]
 ###ENDLIST###
