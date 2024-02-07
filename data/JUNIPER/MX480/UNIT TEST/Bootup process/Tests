@@ -1,40 +1,91 @@
- Here are 2 Unit Test Cases and corresponding python test scripts for Bootup process for Network MSeries Router MX480:
+ Here are 2 unit test cases with python test scripts for Bootup process for MX480 router:
 
 ###STARTLIST###
 [
-{
-  "testname": "Test Bootup with Valid Configuration",
-  "testcase": {
-    "testname": "Test Bootup with Valid Configuration",  
-    "objective": "Validate router boots up successfully with valid startup configuration",
-    "steps": ["Verify console displays expected bootup logs", "Verify router transitions to enabled mode"] 
+  {
+    "testname": "Test Bootup Time", 
+    "testcase": {
+      "testname": "Test Bootup Time",
+      "objective": "Validate router bootup time is within 120 seconds",
+      "steps": [
+        "Power on the router", 
+        "Note start time",
+        "Wait for router to complete bootup",
+        "Note end time",
+        "Validate bootup time is <= 120 seconds"
+      ],
+      "test_data": {
+        "max_bootup_time": 120
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Time",
+      "objective": "Validate router bootup time using python",
+      "file_name": "test_bootup_time.py",
+      "init_scripts": "import time",
+      "script": """
+start_time = time.time()
+print("Router powered on")
+
+# Code to wait for router bootup
+time.sleep(100)  
+
+end_time = time.time()
+bootup_time = end_time - start_time
+max_time = 120
+
+if bootup_time <= max_time:
+  print("Test Passed. Bootup Time: " + str(bootup_time))
+else:
+  print("Test Failed. Bootup Time: " + str(bootup_time))
+      """,
+      "run_command": "python test_bootup_time.py",
+      "expected_result": "Test Passed. Bootup Time: 100"
+    }
   },
-  "testscript": {
-    "testname": "Test Bootup with Valid Configuration",
-    "objective": "Validate router boots up successfully with valid startup configuration", 
-    "file_name": "test_bootup_valid_config.py",
-    "init_scripts": "\"\"\"\npip install pytest\n\"\"\"\n",
-    "script": "\"\"\"\nimport pytest\n\ndef test_bootup():\n    # Simulate router bootup process with valid configuration\n    print('Displaying expected bootup logs')\n    assert True # Represents transitition to enabled mode\n\"\"\"\n",  
-    "run_command": "python test_bootup_valid_config.py",
-    "expected_result": "Test passes and router boots up successfully with valid configuration"
+  {
+    "testname": "Test Interface Status",
+    "testcase": {
+      "testname": "Test Interface Status ",
+      "objective": "Validate all interfaces are up after bootup",
+      "steps": [
+        "Power on the router",
+        "Wait for router to complete bootup",
+        "Execute 'show interfaces status' command",
+        "Validate status is up for all interfaces"  
+      ],
+      "test_data": {
+      }
+    },
+    "testscript": {
+      "testname": "Test Interface Status", 
+      "objective": "Validate interface status using python",
+      "file_name": "test_interface_status.py",
+      "init_scripts": "import re",
+      "script": """
+# Code to execute 'show interfaces status' 
+cli_output = '''
+Interface       Status     Protocol
+ge-0/0/0        up          up  
+ge-0/0/1        up          up
+'''
+
+interfaces = re.findall(r'([a-z|-|\d]+)/(\d+/\d+/\d+)\s+(\w+)', cli_output)
+
+passed = True
+for interface in interfaces:
+  if interface[2] != "up":
+    print(f"Interface {interface[1]} status is down")
+    passed = False
+    
+if passed:
+  print("Test Passed. All interfaces are up")  
+else:
+  print("Test Failed. One or more interfaces are down")
+    """,
+    "run_command": "python test_interface_status.py", 
+    "expected_result": "Test Passed. All interfaces are up"
+    }
   }
-},
-{
-  "testname": "Test Bootup with Invalid Configuration",
-  "testcase": {
-    "testname": "Test Bootup with Invalid Configuration",
-    "objective": "Validate router enters safe mode on invalid startup configuration",
-    "steps": ["Verify console displays error indicating invalid configuration", "Verify router enters safe mode"]
-  },
-  "testscript": {
-    "testname": "Test Bootup with Invalid Configuration",
-    "objective": "Validate router enters safe mode on invalid startup configuration",
-    "file_name": "test_bootup_invalid_config.py",
-    "init_scripts": "\"\"\"\npip install pytest\n\"\"\"\n",  
-    "script": "\"\"\"\nimport pytest \n\ndef test_bootup():\n    # Simulate router bootup process with invalid configuration\n    print('Error displaying invalid configuration')\n    assert False # Represents entering safe mode\n\"\"\"\n",
-    "run_command": "python test_bootup_invalid_config.py", 
-    "expected_result": "Test fails and router enters safe mode due to invalid configuration"
-  }
-}
 ]
 ###ENDLIST###
