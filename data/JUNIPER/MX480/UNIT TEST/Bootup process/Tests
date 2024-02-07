@@ -1,262 +1,325 @@
- Here are 2 Unit Test Cases and corresponding Python test scripts for Bootup process for Network MSeries Router MX480:
+ Here are 2 example unit test cases and corresponding Python test code for testing the bootup process on a Juniper Networks MX480 router:
 
-###STARTLIST###
-[
-    {
-        "testname": "Test Bootup CLI Access", 
-        "testcase": {
-            "testname": "Test Bootup CLI Access",
-            "objective": "Verify CLI access is available after bootup completes",
-            "steps": [
-                "1. Power on the MX480 router",
-                "2. Wait for bootup process to complete",
-                "3. Use console cable to connect to CLI",
-                "4. Login to CLI using valid credentials",
-                "5. Verify login is successful and router# prompt displays"
-            ],
-            "test_data": {
-                "username": "admin",
-                "password": "admin123"
-            }
-        },
-        "testscript": {
-            "testname": "Test Bootup CLI Access",
-            "objective": "Verify CLI access after bootup using paramiko",
-            "file_name": "test_bootup_cli_access.py",
-            "init_scripts": "pip install paramiko",
-            "script": """
-                import paramiko
-                import time
-                
-                IP = "192.168.1.1"
-                PORT = 22
-                USERNAME = "admin"
-                PASSWORD = "admin123"
-                
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                
-                print("Initiating connection to router")
-                ssh.connect(IP, port=PORT, username=USERNAME, password=PASSWORD)
-                time.sleep(20)
-                
-                stdin, stdout, stderr = ssh.exec_command("show version")
-                lines = stdout.readlines()
-                
-                if lines[-1].endswith("router#"):
-                    print("Login successful")
-                else:
-                    print("Login failed")
-                    
-                ssh.close()
-            """,
-            "run_command": "python test_bootup_cli_access.py",
-            "expected_result": "Login successful"
+## Test Case 1 - Cold Boot
+
+Verify the router boots up successfully from a powered off state.
+
+```python
+import unittest
+from netmiko import ConnectHandler
+
+class TestMx480Bootup(unittest.TestCase):
+
+    def test_cold_boot(self):
+        device = {
+            'device_type': 'juniper',
+            'host': 'mx480.example.com',
+            'username': 'testuser',
+            'password': 'testpass'
         }
-    },
-    {
-         "testname": "Test Bootup Syslog",
-         "testcase": {
-             "testname": "Test Bootup Syslog ",
-             "objective": "Verify bootup logs are collected in syslog file",
-             "steps": [
-                 "1. Clear existing syslog file on MX480",  
-                 "2. Power on the MX480 router",
-                 "3. Wait for bootup process to complete ",
-                 "4. Check syslog file for bootup logs"
-             ],
-             "test_data": {}
-         },
-         "testscript": {
-             "testname": "Test Bootup Syslog",
-             "objective": "Check for bootup logs in syslog using Python",
-             "file_name": "test_bootup_syslog.py",
-             "init_scripts": "pip install paramiko",
-             "script": """
-                import paramiko
-                import re
-                
-                IP = "192.168.1.1"
-                PORT = 22
-                USERNAME = "admin"
-                PASSWORD = "admin123"
-                
-                bootup_logs = ["Starting kernel", "Initializing cgroup subsys cpuset",
-                               "Initializing cgroup subsys cpu", "Loading /boot/vmlinuz-3.10.0-957.el7.x86_64"]
-                
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(IP, port=PORT, username=USERNAME, password=PASSWORD)
-                
-                stdin, stdout, stderr = ssh.exec_command("cat /var/log/messages")
-                lines = stdout.readlines()
-                
-                found = []
-                for line in lines:
-                    for log in bootup_logs:
-                        if re.search(log, line):
-                            found.append(log)
-                
-                if set(found) == set(bootup_logs):
-                    print("All bootup logs found")
-                else:
-                    print("Some bootup logs missing")
-                    
-                ssh.close()
-             """,
-             "run_command": "python test_bootup_syslog.py",
-             "expected_result": "All bootup logs found"  
-         }
-     }
- ]
-###ENDLIST### Here are 2 detailed Unit Test Cases with python test scripts for Bootup process for the ISR 4321 router:
+        
+        net_connect = ConnectHandler(**device)
+        net_connect.send_command('request system reboot', expect_string='#')
+        
+        # Wait for device to go down
+        net_connect.disconnect()
+        
+        # Wait sufficient time for device to cold boot
+        import time
+        time.sleep(300) 
 
-###STARTLIST###
-[
-  {
-    "testname": "Test Bootup Sequence", 
-    "testcase": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Validate that the router goes through the correct bootup sequence",
-      "steps": [
-        "Power on the router",
-        "Verify POST completes successfully",
-        "Verify boot loader is loaded", 
-        "Verify IOS image is loaded successfully",
-        "Verify router transitions to privileged EXEC mode"
-      ],
-      "test_data": {
-        "router_model": "ISR 4321",
-        "ios_image": "isr4300-universalk9.16.06.01.SPA.bin"  
-      }
-    },
-    "testscript": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Automate validation of bootup sequence",
-      "file_name": "test_bootup.py",
-      "init_scripts": [
-        "pip install pexpect"  
-      ],
-      "script": """
-        import pexpect
+        # Reconnect to device
+        net_connect = ConnectHandler(**device)
         
-        ROUTER_IP = "192.168.1.1"
-        ROUTER_USERNAME = "admin"
-        ROUTER_PASSWORD = "Cisco123"
-        
-        router = pexpect.spawn(f"ssh {ROUTER_USERNAME}@{ROUTER_IP}")
-        router.expect("Password:")
-        router.sendline(ROUTER_PASSWORD)
-        
-        router.expect("#")
-        router.sendline("show version")
-        version_output = router.before
-        
-        assert "Cisco IOS XE Software" in version_output
-        assert "ISR4321" in version_output
-      """,
-      "run_command": "python test_bootup.py",
-      "expected_result": "Both assertions should pass, indicating successful bootup"
-    }
-  },
-  {
-    "testname": "Test Hardware Inventory",
-    "testcase": {
-      "testname": "Test Hardware Inventory",
-      "objective": "Validate hardware components detected accurately after bootup", 
-      "steps": [ 
-        "Power on the router",
-        "Verify POST completes successfully",
-        "Execute 'show inventory' command",
-        "Verify CPU, RAM, flash and interfaces are listed correctly"   
-      ],
-      "test_data": {
-        "router_model": "ISR 4321",
-        "cpu": "1RU A900MHz",  
-        "ram": "8GB",
-        "flash": "8GB",
-        "interfaces": ["GigabitEthernet0/0", "GigabitEthernet0/1"]  
-      }
-    },
-    "testscript": {
-      "testname": "Test Hardware Inventory",    
-      "objective": "Automate validation of hardware inventory",
-      "file_name": "test_inventory.py",
-      "init_scripts": [ 
-        "pip install pexpect"
-      ],
-      "script": """
-        import re
-        import pexpect
-        
-        ROUTER_IP = "192.168.1.1"
-        ROUTER_USERNAME = "admin"
-        ROUTER_PASSWORD = "Cisco123"
-        
-        router = pexpect.spawn(f"ssh {ROUTER_USERNAME}@{ROUTER_IP}") 
-        router.expect("Password:")
-        router.sendline(ROUTER_PASSWORD)
-        
-        router.expect("#")
-        router.sendline("show inventory")
-        inventory_output = router.before
-        
-        assert re.search("1RU A900MHz", inventory_output)
-        assert re.search("8GB", inventory_output) 
-        assert re.search("flash:(8|16)GB", inventory_output)
-        assert re.search("GigabitEthernet0/0", inventory_output)
-        assert re.search("GigabitEthernet0/1", inventory_output)
-      """,
-      "run_command": "python test_inventory.py", 
-      "expected_result": "All assertions should pass, indicating hardware inventory captured correctly"
-    }
-  } 
-]
-###ENDLIST### Here is a Python list with JSON objects for test cases and test scripts for Bootup process of the MX480:
+        # Verify prompt has been reached 
+        prompt = net_connect.find_prompt()
+        self.assertEqual(prompt, 'mx480#')
 
-###STARTLIST###
-[
-{"testname": "Test Bootup Sequence", 
-"testcase": {
-  "testname": "Test Bootup Sequence",
-  "objective": "Validate bootup sequence and ensure device reaches operational state",
-  "steps": [
-    "Power on device",
-    "Validate boot messages", 
-    "Validate successful loading of configuration",
-    "Validate interfaces are operationally up"
-  ]
-},
-"testscript": {
-  "testname": "Test Bootup Sequence", 
-  "objective": "Script to validate bootup sequence",
-  "filename": "test_bootup.py",
-  "init_scripts": [
-    "pip install paramiko"  
-  ],
-  "script": """
-    import paramiko
+if __name__ == '__main__':
+    unittest.main()
+```
+
+## Test Case 2 - Warm Boot
+
+Verify the router boots up successfully from a warm reboot.
+
+```python
+import unittest
+from netmiko import ConnectHandler
+
+class TestMx480Bootup(unittest.TestCase):
+
+    def test_warm_boot(self):
+        device = {
+            'device_type': 'juniper',
+            'host': 'mx480.example.com',
+            'username': 'testuser',
+            'password': 'testpass'
+        }
+       
+        net_connect = ConnectHandler(**device)
+        output = net_connect.send_command('request system reboot', expect_string='#')
+        
+        # Verify reboot message in output
+        self.assertIn('Rebooting', output)
+        
+        # Wait for prompt to confirm reboot
+        net_connect.send_command('', expect_string='#')
+        
+        # Verify prompt has been reached
+        prompt = net_connect.find_prompt()  
+        self.assertEqual(prompt, 'mx480#')
+        
+if __name__ == '__main__':
+    unittest.main()
+```
+
+The test cases verify successful bootup from cold and warm reboots by reconnecting to the device after reboot and checking that the expected CLI prompt is reached. The Python code uses the Netmiko library to automate the CLI interaction. Here are 2 detailed unit test cases and corresponding Python test cases for testing the bootup process on a Cisco ISR 4321 router:
+
+**Test Case 1 - Verify bootup to ROMMON prompt**
+
+Steps:
+
+1. Power on the router 
+2. Verify that the router reaches the ROMMON prompt
+
+Python code:
+
+```python
+import re
+from netmiko import ConnectHandler
+
+def test_rommon_prompt(host, username, password):
+    device = ConnectHandler(host=host, username=username, password=password)
+    output = device.send_command("")
+
+    assert re.search(r"rommon", output)
+
+test_rommon_prompt("192.168.1.1", "admin", "password")
+```
+
+**Test Case 2 - Verify successful bootup to privileged EXEC mode** 
+
+Steps:
+
+1. Power on the router
+2. At the ROMMON prompt, issue the `boot` command
+3. Verify that the router boots up successfully to privileged EXEC mode
+
+Python code: 
+
+```python
+import re 
+from netmiko import ConnectHandler
+
+def test_successful_boot(host, username, password):
+    device = ConnectHandler(host=host, username=username, password=password)
+    device.send_command("boot")
+    output = device.send_command("")
     
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect("192.168.0.1")
+    assert re.search(r">", output) 
+
+test_successful_boot("192.168.1.1", "admin", "password")
+```
+
+This tests booting to ROMMON prompt and successful bootup to privileged EXEC mode. The Python test cases use netmiko to connect and send commands, and assert on expected output. Here are 2 unit test cases with Python code for testing the bootup process on an MX480 router:
+
+### Test Case 1: Normal Bootup
+
+**Setup:**
+- Connect console cable to MX480
+- Power on MX480
+
+**Execution:**
+```python
+import re
+import pexpect
+
+def test_normal_bootup():
+    console = pexpect.spawn('telnet 192.168.1.1')
+    console.expect('login:')
+    console.sendline('admin')
+    console.expect('Password:')
+    console.sendline('password')
     
-    stdin, stdout, stderr = client.exec_command("show version")
-    out = stdout.read()
-    assert "Junos version" in out
+    # Verify boot messages
+    console.expect(re.escape('Booting flash...')) 
+    console.expect(re.escape('Kernel loaded in '))
+    console.expect(re.escape('Initiating Background Daemon...'))
+
+    # Verify login prompt
+    console.expect('#')
     
-    stdin, stdout, stderr = client.exec_command("show configuration failed") 
-    out = stdout.read()
-    assert "error: configuration check-out failed" not in out
+    console.close()
+```
+
+**Verification:**
+- Boot messages are printed to console in correct order
+- Login prompt is displayed after bootup completes
+
+**Teardown:**
+- Disconnect console cable
+
+### Test Case 2: Bootup with Corrupted Kernel
+
+**Setup:** 
+- Connect console cable to MX480
+- Corrupt kernel image on MX480
+- Power on MX480
+
+**Execution:**
+```python 
+import pexpect
+
+def test_corrupted_kernel_boot():
+    console = pexpect.spawn('telnet 192.168.1.1')
     
-    for intf in ["ge-0/0/0", "ge-0/0/1"]:
-      stdin, stdout, stderr = client.exec_command(f"show interfaces {intf} | match Link")  
-      out = stdout.read()
-      assert "Up" in out
-  """,
-  "run_command": "python test_bootup.py",
-  "expected_result": "All asserts should pass, validating successful bootup"  
-}
-}
-] 
-###ENDLIST###
+    # Verify corrupted kernel message
+    console.expect('Booting backup kernel') 
+
+    # Verify login prompt   
+    console.expect('login:')
+    
+    console.sendline('admin')
+    console.expect('Password:')
+    console.sendline('password')
+    console.expect('#')
+    
+    console.close()  
+```
+
+**Verification:**
+- Backup kernel boot message is displayed
+- Login prompt is displayed after bootup completes
+
+**Teardown:**
+- Disconnect console cable
+- Restore good kernel image  Here are some sample Python 2 unit test cases and test code for testing the bootup process on an MX480 router:
+
+```python
+import unittest
+from router import MX480
+
+class MX480BootupTestCase(unittest.TestCase):
+
+    def test_powers_on(self):
+        """Test that the router powers on successfully"""
+        router = MX480()
+        router.power_on()
+        self.assertTrue(router.is_powered_on())
+
+    def test_loads_boot_config(self):
+        """Test that the router loads the boot configuration""" 
+        router = MX480()
+        router.power_on()
+        self.assertEqual(router.get_config(), "boot_config.txt")
+
+    def test_boot_sequence_completes(self):
+        """Test that the full bootup sequence completes"""
+        router = MX480()
+        router.power_on()
+        self.assertTrue(router.is_ready())
+
+    def test_failsafes_on_incomplete_boot(self):
+        """Test failsafe mechanisms for incomplete boot"""
+        # Simulate scenario where boot doesn't fully complete
+        router = MX480()
+        router.power_on()
+        router.boot_sequence_incomplete()
+        
+        # Check for failsafe/recovery mechanisms
+        self.assertTrue(router.is_in_safe_mode())
+        self.assertTrue(router.has_booted_backup())
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+This provides some example test cases that:
+
+- Check basic power on 
+- Verify boot config is loaded
+- Check full boot sequence completes
+- Simulate incomplete boot and test failsafe mechanisms
+
+The test code stubs out a `MX480` class with methods to simulate router state and behaviors during bootup. The tests assert expected state changes and behaviors occur. Here are 2 unit test cases and sample Python test code for testing the bootup process on an MX480 router:
+
+## Test Case 1 - Verify Bootup Completes Successfully
+
+**Steps:**
+
+1. Power on the MX480 router.
+
+2. Wait for the router to complete the bootup process. 
+
+3. Verify the router prompts for username and password.
+
+**Expected Result:** 
+
+The router should boot up successfully and display the login prompt without any errors.
+
+**Python Code:**
+
+```python
+import pexpect
+
+router = pexpect.spawn('telnet 192.168.1.1')
+router.expect('username:')
+router.sendline('admin')
+router.expect('password:')
+router.sendline('admin123')
+router.expect('#')
+print("Router booted up successfully")
+```
+
+## Test Case 2 - Verify Configuration Persists After Reboot
+
+**Steps:** 
+
+1. Configure a loopback interface on the router. 
+
+2. Save the configuration.
+
+3. Reboot the router.
+
+4. Verify the loopback interface still exists after reboot.
+
+**Expected Result:**
+
+The loopback interface configuration should persist after the router reboots.
+
+**Python Code:**
+
+```python
+import pexpect
+
+router = pexpect.spawn('telnet 192.168.1.1')
+router.expect('username:')
+router.sendline('admin')
+router.expect('password:') 
+router.sendline('admin123')
+
+# Configure loopback 
+router.expect('#')
+router.sendline('configure')
+router.expect('#')
+router.sendline('interface loopback 1')
+router.expect('#')
+router.sendline('exit')
+router.sendline('commit')
+
+# Reboot 
+router.sendline('request system reboot')
+router.expect('Reboot the system?')
+router.sendline('yes')
+
+# Verify loopback exists after reboot
+router.expect('username:')
+router.sendline('admin')
+router.expect('password:')
+router.sendline('admin123')
+router.expect('#')
+router.sendline('show interfaces loopback 1')
+router.expect('loopback1')
+print("Loopback interface persisted through reboot")
+```
