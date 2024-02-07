@@ -1,116 +1,105 @@
- Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for the Network MSeries Router MX480:
+ Here is the Python list with 2 Regression Test Cases and test scripts for Zone-based firewall cases for MX480 router:
 
 ###STARTLIST###
 [
-  {
-    "testname": "Test Zone-based Block Rules",
+{
+    "testname": "Zone-based firewall rule verification",
     "testcase": {
-      "testname": "Test Zone-based Block Rules",
-      "objective": "Validate that zone-based firewall block rules are correctly blocking traffic",
-      "steps": [
-        "Create zone-based firewall with block rule between zoneA and zoneB", 
-        "Send TCP traffic from zoneA to zoneB",
-        "Verify traffic is blocked"
-      ],
-      "test_data": {
-        "zoneA_network": "192.168.1.0/24",
-        "zoneB_network": "192.168.2.0/24"
-      }
+        "testname": "Zone-based firewall rule verification",  
+        "objective": "Verify that zone-based firewall rules are configured properly between zones",
+        "steps": [
+            "Configure zone-based firewall policy between untrust and trust zones", 
+            "Verify connectivity between zones follows defined rules",
+            "Check syslog for any deny traffic logs"      
+        ],
+        "test_data": {
+            "zones": ["untrust", "trust"],
+            "rules": [{"source": "untrust", "dest": "trust", "service": "HTTP", "action": "permit"}] 
+        }
     },
     "testscript": {
-      "testname": "Test Zone-based Block Rules", 
-      "objective": "Validate that zone-based firewall block rules are correctly blocking traffic",
-      "file_name": "test_zone_based_firewall.py",
-      "init_scripts": "pip install paramiko netmiko",
-      "script": """
-import paramiko
-import netmiko
-
-zoneA_network = "192.168.1.0/24" 
-zoneB_network = "192.168.2.0/24"
-
-ssh_client = paramiko.SSHClient()
-ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh_client.connect(router_ip, username=username, password=password)
-
-net_connect = netmiko.ConnectHandler(device_type='juniper', ip=router_ip, username=username, password=password)
-
-# Configure zone-based firewall block rule  
-net_connect.send_config_set([f"set security zones security-zone zoneA host-inbound-traffic system-services ping",
-                             f"set security zones security-zone zoneB host-inbound-traffic system-services ping",
-                             f"set security policies from-zone zoneA to-zone zoneB policy block-traffic match source-address {zoneA_network} destination-address {zoneB_network}"])
-
-# Send TCP traffic from zoneA to zoneB
-net_connect.send_command(f"ping {zoneB_network} from {zoneA_network}") 
-
-# Verify traffic is blocked  
-output = net_connect.send_command("show security flow session")
-if f"{zoneA_network}->{zoneB_network}" not in output:
-    print("Traffic successfully blocked by zone firewall")
-else:
-    raise Exception("Traffic not blocked by zone firewall")
-          
-ssh_client.close()
-net_connect.disconnect()    
-      """,
-      "run_command": "python test_zone_based_firewall.py", 
-      "expected_result": "Traffic successfully blocked by zone firewall"
+        "testname": "Verify Zone-based Firewall Rules",
+        "objective": "Automated verification of zone-based firewall rules",  
+        "file_name": "test_fw_rules.py",
+        "init_scripts": "pip install paramiko ncclient jsonschema", 
+        "script": """
+            import paramiko
+            import ncclient
+            import jsonschema
+            
+            HOST = '192.168.1.1'
+            USER = 'admin'
+            PWD = 'Juniper!123'
+            
+            # Get firewall config over NETCONF
+            with ncclient.Manager(host=HOST, port=2022, username=USER, password=PWD) as m:
+                fw_config = m.get(('xpath','/conf/firewall')).data_xml
+            
+            # Validate firewall config schema
+            with open('fw_schema.json') as f: 
+                schema = json.load(f)
+            jsonschema.validate(instance=fw_config, schema=schema)
+            
+            # Connect SSH 
+            ssh = paramiko.SSHClient() 
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(hostname=HOST, username=USER, password=PWD)
+            
+            # Validate connectivity between zones
+            stdin, stdout, stderr = ssh.exec_command('ping 192.168.10.5 -c 3')  
+            assert '3 received' in stdout.read().decode('utf-8')
+            
+            ssh.close()
+        """,
+        "run_command": "python test_fw_rules.py", 
+        "expected_result": "No errors while validating firewall config. ping succeeds across zones."
     }
-  },
-  {
-    "testname": "Test Zone-based Allow Rules", 
+},
+{
+    "testname": "Zone-based firewall failover verification",  
     "testcase": {
-      "testname": "Test Zone-based Allow Rules",
-      "objective": "Validate that zone-based firewall allow rules are correctly allowing traffic",
-      "steps": [ 
-        "Create zone-based firewall with allow rule between zoneA and zoneB",
-        "Send TCP traffic from zoneA to zoneB", 
-        "Verify traffic is allowed"
-      ],
-     "test_data": {
-        "zoneA_network": "192.168.1.0/24",
-        "zoneB_network": "192.168.2.0/24"  
-      }
+        "testname": "Zone-based firewall failover verification",
+        "objective": "Verify zone-based firewall configuration fails over properly",
+        "steps": [
+            "Force failover from primary to backup routing engine",
+            "Verify zone connectivity as per firewall rules post failover" 
+        ],
+        "test_data": {}  
     },
     "testscript": {
-      "testname": "Test Zone-based Allow Rules",
-      "objective": "Validate that zone-based firewall allow rules are correctly allowing traffic",
-      "file_name": "test_zone_based_firewall.py", 
-      "init_scripts": "pip install paramiko netmiko",
-      "script": """  
-import paramiko
-import netmiko
-
-zoneA_network = "192.168.1.0/24"
-zoneB_network = "192.168.2.0/24"  
-
-ssh_client = paramiko.SSHClient()
-ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh_client.connect(router_ip, username=username, password=password)
-
-net_connect = netmiko.ConnectHandler(device_type='juniper', ip=router_ip, username=username, password=password)
-
-# Configure zone-based firewall allow rule
-net_connect.send_config_set([f"set security zones security-zone zoneA host-inbound-traffic system-services ping",
-                             f"set security zones security-zone zoneB host-inbound-traffic system-services ping",
-                             f"set security policies from-zone zoneA to-zone zoneB policy allow-traffic match source-address {zoneA_network} destination-address {zoneB_network}"])
-                             
-# Send TCP traffic from zoneA to zoneB
-net_connect.send_command(f"ping {zoneB_network} from {zoneA_network}")
-
-# Verify traffic is allowed
-output = net_connect.send_command("show security flow session")
-if f"{zoneA_network}->{zoneB_network}" in output:
-    print("Traffic successfully allowed by zone firewall")
-else: 
-    raise Exception("Traffic not allowed by zone firewall")
-        
-ssh_client.close()  
-net_connect.disconnect()
-      """,
-      "run_command": "python test_zone_based_firewall.py",
-      "expected_result": "Traffic successfully allowed by zone firewall"
+        "testname": "Verify Firewall Failover",   
+        "objective": "Automated verification of firewall failover",
+        "file_name": "test_fw_failover.py", 
+        "init_scripts": "pip install paramiko ncclient time",
+        "script": """
+            import paramiko
+            import ncclient
+            import time
+            
+            HOST = '192.168.1.1'
+            USER = 'admin'
+            PWD = 'Juniper!123'
+            
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  
+            ssh.connect(hostname=HOST, username=USER, password=PWD)
+            
+            # Force failover
+            stdin, stdout, stderr = ssh.exec_command('request chassis routing-engine master switch no-confirm')
+            
+            # Wait 30 secs for backup RE to take over  
+            time.sleep(30) 
+            
+            # Verify ping 
+            stdin, stdout, stderr = ssh.exec_command('ping 192.168.10.5 -c 3')
+            assert '3 received' in stdout.read().decode('utf-8')  
+            
+            ssh.close()
+        """,
+        "run_command": "python test_fw_failover.py",
+        "expected_result": "Firewall connectivity as per policy post failover"  
     }
-  }
-]
+}]
 ###ENDLIST###
+
+The test cases cover zone-based firewall rule validation and failover scenarios. The associated test scripts leverage paramiko, ncclient to carry out the test steps over SSH and NETCONF. Hopefully this helps with regression testing the firewall functionality. Let me know if you need any clarification or have additional requirements.
