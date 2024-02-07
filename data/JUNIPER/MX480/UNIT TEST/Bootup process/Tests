@@ -1,91 +1,80 @@
- Here are 2 unit test cases with python test scripts for Bootup process for MX480 router:
+ Here are 2 Unit Test Cases and its respective python test cases for Bootup process cases for the Network MSeries Router MX480:
 
 ###STARTLIST###
+
 [
-  {
-    "testname": "Test Bootup Time", 
-    "testcase": {
-      "testname": "Test Bootup Time",
-      "objective": "Validate router bootup time is within 120 seconds",
-      "steps": [
-        "Power on the router", 
-        "Note start time",
-        "Wait for router to complete bootup",
-        "Note end time",
-        "Validate bootup time is <= 120 seconds"
-      ],
-      "test_data": {
-        "max_bootup_time": 120
-      }
+    {
+        "testname": "Test Bootup Time", 
+        "testcase": {
+            "testname": "Test Bootup Time",
+            "objective": "Validate that the router boots up within the expected time limit",
+            "steps": [
+                "Power on the router", 
+                "Start a timer when power on begins",
+                "Stop timer when router completes bootup and management interface comes up",
+                "Validate that total bootup time is less than 300 seconds"
+            ],
+            "test_data": {
+                "max_bootup_time": 300
+            }
+        },
+        "testscript": {
+            "testname": "Test Bootup Time",
+            "objective": "Validate bootup time",
+            "file_name": "test_bootup_time.py",
+            "init_scripts": "import time\nimport unittest",
+            "script": """
+import time
+import unittest
+
+class TestBootupTime(unittest.TestCase):
+    def test_bootup_time(self):
+        max_time = 300 
+        start = time.time()
+        # Code to power on router
+        end = time.time() 
+        bootup_time = end - start
+        self.assertLess(bootup_time, max_time)
+""",
+            "run_command": "python test_bootup_time.py",
+            "expected_result": "OK"  
+        }
     },
-    "testscript": {
-      "testname": "Test Bootup Time",
-      "objective": "Validate router bootup time using python",
-      "file_name": "test_bootup_time.py",
-      "init_scripts": "import time",
-      "script": """
-start_time = time.time()
-print("Router powered on")
+    {
+        "testname": "Test Bootup Sequence", 
+        "testcase": {
+            "testname": "Test Bootup Sequence",
+            "objective": "Validate bootup sequence and ensure all processes start properly", 
+            "steps": [
+                "Power on the router",
+                "Check console prints for system boot messages", 
+                "Validate BIOS initialization messages are printed",
+                "Validate loader initialization messages are printed", 
+                "Validate kernel boot messages are printed",
+                "Validate successful startup of management interface"
+            ]
+        },
+        "testscript": {
+            "testname": "Test Bootup Sequence", 
+            "objective": "Validate bootup sequence",
+            "file_name": "test_bootup_sequence.py",
+            "init_scripts": "import re \nimport unittest",
+            "script": """  
+import re
+import unittest
 
-# Code to wait for router bootup
-time.sleep(100)  
-
-end_time = time.time()
-bootup_time = end_time - start_time
-max_time = 120
-
-if bootup_time <= max_time:
-  print("Test Passed. Bootup Time: " + str(bootup_time))
-else:
-  print("Test Failed. Bootup Time: " + str(bootup_time))
-      """,
-      "run_command": "python test_bootup_time.py",
-      "expected_result": "Test Passed. Bootup Time: 100"
+class TestBootupSequence(unittest.TestCase):
+    def test_bootup_sequence(self):
+        console_log = # Code to get console log
+        self.assertRegex(console_log, r"BIOS initialization")  
+        self.assertRegex(console_log, r"loader initialization")
+        self.assertRegex(console_log, r"kernel initialization")
+        self.assertRegex(console_log, r"Management interface up")  
+""",
+            "run_command": "python test_bootup_sequence.py",
+            "expected_result": "OK"
+        }
     }
-  },
-  {
-    "testname": "Test Interface Status",
-    "testcase": {
-      "testname": "Test Interface Status ",
-      "objective": "Validate all interfaces are up after bootup",
-      "steps": [
-        "Power on the router",
-        "Wait for router to complete bootup",
-        "Execute 'show interfaces status' command",
-        "Validate status is up for all interfaces"  
-      ],
-      "test_data": {
-      }
-    },
-    "testscript": {
-      "testname": "Test Interface Status", 
-      "objective": "Validate interface status using python",
-      "file_name": "test_interface_status.py",
-      "init_scripts": "import re",
-      "script": """
-# Code to execute 'show interfaces status' 
-cli_output = '''
-Interface       Status     Protocol
-ge-0/0/0        up          up  
-ge-0/0/1        up          up
-'''
-
-interfaces = re.findall(r'([a-z|-|\d]+)/(\d+/\d+/\d+)\s+(\w+)', cli_output)
-
-passed = True
-for interface in interfaces:
-  if interface[2] != "up":
-    print(f"Interface {interface[1]} status is down")
-    passed = False
-    
-if passed:
-  print("Test Passed. All interfaces are up")  
-else:
-  print("Test Failed. One or more interfaces are down")
-    """,
-    "run_command": "python test_interface_status.py", 
-    "expected_result": "Test Passed. All interfaces are up"
-    }
-  }
 ]
+
 ###ENDLIST###
