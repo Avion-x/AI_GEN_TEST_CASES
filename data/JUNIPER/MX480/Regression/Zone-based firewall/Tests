@@ -2,117 +2,115 @@
 
 ###STARTLIST###
 [
-{
-  "testname": "Test creating firewall zone",
-  "testcase": {
-    "testname": "Create firewall zone test",  
-    "objective": "Validate creating new firewall zone",
-    "steps": [
-      "Send REST API call to create new zone",
-      "Verify zone got created with correct name"
-    ],
-    "testdata": {
-      "zonename": "TestZone1", 
-      "interfaces": ["ge-0/0/1"]
-    }
-  },
-  
-  "testscript": {
-    "testname": "Create firewall zone test",
-    "objective": "Validate creating new firewall zone",  
-    "file_name": "test_create_fw_zone.py",
-    "init_scripts": [
-      "pip install requests",
-      "pip install json"
-    ],
-    "script": """
-import requests
-import json
+  {
+    "testname": "Test Zone-based Block Rules",
+    "testcase": {
+      "testname": "Test Zone-based Block Rules",
+      "objective": "Validate that zone-based firewall block rules are correctly blocking traffic",
+      "steps": [
+        "Create zone-based firewall with block rule between zoneA and zoneB", 
+        "Send TCP traffic from zoneA to zoneB",
+        "Verify traffic is blocked"
+      ],
+      "test_data": {
+        "zoneA_network": "192.168.1.0/24",
+        "zoneB_network": "192.168.2.0/24"
+      }
+    },
+    "testscript": {
+      "testname": "Test Zone-based Block Rules", 
+      "objective": "Validate that zone-based firewall block rules are correctly blocking traffic",
+      "file_name": "test_zone_based_firewall.py",
+      "init_scripts": "pip install paramiko netmiko",
+      "script": """
+import paramiko
+import netmiko
 
-zonename = "TestZone1"
-interfaces = ["ge-0/0/1"]
+zoneA_network = "192.168.1.0/24" 
+zoneB_network = "192.168.2.0/24"
 
-api_url = "https://router/api/zones"
-headers = {"Content-Type": "application/json"}
-data = {"name": zonename, "interfaces": interfaces}
+ssh_client = paramiko.SSHClient()
+ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh_client.connect(router_ip, username=username, password=password)
 
-resp = requests.post(api_url, headers=headers, json=data)
+net_connect = netmiko.ConnectHandler(device_type='juniper', ip=router_ip, username=username, password=password)
 
-if resp.status_code == 201:
-  print("SUCCESS: Zone created")  
-else: 
-  print(f"FAILED: Creating zone {zonename}")
-    """,
-    "run_command": "python test_create_fw_zone.py", 
-    "expected_result": "SUCCESS: Zone created"
-  }
-},
+# Configure zone-based firewall block rule  
+net_connect.send_config_set([f"set security zones security-zone zoneA host-inbound-traffic system-services ping",
+                             f"set security zones security-zone zoneB host-inbound-traffic system-services ping",
+                             f"set security policies from-zone zoneA to-zone zoneB policy block-traffic match source-address {zoneA_network} destination-address {zoneB_network}"])
 
-{
-  "testname": "Test updating firewall policy", 
-  "testcase": {
-    "testname": "Update firewall policy test",
-    "objective": "Validate updating firewall policy with new rule",
-    "steps": [ 
-      "Send REST API call to update policy with new rule",
-      "Verify policy got updated with new rule" 
-    ],
-    "testdata": {
-      "policyname": "TestPolicy",
-      "newrule": {
-        "name": "AllowHTTP",
-        "match": {
-          "source-address": ["any"], 
-          "destination-address": ["any"],
-          "application": ["junos-http"]  
-        },
-        "then": {
-          "permit": True 
-        }    
-      }  
-    }
-  },
+# Send TCP traffic from zoneA to zoneB
+net_connect.send_command(f"ping {zoneB_network} from {zoneA_network}") 
 
-  "testscript": {
-    "testname": "Update firewall policy test",
-    "objective": "Validate updating firewall policy with new rule", 
-    "file_name": "test_update_fw_policy.py",
-    "init_scripts": [
-      "pip install requests",
-      "pip install json"
-    ],
-    "script": """  
-import requests
-import json
-
-policyname = "TestPolicy"  
-newrule = {
-  "name": "AllowHTTP",
-  "match": {
-    "source-address": ["any"],
-    "destination-address": ["any"], 
-    "application": ["junos-http"]
-  },
-  "then": {
-    "permit": True 
-  }  
-}
-
-api_url = f"https://router/api/policies/{policyname}"
-headers = {"Content-Type": "application/json"}  
-
-resp = requests.post(api_url, headers=headers, json=newrule)  
-
-if resp.status_code == 204:
-  print("SUCCESS: Policy updated with new rule") 
+# Verify traffic is blocked  
+output = net_connect.send_command("show security flow session")
+if f"{zoneA_network}->{zoneB_network}" not in output:
+    print("Traffic successfully blocked by zone firewall")
 else:
-  print(f"FAILED: Updating policy {policyname}")
-    """,
-    "run_command": "python test_update_fw_policy.py",
-    "expected_result": "SUCCESS: Policy updated with new rule" 
+    raise Exception("Traffic not blocked by zone firewall")
+          
+ssh_client.close()
+net_connect.disconnect()    
+      """,
+      "run_command": "python test_zone_based_firewall.py", 
+      "expected_result": "Traffic successfully blocked by zone firewall"
+    }
+  },
+  {
+    "testname": "Test Zone-based Allow Rules", 
+    "testcase": {
+      "testname": "Test Zone-based Allow Rules",
+      "objective": "Validate that zone-based firewall allow rules are correctly allowing traffic",
+      "steps": [ 
+        "Create zone-based firewall with allow rule between zoneA and zoneB",
+        "Send TCP traffic from zoneA to zoneB", 
+        "Verify traffic is allowed"
+      ],
+     "test_data": {
+        "zoneA_network": "192.168.1.0/24",
+        "zoneB_network": "192.168.2.0/24"  
+      }
+    },
+    "testscript": {
+      "testname": "Test Zone-based Allow Rules",
+      "objective": "Validate that zone-based firewall allow rules are correctly allowing traffic",
+      "file_name": "test_zone_based_firewall.py", 
+      "init_scripts": "pip install paramiko netmiko",
+      "script": """  
+import paramiko
+import netmiko
+
+zoneA_network = "192.168.1.0/24"
+zoneB_network = "192.168.2.0/24"  
+
+ssh_client = paramiko.SSHClient()
+ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh_client.connect(router_ip, username=username, password=password)
+
+net_connect = netmiko.ConnectHandler(device_type='juniper', ip=router_ip, username=username, password=password)
+
+# Configure zone-based firewall allow rule
+net_connect.send_config_set([f"set security zones security-zone zoneA host-inbound-traffic system-services ping",
+                             f"set security zones security-zone zoneB host-inbound-traffic system-services ping",
+                             f"set security policies from-zone zoneA to-zone zoneB policy allow-traffic match source-address {zoneA_network} destination-address {zoneB_network}"])
+                             
+# Send TCP traffic from zoneA to zoneB
+net_connect.send_command(f"ping {zoneB_network} from {zoneA_network}")
+
+# Verify traffic is allowed
+output = net_connect.send_command("show security flow session")
+if f"{zoneA_network}->{zoneB_network}" in output:
+    print("Traffic successfully allowed by zone firewall")
+else: 
+    raise Exception("Traffic not allowed by zone firewall")
+        
+ssh_client.close()  
+net_connect.disconnect()
+      """,
+      "run_command": "python test_zone_based_firewall.py",
+      "expected_result": "Traffic successfully allowed by zone firewall"
+    }
   }
-}
 ]
 ###ENDLIST###
-
-The above contains 2 test cases along with their python test scripts for zone-based firewall validation for the MX480 router. The test cases validate creating a new firewall zone and updating an existing firewall policy. The corresponding python scripts use REST API calls to test these scenarios. Each test case and script is encapsulated within its own JSON object inside a python list.
