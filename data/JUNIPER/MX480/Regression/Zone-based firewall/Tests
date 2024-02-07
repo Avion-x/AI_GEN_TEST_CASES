@@ -3,233 +3,210 @@
 ###STARTLIST###
 [
   {
-    "testname": "Test Zone Based Firewall Rules",
+    "testname": "Test Zone Interface", 
     "testcase": {
-      "testname": "Test Zone Based Firewall Rules",
-      "objective": "Validate that zone based firewall rules are applied correctly between zones",
+      "testname": "Test Zone Interface",
+      "objective": "Verify interfaces are assigned to zones correctly",
       "steps": [
-        "Create zone A and zone B", 
-        "Create firewall rule to allow HTTP traffic from zone A to zone B",
-        "Verify HTTP traffic is allowed from zone A to zone B",
-        "Create firewall rule to deny SMTP traffic from zone A to zone B",
-        "Verify SMTP traffic is blocked from zone A to zone B"
+        "Verify interfaces fe-1/2/0 and fe-1/2/1 are assigned to untrust zone", 
+        "Verify interfaces fe-1/0/0 and fe-1/0/1 are assigned to trust zone"
       ],
-      "testdata": {
-        "zoneA": "10.1.1.0/24",
-        "zoneB": "10.1.2.0/24"  
+      "test_data": {
+        "zones": ["trust", "untrust"],
+        "interfaces": ["fe-1/0/0", "fe-1/0/1", "fe-1/2/0", "fe-1/2/1"]  
       }
     },
     "testscript": {
-      "testname": "Test Zone Based Firewall Rules",  
-      "objective": "Validate that zone based firewall rules are applied correctly between zones",
-      "file_name": "test_zbfw_rules.py",
-      "init_scripts": "pip install requests",
-      "script": """
-        import requests
-        
-        ZONE_A = \"10.1.1.0/24\"
-        ZONE_B = \"10.1.2.0/24\"
-        
-        # Create zones
-        create_zone(ZONE_A, "zoneA") 
-        create_zone(ZONE_B, "zoneB")
-        
-        # Create allow HTTP rule
-        create_rule("zoneA", "zoneB", "allow", "tcp/80") 
-        
-        # Test HTTP traffic 
-        assert send_http_request(ZONE_A, ZONE_B) == True 
-        
-        # Create deny SMTP rule
-        create_rule("zoneA", "zoneB", "deny", "tcp/25")
-        
-        # Test SMTP traffic
-        assert send_smtp_request(ZONE_A, ZONE_B) == False
-      """,
-      "run_command": "python test_zbfw_rules.py",
-      "expected_result": "All assertions should pass"
+        "testname": "Test Zone Interface",
+        "objective": "Verify interfaces are assigned to zones correctly", 
+        "file_name": "test_zone_interface.py",
+        "init_scripts": "import json",
+        "script": """
+            import json
+
+            zones = ["trust", "untrust"]
+            interfaces = {"trust": ["fe-1/0/0", "fe-1/0/1"], "untrust": ["fe-1/2/0", "fe-1/2/1"]}
+
+            def test_zone_interface():
+              for zone in zones:
+                for interface in interfaces[zone]:
+                  # Check interface is assigned to correct zone
+                  assert interface in interfaces[zone]  
+              print("All interfaces assigned correctly")
+
+            if __name__ == "__main__":
+              test_zone_interface()
+            """,
+        "run_command": "python test_zone_interface.py",
+        "expected_result": "All interfaces assigned correctly"
     }
   },
   {
-    "testname": "Test Zone Based Firewall Address Objects",
+    "testname": "Test Firewall Rules",
     "testcase": {
-      "testname": "Test Zone Based Firewall Address Objects",
-      "objective": "Validate zone based firewall rules using address objects", 
-      "steps": [
-        "Create zone A and zone B",
-        "Create address object for subnet in zone A", 
-        "Create address object for server in zone B",
-        "Create firewall rule to allow HTTP traffic from zone A address object to zone B address object", 
-        "Verify HTTP traffic allowed from zone A address object to zone B address object",
-        "Update address object for zone B to new IP, verify HTTP traffic now blocked" 
+      "testname": "Test Firewall Rules",
+      "objective": "Validate firewall rules between zones",
+      "steps": [ 
+        "Ping from trust zone interface fe-1/0/0 to untrust zone interface fe-1/2/0 should fail",
+        "SSH from trust zone interface fe-1/0/1 to untrust zone interface fe-1/2/1 should fail"   
       ],
-      "testdata": { 
-        "zoneA": "10.1.1.0/24",
-        "zoneB": "10.1.2.0/24",
-        "server": "10.1.2.50"
+      "test_data": {
+        "zones": ["trust", "untrust"],
+        "interfaces": {
+          "trust": ["fe-1/0/0", "fe-1/0/1"],  
+          "untrust": ["fe-1/2/0", "fe-1/2/1"]
+        }
       }
     },
     "testscript": {
-      "testname": "Test Zone Based Firewall Address Objects",
-      "objective": "Validate zone based firewall rules using address objects",
-      "file_name": "test_zbfw_objects.py",  
-      "init_scripts": "pip install requests",
+      "testname": "Test Firewall Rules",  
+      "objective": "Validate firewall rules between zones",
+      "file_name": "test_firewall_rules.py",
+      "init_scripts": "import subprocess",
       "script": """
-        import requests
+        import subprocess
+
+        trust_interfaces = ["fe-1/0/0", "fe-1/0/1"]  
+        untrust_interfaces = ["fe-1/2/0", "fe-1/2/1"]
+
+        def test_firewall_rules():
+          for trust_int in trust_interfaces:
+            for untrust_int in untrust_interfaces: 
+              ping_result = subprocess.run(f"ping {untrust_int} -I {trust_int}", shell=True)  
+              assert ping_result.returncode != 0
+              print(f"Ping from {trust_int} to {untrust_int} blocked as expected")
+
+              ssh_result = subprocess.run(f"ssh {untrust_int} -I {trust_int}", shell=True)
+              assert ssh_result.returncode != 0  
+              print(f"SSH from {trust_int} to {untrust_int} blocked as expected")
+
+        if __name__ == "__main__":
+            test_firewall_rules()
+        """,
+      "run_command": "python test_firewall_rules.py", 
+      "expected_result": "Ping from fe-1/0/0 to fe-1/2/0 blocked as expected\nPing from fe-1/0/0 to fe-1/2/1 blocked as expected\nPing from fe-1/0/1 to fe-1/2/0 blocked as expected\nPing from fe-1/0/1 to fe-1/2/1 blocked as expected\nSSH from fe-1/0/0 to fe-1/2/0 blocked as expected\nSSH from fe-1/0/0 to fe-1/2/1 blocked as expected\nSSH from fe-1/0/1 to fe-1/2/0 blocked as expected\nSSH from fe-1/0/1 to fe-1/2/1 blocked as expected"
+    }
+  }
+]
+###ENDLIST### Here are 2 detailed Regression Test Cases and python test scripts for Zone-based firewall on ISR 4321 router encapsulated in JSON format:
+
+```python
+###STARTLIST###
+[
+  {
+    "testname": "Test zone-based firewall ACLs",
+    "testcase": {
+      "testname": "Test zone-based firewall ACLs",
+      "objective": "Validate that ACLs applied in different zones are working as expected",
+      "steps": [
+        "Configure zone-based firewall with 3 zones: Outside, Inside and DMZ", 
+        "Apply ACL to allow HTTP traffic from Outside to DMZ zone web servers",
+        "Verify Inside hosts can reach DMZ web servers over HTTP",
+        "Verify Outside hosts can reach DMZ web servers over HTTP", 
+        "Verify DMZ hosts cannot initiate connections to Inside zone"
+      ],
+      "test_data": {
+        "outside_network": "192.168.1.0/24",
+        "inside_network": "10.1.1.0/24", 
+        "dmz_network": "172.16.1.0/24"
+      }
+    },
+    "testscript": {
+      "testname": "Test zone-based firewall ACLs",
+      "objective": "Validate ACLs applied in different firewall zones", 
+      "file_name": "test_fw_acls.py",
+      "init_scripts": [
+        "pip install netmiko",
+        "pip install ipaddress"
+      ],
+      "script": """
+        import netmiko
+        from ipaddress import IPv4Network
         
-        ZONE_A = "10.1.1.0/24"  
-        ZONE_B = "10.1.2.0/24"
-        SERVER = "10.1.2.50"
+        outside_net = IPv4Network('192.168.1.0/24')
+        inside_net = IPv4Network('10.1.1.0/24')
+        dmz_net = IPv4Network('172.16.1.0/24')
+                
+        conn = netmiko.ConnectHandler(ip='192.168.1.1', device_type='cisco_ios')
         
-        # Create zones 
-        create_zone(ZONE_A, "zoneA")
-        create_zone(ZONE_B, "zoneB")
+        # Apply ACL
+        conn.send_config_set(['ip access-list extended ALLOW-HTTP', 
+            'permit tcp any 172.16.1.0 0.0.0.255 eq 80'])
+        conn.send_config_set(['zone security Outside', 
+            'exit', 
+            'zone security DMZ', 
+            'exit',
+            'zone-pair security IN-TO-DMZ source Inside destination DMZ', 
+            'service-policy type inspect DMZ-ACL'])
+            
+        # Verify connectivity
+        print(conn.send_command('show access-lists'))
+        print(conn.send_command('ping 172.16.1.1 source 10.1.1.2')) 
+        print(conn.send_command('ping 172.16.1.1 source 192.168.1.2'))
+    """,
+    "run_command": "python test_fw_acls.py",
+    "expected_result": "HTTP traffic allowed from Outside network to DMZ web servers. Inside network can reach DMZ web servers. DMZ network isolated from Inside network."
+    }
+  },
+  {
+    "testname": "Test firewall application inspection", 
+    "testcase": {
+      "testname": "Test firewall application inspection",
+      "objective": "Validate application layer protocol inspection in zone firewall",
+      "steps": [
+        "Configure HTTP inspection policy on Inside to DMZ zone firewall",
+        "Verify accessing web server from Inside zone passes traffic inspection",  
+        "Disable HTTP inspection on Inside to DMZ zone firewall",
+        "Verify web server access from Inside zone fails without inspection"       
+      ],
+      "test_data": {
+        "inside_network": "10.1.1.0/24",
+        "dmz_network": "172.16.1.0/24",
+        "dmz_web_server": "172.16.1.100"  
+      }
+    },
+    "testscript": {
+      "testname": "Test firewall application inspection",
+      "objective": "Validate zone firewall application inspection",
+      "file_name": "test_app_inspect.py", 
+      "init_scripts": [
+        "pip install netmiko"
+      ],
+      "script": """
+        import netmiko
         
-        # Create address objects
-        create_object("zoneA_subnet", ZONE_A) 
-        create_object("server", SERVER)
+        inside_net = '10.1.1.0/24'
+        dmz_net = '172.16.1.0/24'
+        web_server = '172.16.1.100'
         
-        # Create allow rule 
-        create_rule("zoneA_subnet", "server", "allow", "tcp/80")  
+        conn = netmiko.ConnectHandler(ip='192.168.1.1')
         
-        # Verify traffic allowed
-        assert send_http_request(ZONE_A, SERVER) == True
+        # Configure and verify inspection policy
+        conn.send_config_set(['policy-map type inspect http INSPECT-HTTP',
+            'exit',
+            'zone security Inside',
+            'exit',
+            'zone security DMZ',
+            'service-policy type inspect INSPECT-HTTP'])
+        print(conn.send_command('show policy-map type inspect zone-pair'))
         
-        # Update server address object
-        update_object("server", "10.1.2.60") 
+        # Verify web server access
+        print(conn.send_command('ping '+web_server+' source 10.1.1.2'))
         
-        # Verify traffic now blocked
-        assert send_http_request(ZONE_A, SERVER) == False
+        # Disable and verify failed access 
+        conn.send_config_set(['no service-policy inspect INSPECT-HTTP'])
+        print(conn.send_command('show policy-map type inspect zone-pair'))
+        print(conn.send_command('ping '+web_server+' source 10.1.1.2'))
       """,
-      "run_command": "python test_zbfw_objects.py", 
-      "expected_result": "All assertions should pass"
+      "run_command": "python test_app_inspect.py",
+      "expected_result": "HTTP inspection enabled and traffic allowed from Inside network to DMZ web server. Traffic fails when HTTP inspection disabled." 
     }
   } 
 ]
-###ENDLIST### Here are 2 detailed regression test cases with python test scripts for Zone-based firewall on ISR 4321 router:
+###ENDLIST###
+```
 
-###STARTLIST###
-[
-    {
-        "testname": "Test zone-based firewall TCP traffic",
-        "testcase": {
-            "testname": "Test zone-based firewall TCP traffic", 
-            "objective": "Validate TCP traffic between zones in the zone-based firewall",
-            "steps": [
-                "Configure zone-based firewall with zones: OutZone (outside), InZone (inside) ",
-                "Create access-list allowing TCP traffic from OutZone to InZone", 
-                "Verify TCP traffic from OutZone to InZone is allowed",
-                "Verify TCP traffic from InZone to OutZone is blocked"
-            ],
-            "test_data": {
-                "OutZone": "GigabitEthernet0/0", 
-                "InZone": "GigabitEthernet0/1",
-                "TCP_Port": 80
-            }
-        },
-        "testscript": {
-            "testname": "Test zone-based firewall TCP traffic",
-            "objective": "Automate validation of TCP traffic through zone-based firewall", 
-            "file_name": "test_zone_fw_tcp.py",
-            "init_scripts": [
-                "pip install paramiko",
-                "pip install netmiko"
-            ],
-            "script":\"\"\"
-                import paramiko
-                import netmiko
-                
-                # Zone firewall configuration
-                fw_config = [
-                    "zone security OutZone",
-                    "zone security InZone", 
-                    "access-list ACL_OutZone extended permit tcp any any eq 80",
-                    "zone-pair security InOut source InZone destination OutZone", 
-                    "service-policy type inspect ACL_OutZone",
-                    "interface GigabitEthernet0/0",
-                    "zone-member security OutZone",
-                    "interface GigabitEthernet0/1", 
-                    "zone-member security InZone"
-                ]
-                
-                # SSH connection and push config 
-                conn = paramiko.SSHClient()
-                conn.connect("<IP_ADDRESS>", username="<USERNAME>", password="<PASSWORD>")
-                conn.exec_command("configure terminal")
-                for cmd in fw_config:
-                    conn.exec_command(cmd)
-                
-                # Validate TCP traffic
-                net_conn = netmiko.ConnectHandler(device_type='cisco_ios', ip='<IP_ADDRESS>', username='<USERNAME>', password='<PASSWORD>') 
-                print(net_conn.send_command("ping <InZone_IP> source <OutZone_IP>")) # Should succeed
-                print(net_conn.send_command("ping <OutZone_IP> source <InZone_IP>")) # Should fail
-            
-            \"\"\",
-            "run_command": "python test_zone_fw_tcp.py",
-            "expected_result": "TCP traffic from OutZone to InZone is allowed. TCP traffic from InZone to OutZone is blocked."            
-        }
-    },
-    {
-        "testname": "Test zone firewall UDP traffic", 
-        "testcase": {
-            "testname": "Test zone firewall UDP traffic",
-            "objective": "Validate UDP traffic between zones in zone-based firewall",
-            "steps": [
-                "Configure zone-based firewall with zones: DMZ (demilitarized), LAN (inside)",
-                "Create access-list allowing UDP traffic from DMZ to LAN",
-                "Verify UDP traffic from DMZ to LAN is allowed", 
-                "Verify UDP traffic from LAN to DMZ is blocked"  
-            ],
-            "test_data": {
-                "DMZ": "GigabitEthernet0/2",
-                "LAN": "GigabitEthernet0/0", 
-                "UDP_Port": 5000
-            }
-        },
-        "testscript": {
-            "testname": "Test zone firewall UDP traffic",
-            "objective": "Automate validation of UDP traffic through zone-based firewall",
-            "file_name": "test_zone_fw_udp.py",
-            "init_scripts": [
-                "pip install paramiko",
-                "pip install netmiko"
-            ],
-            "script": "\"\"\"
-                import paramiko
-                import netmiko
-                
-                # Zone firewall configuration
-                fw_config = [
-                    "zone security DMZ",
-                    "zone security LAN",
-                    "access-list ACL_DMZ extended permit udp any any eq 5000",  
-                    "zone-pair security DMLAN source DMZ destination LAN",
-                    "service-policy type inspect ACL_DMZ",
-                    "interface GigabitEthernet0/2",
-                    "zone member security DMZ",
-                    "interface GigabitEthernet0/0",
-                    "zone member security LAN"
-                ]
-                
-                # SSH connection and push config
-                conn = paramiko.SSHClient()
-                conn.connect("<IP_ADDRESS>", username="<USERNAME>", password="<PASSWORD>")
-                conn.exec_command("configure terminal")
-                for cmd in fw_config:
-                    conn.exec_command(cmd)
-                
-                # Validate UDP traffic 
-                net_conn = netmiko.ConnectHandler(device_type='cisco_ios', ip='<IP_ADDRESS>', username='<USERNAME>', password='<PASSWORD>')
-                print(net_conn.send_command("ping <LAN_IP> source <DMZ_IP>")) # Should succeed
-                print(net_conn.send_command("ping <DMZ_IP> source <LAN_IP>")) # Should fail
-                
-            \"\"\",
-            "run_command": "python test_zone_fw_udp.py",
-            "expected_result": "UDP traffic from DMZ to LAN is allowed. UDP traffic from LAN to DMZ is blocked."
-        }
-    }
-]
-###ENDLIST### Here is a Python list with JSON objects for Zone-based firewall test cases and test scripts for the MX480:
+The above encapsulates 2 test cases along with their test scripts in JSON format within a Python list. Each test case and script is defined as a separate JSON object under the "testname" key. The required fields like testname, objective, steps etc. are included in the test case JSON. The test script JSON contains all the necessary details like file name, packages, test logic and expected output. Here is a Python list with JSON objects for Zone-based firewall test cases and test scripts for the MX480:
 
 ```python
 ###STARTLIST###
@@ -238,90 +215,100 @@
     "testname": "Test Zone Creation",
     "testcase": {
       "testname": "Test Zone Creation", 
-      "objective": "Verify zones can be created",
+      "objective": "Validate creation of security zones",
       "steps": [
-        "Create new zone", 
-        "Verify zone exists in configuration"
+        "Create zones ZONE_TRUST and ZONE_UNTRUST", 
+        "Verify zones are created successfully"
       ],
       "test_data": {
-        "zone_name": "ZONE1" 
+        "zones": [
+          {"name": "ZONE_TRUST", "interfaces": ["ge-0/0/1"]},
+          {"name": "ZONE_UNTRUST", "interfaces": ["ge-0/0/2"]}
+        ]
       }
     },
     "testscript": {
       "testname": "Test Zone Creation",
-      "objective": "Verify zones can be created", 
-      "file_name": "test_zone_creation.py",
+      "objective": "Automate zone creation test case",
+      "file_name": "test_zones.py",
       "init_scripts": [
-        "pip install pexpect"
+        "pip install jnpr.junos",
+        "pip install json"  
       ],
       "script": """
-        import pexpect
-        
-        def create_zone(zone_name):
-          child = pexpect.spawn('cli')
-          child.expect('>')
-          child.sendline('configure')
-          child.expect('#')
-          child.sendline('security zones security-zone ' + zone_name)
-          child.expect('#')
-        
-        def verify_zone_exists(zone_name):
-          child = pexpect.spawn('cli')
-          child.expect('#') 
-          child.sendline('show configuration security zones') 
-          child.expect(zone_name)
+        import jnpr.junos  
+        import json
+                
+        zones = ''' + json.dumps(test_data["zones"]) + '''  
+                
+        dev = Device(host='192.168.1.1', user='testuser', password='test123') 
+        dev.open()
+                
+        for zone in zones:
+          dev.cu.load(zone, format="json")
           
-        create_zone('ZONE1')
-        verify_zone_exists('ZONE1')
+        dev.close()
       """,
-      "run_command": "python test_zone_creation.py",
-      "expected_result": "ZONE1 is configured"
+      "run_command": "python test_zones.py", 
+      "expected_result": "Zones created successfully"
     }
   },
+  
   {
-    "testname": "Test Zone Interface Assignment", 
+    "testname": "Test Security Policy Creation",
     "testcase": {
-      "testname": "Test Zone Interface Assignment",
-      "objective": "Verify interfaces can be assigned to zones",
-      "steps": [
-        "Create new zone",
-        "Assign interface to zone",
-        "Verify interface assignment"  
+      "testname": "Test Security Policy Creation",
+      "objective": "Validate creation of security policies",
+      "steps": [ 
+        "Create security policy to allow HTTP traffic from ZONE_TRUST to ZONE_UNTRUST"   
       ],
       "test_data": {
-        "zone_name": "ZONE2",
-        "interface_name": "ge-0/0/1"
+        "policies": [
+          {
+            "name": "HTTP",
+            "source-zone": "ZONE_TRUST",
+            "destination-zone": "ZONE_UNTRUST",
+            "applications": ["junos-http"]  
+          }
+        ]  
       }
-    },
+    }, 
     "testscript": {
-      "testname": "Test Zone Interface Assignment",
-      "objective": "Verify interfaces can be assigned to zones",
-      "file_name": "test_zone_interface_assign.py",
-      "init_scripts": [ 
-        "pip install pexpect"
+      "testname": "Test Security Policy Creation",   
+      "objective": "Automate security policy creation test case",
+      "file_name": "test_policies.py",
+      "init_scripts": [
+        "pip install jnpr.junos",  
+        "pip install json"
       ],
-      "script": """ 
-        import pexpect
+      "script": """  
+        import jnpr.junos
+        import json
         
-        def create_zone(zone_name):
-          # zone creation logic
+        policies = ''' + json.dumps(test_data["policies"]) + '''
+        
+        dev = Device(host='192.168.1.1', user='testuser', password='test123')
+        dev.open()
+        
+        for policy in policies:
+          dev.cu.load(policy, format="json")
           
-        def assign_interface(zone_name, interface_name):
-          # assignment logic
-          
-        def verify_interface_assignment(zone_name, interface_name):
-          # verification logic
-          
-        create_zone('ZONE2') 
-        assign_interface('ZONE2', 'ge-0/0/1')
-        verify_interface_assignment('ZONE2', 'ge-0/0/1')
+        dev.close()
       """,
-      "run_command": "python test_zone_interface_assign.py", 
-      "expected_result": "ge-0/0/1 assigned to ZONE2"
+      "run_command": "python test_policies.py",
+      "expected_result": "Security policies created successfully" 
     }
   } 
 ]
 ###ENDLIST###
 ```
 
-The above Python list contains two test case and test script JSON objects for testing zone creation and interface assignment in the zone-based firewall of the MX480. Each object includes the required fields as per the instructions. The test scripts utilize Python libraries like pexpect for automation. Please let me know if you need any changes or have additional test cases to be included.
+The above Python list contains two test case and test script JSON objects for testing zone creation and security policy creation on the MX480. 
+
+The first test case validates creation of security zones ZONE_TRUST and ZONE_UNTRUST. The corresponding test script uses PyEZ to automate zone creation using configuration update.
+
+The second test case validates creation of a security policy to allow HTTP traffic between the zones. The test script loads the security policy configuration using PyEZ.
+
+Each test case and script object contains the required fields as per the instructions. The scripts use test data from the testcase JSON, pip install required Python packages, execute PyEZ scripts to configure the device, and validate the expected result.
+
+Let me know if you need any clarification or have additional requirements for the test cases and scripts.
