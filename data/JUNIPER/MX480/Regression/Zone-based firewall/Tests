@@ -1,57 +1,118 @@
- Here are 2 regression test cases with python test scripts for Zone-based firewall on MX480 router:
+ Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for the Network MSeries Router MX480:
 
 ###STARTLIST###
 [
 {
-  "testname": "test_interzone_policies",
+  "testname": "Test creating firewall zone",
   "testcase": {
-    "testname": "test_interzone_policies",
-    "objective": "Validate interzone security policies are correctly enforced between zones",
+    "testname": "Create firewall zone test",  
+    "objective": "Validate creating new firewall zone",
     "steps": [
-      "1. Configure zones A and B with interzone policy to allow traffic from A to B", 
-      "2. Verify hosts in zone A can access resources in zone B",
-      "3. Verify hosts in zone B cannot initiate connections to zone A"
+      "Send REST API call to create new zone",
+      "Verify zone got created with correct name"
     ],
-    "test_data": {
-      "zoneA_network": "192.168.1.0/24",
-      "zoneB_network": "192.168.2.0/24" 
+    "testdata": {
+      "zonename": "TestZone1", 
+      "interfaces": ["ge-0/0/1"]
     }
   },
+  
   "testscript": {
-    "testname": "test_interzone_policies",
-    "objective": "Automated test script to validate interzone policies",
-    "file_name": "test_interzone_policies.py",
-    "init_scripts": "\"\"\"\npip install paramiko\n\"\"\"",
-    "script": "\"\"\"\nimport paramiko\n\n# SSH Connect\nclient = paramiko.SSHClient()\n\n# Verify zone A to zone B connectivity\nstdin, stdout, stderr = client.exec_command('ping 192.168.2.1')\nassert ' 0% packet loss' in stdout.read()\n\n# Verify no connectivity from zone B to zone A\nstdin, stdout, stderr = client.exec_command('ping 192.168.1.1')\nassert '100% packet loss' in stdout.read()\n\"\"\"",
-    "run_command": "python test_interzone_policies.py",
-    "expected_result": "Script asserts the expected interzone connectivity based on policies"
+    "testname": "Create firewall zone test",
+    "objective": "Validate creating new firewall zone",  
+    "file_name": "test_create_fw_zone.py",
+    "init_scripts": [
+      "pip install requests",
+      "pip install json"
+    ],
+    "script": """
+import requests
+import json
+
+zonename = "TestZone1"
+interfaces = ["ge-0/0/1"]
+
+api_url = "https://router/api/zones"
+headers = {"Content-Type": "application/json"}
+data = {"name": zonename, "interfaces": interfaces}
+
+resp = requests.post(api_url, headers=headers, json=data)
+
+if resp.status_code == 201:
+  print("SUCCESS: Zone created")  
+else: 
+  print(f"FAILED: Creating zone {zonename}")
+    """,
+    "run_command": "python test_create_fw_zone.py", 
+    "expected_result": "SUCCESS: Zone created"
   }
 },
+
 {
-  "testname": "test_security_policy",
+  "testname": "Test updating firewall policy", 
   "testcase": {
-    "testname": "test_security_policy",  
-    "objective": "Validate firewall correctly blocks/allows traffic based on security policy rules",
-    "steps": [
-      "1. Configure security policy to block FTP traffic from zone A",
-      "2. Verify FTP connection from zone A is blocked",  
-      "3. Verify HTTP connection from zone A still works"
+    "testname": "Update firewall policy test",
+    "objective": "Validate updating firewall policy with new rule",
+    "steps": [ 
+      "Send REST API call to update policy with new rule",
+      "Verify policy got updated with new rule" 
     ],
-    "test_data": {
-      "zoneA_network":"192.168.1.0/24",
-      "zoneB_network":"192.168.2.0/24"
+    "testdata": {
+      "policyname": "TestPolicy",
+      "newrule": {
+        "name": "AllowHTTP",
+        "match": {
+          "source-address": ["any"], 
+          "destination-address": ["any"],
+          "application": ["junos-http"]  
+        },
+        "then": {
+          "permit": True 
+        }    
+      }  
     }
   },
 
   "testscript": {
-    "testname": "test_security_policy",
-    "objective": "Automated test script to validate security policy rules",
-    "file_name": "test_security_policy.py",
-    "init_scripts": "\"\"\"\npip install paramiko ftplib\n\"\"\"",
-    "script": "\"\"\"\nimport paramiko \nimport ftplib\n\n# Set up test FTP connection\nftp = ftplib.FTP()\nftp.connect('192.168.2.100')\n\n# Verify FTP is blocked\nassertRaises ftp.login('testuser','testpass')\n     \n# Verify HTTP still works  \nstdin, stdout, stderr = client.exec_command('wget 192.168.2.200')\nassert 'saved' in stdout.read()\n\"\"\"",
-    "run_command": "python test_security_policy.py", 
-    "expected_result": "Script asserts FTP traffic is blocked but HTTP works based on policy rules"
+    "testname": "Update firewall policy test",
+    "objective": "Validate updating firewall policy with new rule", 
+    "file_name": "test_update_fw_policy.py",
+    "init_scripts": [
+      "pip install requests",
+      "pip install json"
+    ],
+    "script": """  
+import requests
+import json
+
+policyname = "TestPolicy"  
+newrule = {
+  "name": "AllowHTTP",
+  "match": {
+    "source-address": ["any"],
+    "destination-address": ["any"], 
+    "application": ["junos-http"]
+  },
+  "then": {
+    "permit": True 
+  }  
+}
+
+api_url = f"https://router/api/policies/{policyname}"
+headers = {"Content-Type": "application/json"}  
+
+resp = requests.post(api_url, headers=headers, json=newrule)  
+
+if resp.status_code == 204:
+  print("SUCCESS: Policy updated with new rule") 
+else:
+  print(f"FAILED: Updating policy {policyname}")
+    """,
+    "run_command": "python test_update_fw_policy.py",
+    "expected_result": "SUCCESS: Policy updated with new rule" 
   }
-} 
+}
 ]
 ###ENDLIST###
+
+The above contains 2 test cases along with their python test scripts for zone-based firewall validation for the MX480 router. The test cases validate creating a new firewall zone and updating an existing firewall policy. The corresponding python scripts use REST API calls to test these scenarios. Each test case and script is encapsulated within its own JSON object inside a python list.
