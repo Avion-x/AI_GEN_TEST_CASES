@@ -2,130 +2,177 @@
 
 ###STARTLIST###
 [
-{
-    "testname": "Test Inter-Zone Traffic", 
+  {
+    "testname": "Test Zone-based Firewall Configuration",
     "testcase": {
-        "testname": "Test Inter-Zone Traffic",
-        "objective": "Validate inter-zone traffic between zones is blocked when default policy is deny",
-        "steps": [
-            "1. Configure zone A and zone B on MX480", 
-            "2. Configure default zone policy to Deny",
-            "3. Generate traffic from zone A to zone B",
-            "4. Verify traffic is blocked between zones"
-        ],
-        "test_data": {
-            "zoneA_network": "192.168.1.0/24",
-            "zoneB_network": "192.168.2.0/24" 
-        }
+      "testname": "Test Zone-based Firewall Configuration",
+      "objective": "Validate that the zone-based firewall is configured correctly with the correct zones, policies and address groups",
+      "steps": [
+        "1. Verify that the configured zones exist with the expected interfaces assigned", 
+        "2. Verify that the configured zone-based firewall policies exist between the zones with expected source, destination and services",
+        "3. Verify that the configured address groups exist with the expected IP addresses/subnets"
+      ],
+      "test_data": {
+        "zones": ["TRUST", "UNTRUST"], 
+        "interfaces": {"TRUST": ["ge-0/0/2"], "UNTRUST": ["ge-0/0/1"]},
+        "policies": [{"name": "TRUST-to-UNTRUST", "source_zone": "TRUST", "destination_zone": "UNTRUST", "services": ["ANY"]}], 
+        "address_groups": [{"name": "TRUST-SUBNETS", "addresses": ["192.168.1.0/24"]}]
+      }
     },
     "testscript": {
-        "testname": "Test Inter-Zone Traffic",
-        "objective": "Validate inter-zone traffic between zones is blocked when default policy is deny", 
-        "file_name": "test_inter_zone_traffic.py",
-        "init_scripts": "pip install paramiko netmiko",
-        "script": """
-            import paramiko
-            import netmiko
+      "testname": "Test Zone-based Firewall Configuration",  
+      "objective": "Validate zone-based firewall configuration using PyEZ",
+      "file_name": "test_zbfw_config.py",
+      "init_scripts": ["pip install junos-eznc"],
+      "script": """
+        from jnpr.junos import Device
+        from jnpr.junos.exception import ConnectError
+        import json
+        
+        def test_zbfw_config(zones, interfaces, policies, address_groups):
+            dev = Device(host='192.168.1.1', user='netconf', password='secret123')
+            try:
+                dev.open()
+            except ConnectError as err:
+                print("Cannot connect to device: {0}".format(err))
+                return False
+        
+            # Test zones
+            configured_zones = dev.rpc.get_config(filter_xml=f"""
+                <configuration>
+                    <security>
+                        <zones/>
+                    </security>
+                </configuration>""").findall(".//zones/name")
             
-            ZONEA_NETWORK = \"\"\"192.168.1.0/24\"\"\"
-            ZONEB_NETWORK = \"\"\"192.168.2.0/24\"\"\"
+            if set(zones) != set(configured_zones):
+                print("Configured zones do not match expected")
+                return False
             
-            ssh_client = paramiko.SSHClient()
-            router = {
-                "device_type": "juniper",
-                "host":   "192.168.0.1",
-                "username": "netadmin",
-                "password": "Juniper123"
-            }
-            
-            ssh_client.connect(**router)
-            connection = netmiko.ConnectHandler(**router)
-            
-            connection.send_config_set([
-                "set security zones security-zone ZONE_A interfaces ge-0/0/0.0 host-inbound-traffic system-services ping",
-                "set security zones security-zone ZONE_B interfaces ge-0/0/1.0 host-inbound-traffic system-services ping",
-                "set security policies default-policy deny-all" 
-            ])
-            
-            print("Configured Zones and Default Deny Policy")
-            
-            connection.send_command("ping "+ZONEB_NETWORK+" source "+ZONEA_NETWORK)
-            
-            print("Attempted ping from Zone A to Zone B")
-            
-            ping_output = connection.send_command_expect("ping "+ZONEB_NETWORK+" source "+ ZONEA_NETWORK, expect_string="#")
-            if "100% packet loss" in ping_output:
-                print("Ping Failed from Zone A to Zone B - Test Passed")
-            else:
-                print("Ping Successful from Zone A to Zone B - Test Failed")
+            # Test interfaces
+            configured_ifs = {} 
+            for z in zones:
+                zone_ifs = dev.rpc.get_interface_information(terse=True, interfaces="fxp0").findall(f".//interface[zone='{z}']/name")
+                configured_ifs[z] = zone_ifs
                 
-        """,
-        "run_command": "python test_inter_zone_traffic.py", 
-        "expected_result": "Ping Failed from Zone A to Zone B - Test Passed"
+            if configured_ifs != interfaces:
+                print("Zone interfaces do not match expected")
+                return False
+                
+            # Test policies
+            configured_policies = dev.rpc.get_config(filter_xml="""
+                <configuration>
+                    <security>
+                        <policies/>
+                    </security>
+                </configuration>""").findall(".//policies/policy")
+                
+            for p in policies:
+                found = False
+                for cp in configured_policies:
+                    if (cp.find("name").text == p["name"] and
+                        cp.find("source-zone").text == p["source_zone"] and 
+                        cp.find("destination-zone").text == p["destination_zone"] and
+                        cp.find("services").text == str(p["services"])):
+                            
+                        found = True
+                        break
+                        
+                if not found:
+                    print("Did not find expected policy configured")
+                    return False
+                    
+            # Test address groups
+            configured_groups = dev.rpc.get_config(filter_xml="""
+                <configuration>
+                    <security>
+                        <address-book>
+                            <address>
+                            </address>
+                        </address-book>
+                    </security>
+                </configuration>""").findall(".//address/name")    
+                
+            for g in address_groups:
+                if g["name"] not in configured_groups:
+                    print("Did not find expected address group configured")  
+                    return False
+          
+            print("All zone-based firewall checks passed")
+            return True
+        
+        test_zbfw_config(**test_data)
+        dev.close()
+      """,
+      "run_command": "python3 test_zbfw_config.py",
+      "expected_result": "All zone-based firewall checks passed"
     }
-},
-{
-    "testname": "Test Zone Security Policy",
+  },
+  {
+    "testname": "Test Zone-based Firewall Traffic",
     "testcase": {
-        "testname": "Test Zone Security Policy",
-        "objective": "Validate traffic flows when zone security policy is configured to permit between zones ",
-        "steps": [
-            "1. Configure zone A and zone B on MX480",
-            "2. Configure zone security policy to permit traffic from zone A to zone B ",
-            "3. Generate traffic from zone A to zone B", 
-            "4. Verify traffic flows between zones"
-        ],
-        "test_data": {
-            "zoneA_network": "192.168.1.0/24",
-            "zoneB_network": "192.168.2.0/24"
-        }
+      "testname": "Test Zone-based Firewall Traffic",
+      "objective": "Validate that traffic is handled correctly by the zone-based firewall",
+      "steps": [ 
+        "1. Initiate HTTP connection from host in TRUST zone to server in UNTRUST zone and verify connection success",
+        "2. Initiate HTTP connection from host in UNTRUST zone to server in TRUST zone and verify connection failure"              
+      ],
+      "test_data": {
+        "trusted_client": "192.168.1.5",
+        "untrusted_server": "10.0.0.100"  
+      }
     },
-    "testscript": {    
-        "testname": "Test Zone Security Policy",
-        "objective": "Validate traffic flows when zone security policy is configured to permit between zones",
-        "file_name": "test_zone_security_policy.py",
-        "init_scripts": "pip install paramiko netmiko", 
-        "script": """
-            import paramiko
-            import netmiko
+    "testscript": {
+      "testname": "Test Zone-based Firewall Traffic",
+      "objective": "Validate zone-based firewall traffic handling using Scapy",
+      "file_name": "test_zbfw_traffic.py",
+      "init_scripts": [
+        "pip install scapy"
+      ],
+      "script": """  
+        from scapy.all import *
+        
+        def test_zbfw_traffic(src_host, dst_host):
+            dst_port = 80
+            src_port = 12345
             
-            ZONEA_NETWORK = \"\"\"192.168.1.0/24\"\"\"
-            ZONEB_NETWORK = \"\"\"192.168.2.0/24\"\"\"
+            # Craft TCP SYN packet from trusted client to untrusted server
+            ip = IP(src=src_host, dst=dst_host)
+            tcp_syn = TCP(sport=src_port, dport=dst_port, flags="S", seq=1000)
+            pkt = ip/tcp_syn
             
-            ssh_client = paramiko.SSHClient()
-            router = {
-                "device_type": "juniper",
-                "host":   "192.168.0.1",
-                "username": "netadmin",
-                "password": "Juniper123"
-            }
+            # Send packet and receive response
+            resp = sr1(pkt)
             
-            ssh_client.connect(**router)
-            connection = netmiko.ConnectHandler(**router)
-            
-            connection.send_config_set([
-                "set security zones security-zone ZONE_A interfaces ge-0/0/0.0 host-inbound-traffic system-services ping",
-                "set security zones security-zone ZONE_B interfaces ge-0/0/1.0 host-inbound-traffic system-services ping",
-                "set security policies from-zone ZONE_A to-zone ZONE_B policy ZONE_POLICY match source-address any destination-address any application any",
-                "set security policies from-zone ZONE_A to-zone ZONE_B policy ZONE_POLICY then permit"
-            ])   
-            
-            print("Configured Zones and Security Policy to Permit")
-            
-            connection.send_command("ping "+ZONEB_NETWORK+" source "+ZONEA_NETWORK)
-            
-            print("Attempted ping from Zone A to Zone B")   
-            
-            ping_output = connection.send_command_expect("ping "+ZONEB_NETWORK+" source "+ ZONEA_NETWORK)
-            if "!!!" in ping_output:
-                print("Ping Successful from Zone A to Zone B - Test Passed")
-            else:
-                print("Ping Failed from Zone A to Zone B - Test Failed")
+            if (resp is None or 
+                resp.haslayer(TCP) == False or 
+                resp[TCP].flags != "SA"):
                 
-        """,
-        "run_command": "python test_zone_security_policy.py",
-        "expected_result": "Ping Successful from Zone A to Zone B - Test Passed"
+                print("Did not receive expected SYN-ACK response")
+                return False 
+                
+            print("TCP connection success from Trust to Untrust")
+            
+            # Craft TCP SYN packet from untrusted client to trusted server 
+            ip = IP(src=dst_host, dst=src_host)  
+            tcp_syn = TCP(sport=12345, dport=80, flags="S", seq=1000)
+            pkt = ip/tcp_syn
+            
+            # Send packet and receive response
+            resp = sr1(pkt)
+            
+            if resp is not None:
+                print("Unexpectedly received response on blocked connection")
+                return False
+                
+            print("Connection blocked as expected from Untrust to Trust") 
+            return True
+          
+        test_zbfw_traffic(**test_data)  
+      """,
+      "run_command": "sudo python3 test_zbfw_traffic.py", 
+      "expected_result": "Connection blocked as expected from Untrust to Trust"
     }
-} 
+  }  
 ]
 ###ENDLIST###
