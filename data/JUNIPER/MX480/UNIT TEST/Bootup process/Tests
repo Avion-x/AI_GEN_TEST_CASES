@@ -1,80 +1,92 @@
- Here are 2 Unit Test Cases and its respective python test cases for Bootup process cases for the Network MSeries Router MX480:
+ Here are 2 unit test cases with respective python test scripts for Bootup process cases for the Network MSeries Router MX480:
 
 ###STARTLIST###
-
 [
-    {
-        "testname": "Test Bootup Time", 
-        "testcase": {
-            "testname": "Test Bootup Time",
-            "objective": "Validate that the router boots up within the expected time limit",
-            "steps": [
-                "Power on the router", 
-                "Start a timer when power on begins",
-                "Stop timer when router completes bootup and management interface comes up",
-                "Validate that total bootup time is less than 300 seconds"
-            ],
-            "test_data": {
-                "max_bootup_time": 300
-            }
-        },
-        "testscript": {
-            "testname": "Test Bootup Time",
-            "objective": "Validate bootup time",
-            "file_name": "test_bootup_time.py",
-            "init_scripts": "import time\nimport unittest",
-            "script": """
-import time
-import unittest
-
-class TestBootupTime(unittest.TestCase):
-    def test_bootup_time(self):
-        max_time = 300 
-        start = time.time()
-        # Code to power on router
-        end = time.time() 
-        bootup_time = end - start
-        self.assertLess(bootup_time, max_time)
-""",
-            "run_command": "python test_bootup_time.py",
-            "expected_result": "OK"  
-        }
-    },
-    {
-        "testname": "Test Bootup Sequence", 
-        "testcase": {
-            "testname": "Test Bootup Sequence",
-            "objective": "Validate bootup sequence and ensure all processes start properly", 
-            "steps": [
-                "Power on the router",
-                "Check console prints for system boot messages", 
-                "Validate BIOS initialization messages are printed",
-                "Validate loader initialization messages are printed", 
-                "Validate kernel boot messages are printed",
-                "Validate successful startup of management interface"
-            ]
-        },
-        "testscript": {
-            "testname": "Test Bootup Sequence", 
-            "objective": "Validate bootup sequence",
-            "file_name": "test_bootup_sequence.py",
-            "init_scripts": "import re \nimport unittest",
-            "script": """  
-import re
-import unittest
-
-class TestBootupSequence(unittest.TestCase):
-    def test_bootup_sequence(self):
-        console_log = # Code to get console log
-        self.assertRegex(console_log, r"BIOS initialization")  
-        self.assertRegex(console_log, r"loader initialization")
-        self.assertRegex(console_log, r"kernel initialization")
-        self.assertRegex(console_log, r"Management interface up")  
-""",
-            "run_command": "python test_bootup_sequence.py",
-            "expected_result": "OK"
-        }
+{
+  "testname": "Test Bootup Sequence", 
+  "testcase": {
+    "testname": "Test Bootup Sequence",
+    "objective": "Validate bootup sequence completes all steps successfully",
+    "steps": [
+      "Power on the router", 
+      "Validate bootrom version printout",
+      "Validate uboot printout", 
+      "Validate Linux kernel printout",
+      "Validate successful daemon initialization printouts",
+      "Validate completion of bootup sequence"
+    ],
+    "test_data": {
+      "expected_bootrom_version": "17.3R1.8",
+      "expected_uboot_version": "1.1.2",
+      "expected_linux_version": "3.0.0"  
     }
-]
+  },
+  
+  "testscript": {
+    "testname": "Test Bootup Sequence",
+    "objective": "Script to validate bootup printouts", 
+    "file_name": "test_bootup.py",
+    "init_scripts": "pip install pexpect",
+    
+    "script": \"\"\"
+    import pexpect
+    
+    bootrom_version = "17.3R1.8" 
+    uboot_version = "1.1.2"
+    linux_version = "3.0.0"
+    
+    child = pexpect.spawn("start_router")
+    child.expect("Bootrom version: {}".format(bootrom_version))
+    child.expect("Uboot version: {}".format(uboot_version)) 
+    child.expect("Linux version: {}".format(linux_version))
+    child.expect("Starting system daemons")
+    child.expect("Bootup complete")
+    \"\"\",
+    
+    "run_command": "python test_bootup.py",
+    "expected_result": "Successful validation of all bootup printouts"
+  }
+},
 
+{
+  "testname": "Test Power Failure",
+  "testcase": {
+    "testname": "Test Power Failure",
+    "objective": "Validate system recovers properly from power failure",
+    "steps": [
+      "Start router bootup",
+      "Interrupt power during bootup",
+      "Restore power and continue boot", 
+      "Validate successful daemon initialization printouts",
+      "Validate completion of bootup sequence"
+    ],
+    "test_data": {
+      "power_interruption_time": "30 seconds",
+      "expected_recovery_time": "60 seconds"  
+    }
+  },
+  
+  "testscript": {
+    "testname": "Test Power Failure",
+    "objective": "Script to handle power failure",
+    "file_name": "test_power_failure.py",
+    
+    "init_scripts": "pip install pexpect",
+    
+    "script": \"\"\"
+    import pexpect
+    import time
+    
+    child = pexpect.spawn("start_router")
+    time.sleep(30)
+    child.sendcontrol('c')  
+    time.sleep(60)
+    child.expect("Starting system daemons")
+    child.expect("Bootup complete")
+    \"\"\",
+    
+    "run_command": "python test_power_failure.py",
+    "expected_result": "Validates router recovers and completes bootup after power failure"
+  }
+}]
 ###ENDLIST###
