@@ -2,119 +2,93 @@
 
 ###STARTLIST###
 [
-  {
-    "testname": "Test Connectivity between Zones",
-    "testcase": {
-      "testname": "Test Connectivity between Zones", 
-      "objective": "Validate connectivity between different firewall zones",
-      "steps": [
-        "Configure zone-based firewall with multiple zones", 
-        "Add firewall policies to allow traffic between zones",
-        "Verify connectivity between zones by pinging devices in different zones"
-      ],
-      "test_data": {
-        "zones": ["zone1", "zone2", "zone3"], 
-        "addresses": ["192.168.1.1", "192.168.2.1", "192.168.3.1"]  
-      }
-    },
-    "testscript": {
-      "testname": "Test Connectivity between Zones",
-      "objective": "Validate connectivity between different firewall zones", 
-      "file_name": "test_zones.py",
-      "init_scripts": [
-        "pip install juniper-eznc",
-        "pip install paramiko"
-      ],
-      "script": """
-        import jnpr.junos
-        import paramiko
-        
-        # Test data
-        ZONES = ['zone1', 'zone2', 'zone3'] 
-        ADDRESSES = ['192.168.1.1', '192.168.2.1', '192.168.3.1']
-        
-        def test_zones_connectivity(zones, addresses):
-          dev = jnpr.junos.Device(host='192.168.0.1', user='netconf', password='paswd')
-          dev.open()
-          
-          # Configure zones 
-          for zone in zones:
-            dev.cli('set security zones security-zone ' + zone)
-            
-          # Configure policies
-          dev.cli('set security policies from-zone zone1 to-zone zone2 policy 1 match source-address any destination-address any application any')
-          dev.cli('set security policies from-zone zone2 to-zone zone3 policy 2 match source-address any destination-address any application any')
-          
-          # Test connectivity between zones
-          for src, dst in zip(addresses[:-1], addresses[1:]):
-            ping = dev.cli('ping rapid count 5 source '+ src + ' '+ dst)
-            if ping.find('!!!!!') >= 0:
-              print(src + ' can reach ' + dst)
-            else:
-              print(src + ' failed to reach '+ dst)
-              raise Exception('Connectivity test failed between ' + src + ' and ' + dst)
-              
-        test_zones_connectivity(ZONES, ADDRESSES)
-        print('Zone connectivity test passed')
-      """,
-      "run_command": "python test_zones.py", 
-      "expected_result": "Zone connectivity test passed"
+{
+  "testname": "Allow LAN to WAN Traffic", 
+  "testcase": {
+    "testname": "Allow LAN to WAN Traffic",
+    "objective": "Validate LAN to WAN traffic is allowed when firewall policy is configured",
+    "steps": [
+      "1. Configure zone-policy from LAN to WAN to allow ICMP traffic", 
+      "2. Send ICMP traffic from LAN client to internet",
+      "3. Verify ICMP traffic is successful"
+    ],
+    "testdata": {
+      "lan_client_ip": "192.168.1.100",
+      "internet_ip": "8.8.8.8" 
     }
   },
-  {
-    "testname": "Test Application Blocking", 
-    "testcase": {
-      "testname": "Test Application Blocking",
-      "objective": "Validate blocking of applications between firewall zones",
-      "steps": [ 
-        "Configure zones and assign interfaces",
-        "Create firewall policy to block certain applications",
-        "Try accessing blocked application and verify it is blocked"   
-      ],
-      "test_data": {
-        "zones": ["zone1", "zone2"],
-        "blocked_app": "ftp"  
-      }
-    },
-    "testscript": {
-        "testname": "Test Application Blocking",
-        "objective": "Validate blocking of applications between firewall zones",
-        "file_name": "test_app_blocking.py", 
-        "init_scripts": [
-          "pip install juniper-eznc"
-        ],
-        "script": """
-          import jnpr.junos
-          
-          # Test data
-          ZONES = ['zone1', 'zone2']
-          BLOCKED_APP = 'ftp'
-          
-          def test_app_blocking(zones, blocked_app):
-            dev = jnpr.junos.Device(host='192.168.0.1', user='netconf', password='paswd')
-            dev.open()
-            
-            # Configure zones 
-            for zone in zones:
-              dev.cli('set security zones security-zone ' + zone)
-              
-            # Configure policy
-            dev.cli('set security policies from-zone zone1 to-zone zone2 policy 1 match source-address any destination-address any application ' + blocked_app + ' then deny')
-            
-            # Try ftp from zone1 to zone2
-            result = dev.cli('run ftp 192.168.2.1')
-            
-            if 'ftp: connect: Connection refused' in result:
-              print(blocked_app + ' successfully blocked between zones')
-            else:
-              raise Exception('Failed to block ' + blocked_app)
-            
-          test_app_blocking(ZONES, BLOCKED_APP) 
-          print('Application blocking test passed')
-        """,
-        "run_command": "python test_app_blocking.py",
-        "expected_result": "Application blocking test passed" 
-    }
+  "testscript": {
+    "testname": "Allow LAN to WAN Traffic",
+    "objective": "Validate LAN to WAN traffic is allowed when firewall policy is configured",  
+    "file_name": "allow_lan_wan_traffic.py",
+    "init_scripts": "pip install paramiko",
+    "script": """
+import paramiko
+
+lan_client_ip = "192.168.1.100"
+internet_ip = "8.8.8.8"
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect("192.168.1.1", username="admin", password="admin123")
+
+stdin, stdout, stderr = client.exec_command(f"ping {internet_ip} -c 3 -I {lan_client_ip}")
+result = stdout.read().decode()
+
+client.close()
+
+if "0% packet loss" in result:
+  print("LAN to WAN traffic test passed")
+else: 
+  print("LAN to WAN traffic test failed")
+    """,
+    "run_command": "python allow_lan_wan_traffic.py",
+    "expected_result": "LAN to WAN traffic test passed"
   }
+},
+{ 
+  "testname": "Deny LAN to WAN Traffic",
+  "testcase": {
+    "testname": "Deny LAN to WAN Traffic",
+    "objective": "Validate LAN to WAN traffic is denied when firewall policy is not configured", 
+    "steps": [
+      "1. Remove any zone-policy allowing LAN to WAN traffic",
+      "2. Send ICMP traffic from LAN client to internet", 
+      "3. Verify ICMP traffic is blocked"
+    ],
+    "testdata": {
+      "lan_client_ip": "192.168.1.100", 
+      "internet_ip": "8.8.8.8"
+    }
+  },
+  "testscript": {
+    "testname": "Deny LAN to WAN Traffic",
+    "objective": "Validate LAN to WAN traffic is denied when firewall policy is not configured",
+    "file_name": "deny_lan_wan_traffic.py",
+    "init_scripts": "pip install paramiko",
+    "script": """  
+import paramiko
+
+lan_client_ip = "192.168.1.100"
+internet_ip = "8.8.8.8"
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect("192.168.1.1", username="admin", password="admin123")
+
+stdin, stdout, stderr = client.exec_command(f"ping {internet_ip} -c 3 -I {lan_client_ip}") 
+result = stdout.read().decode()
+
+client.close()
+
+if "100% packet loss" in result:
+  print("LAN to WAN traffic test passed") 
+else:
+  print("LAN to WAN traffic test failed")
+    """,
+    "run_command": "python deny_lan_wan_traffic.py", 
+    "expected_result": "LAN to WAN traffic test passed"
+  }
+}
 ]
 ###ENDLIST###
