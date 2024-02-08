@@ -1,52 +1,84 @@
- Here are 2 Unit Test Cases and their respective python test cases for Bootup process for Network MSeries Router MX480:
+ Here are 2 Unit Test Cases and corresponding Python test scripts for Bootup process for Network MSeries Router MX480:
 
 ###STARTLIST###
 [
-{
-    "testname": "Test Bootup Time", 
-    "testcase": {
-        "testname": "Test Bootup Time",
-        "objective": "Validate if the bootup time of the router is within expected limit", 
-        "steps": ["Power on the router", "Note start time", "Router finish booting", "Note end time", "Validate if bootup time is less than 5 minutes"]
-    },
-    "testscript": {
-        "testname": "Test Bootup Time",
-        "objective": "Validate if the bootup time of the router is within expected limit",
-        "file_name": "test_bootup_time.py",
-        "init_scripts": ["import time"],
-        "script": """
-                    start_time = time.time()
-                    print("Router powered on") 
-                    time.sleep(300)
-                    end_time = time.time()
-                    duration = end_time - start_time  
-                    assert duration < 300
-                """,
-        "run_command": "python test_bootup_time.py",
-        "expected_result": "Test should pass"
-    }
+{"testname":"Test Bootup Sequence",
+"testcase":{
+  "testname":"Test Bootup Sequence",
+  "objective":"Validate that the router boots up successfully through all stages",
+  "steps":["Power ON router", "Verify POST completes successfully", "Verify uboot loads successfully", "Verify kernel boots successfully", "Verify userspace processes start"]  
 },
-{
-    "testname": "Test Bootup Sequence",
-    "testcase": {
-        "testname": "Test Bootup Sequence",
-        "objective": "Validate bootup process completes each step in expected sequence",
-        "steps": ["Power on Router", "POST Initialization", "Hardware Initialization", "Software Initialization", "System Online"]  
-    },
-    "testscript": {
-        "testname": "Test Bootup Sequence", 
-        "objective": "Validate bootup process completes each step in expected sequence",
-        "file_name": "test_bootup_sequence.py",
-        "init_scripts": [], 
-        "script": """
-                    print("POST Initialization")
-                    print("Hardware Initialization")
-                    print("Software Initialization")  
-                    print("System Online")
-                """,
-        "run_command": "python test_bootup_sequence.py",
-        "expected_result": "Should print steps in sequence: POST, Hardware, Software, System Online"
-    }
+"testscript":{
+  "testname":"Test Bootup Sequence",
+  "objective":"Validate bootup sequence",  
+  "file_name":"test_bootup.py",
+  "init_scripts":"pip install paramiko",
+  "script":"""
+import paramiko
+import time
+
+IP = '192.168.1.1'
+USERNAME = 'admin'
+PASSWORD = 'admin123'
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(IP, username=USERNAME, password=PASSWORD)
+
+stdin, stdout, stderr = client.exec_command("show system boot-messages")
+output = stdout.read().decode()
+
+stages = ["POST", "uboot", "kernel", "init"]
+for stage in stages:
+  if stage not in output:
+    print(f"{stage} stage failed")
+  else:
+    print(f"{stage} stage passed")    
+
+client.close()
+""",
+"run_command":"python test_bootup.py", 
+"expected_result":"All bootup stages should pass"
+}
+},
+{"testname":"Test Boot Timer", 
+"testcase":{
+  "testname":"Test Boot Timer",
+  "objective":"Validate bootup takes less than 300 seconds",
+  "steps":["Power ON Router", "Note start time", "Verify userspace processes start", "Note end time", "Validate time delta"]
+},
+"testscript":{
+  "testname":"Test Boot Timer",
+  "objective":"Validate bootup time",
+  "file_name":"test_boot_timer.py", 
+  "init_scripts":"pip install paramiko datetime",
+  "script":"""  
+import paramiko
+from datetime import datetime
+
+IP = '192.168.1.1'
+USERNAME = 'admin'
+PASSWORD = 'admin123'
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+start_time = datetime.now()
+client.connect(IP, username=USERNAME, password=PASSWORD) 
+end_time = datetime.now()
+
+boot_time = (end_time - start_time).total_seconds()
+
+if boot_time > 300:
+  print("Bootup took longer than 300 seconds") 
+else:
+  print("Bootup completed within 300 seconds")
+  
+client.close()
+""",
+"run_command":"python test_boot_timer.py",
+"expected_result":"Bootup should complete within 300 seconds"  
+}
 }
 ]
 ###ENDLIST###
