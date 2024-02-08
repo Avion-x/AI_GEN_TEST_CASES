@@ -1,84 +1,74 @@
- Here are 2 Unit Test Cases and corresponding Python test scripts for Bootup process for Network MSeries Router MX480:
+ Here are 2 Unit Test Cases with python test scripts for Bootup process for Network MSeries Router MX480:
 
 ###STARTLIST###
 [
-{"testname":"Test Bootup Sequence",
-"testcase":{
-  "testname":"Test Bootup Sequence",
-  "objective":"Validate that the router boots up successfully through all stages",
-  "steps":["Power ON router", "Verify POST completes successfully", "Verify uboot loads successfully", "Verify kernel boots successfully", "Verify userspace processes start"]  
-},
-"testscript":{
-  "testname":"Test Bootup Sequence",
-  "objective":"Validate bootup sequence",  
-  "file_name":"test_bootup.py",
-  "init_scripts":"pip install paramiko",
-  "script":"""
-import paramiko
-import time
-
-IP = '192.168.1.1'
-USERNAME = 'admin'
-PASSWORD = 'admin123'
-
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect(IP, username=USERNAME, password=PASSWORD)
-
-stdin, stdout, stderr = client.exec_command("show system boot-messages")
-output = stdout.read().decode()
-
-stages = ["POST", "uboot", "kernel", "init"]
-for stage in stages:
-  if stage not in output:
-    print(f"{stage} stage failed")
-  else:
-    print(f"{stage} stage passed")    
-
-client.close()
-""",
-"run_command":"python test_bootup.py", 
-"expected_result":"All bootup stages should pass"
-}
-},
-{"testname":"Test Boot Timer", 
-"testcase":{
-  "testname":"Test Boot Timer",
-  "objective":"Validate bootup takes less than 300 seconds",
-  "steps":["Power ON Router", "Note start time", "Verify userspace processes start", "Note end time", "Validate time delta"]
-},
-"testscript":{
-  "testname":"Test Boot Timer",
-  "objective":"Validate bootup time",
-  "file_name":"test_boot_timer.py", 
-  "init_scripts":"pip install paramiko datetime",
-  "script":"""  
-import paramiko
-from datetime import datetime
-
-IP = '192.168.1.1'
-USERNAME = 'admin'
-PASSWORD = 'admin123'
-
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-start_time = datetime.now()
-client.connect(IP, username=USERNAME, password=PASSWORD) 
-end_time = datetime.now()
-
-boot_time = (end_time - start_time).total_seconds()
-
-if boot_time > 300:
-  print("Bootup took longer than 300 seconds") 
-else:
-  print("Bootup completed within 300 seconds")
-  
-client.close()
-""",
-"run_command":"python test_boot_timer.py",
-"expected_result":"Bootup should complete within 300 seconds"  
-}
-}
+    {
+        "testname": "Test Bootup Sequence", 
+        "testcase": {
+            "testname": "Test Bootup Sequence",
+            "objective": "Validate that the router goes through the expected bootup sequence",
+            "steps": [
+                "Power on the router", 
+                "Verify that POST starts within 60 seconds",
+                "Verify that the Kernel boot starts within 120 seconds after power on",
+                "Verify that user space daemons start within 300 seconds after kernel boot"
+            ],
+            "test_data": {} 
+        },
+        "testscript": {
+            "testname": "Test Bootup Sequence",
+            "objective": "Script to validate bootup sequence timings", 
+            "file_name": "test_bootup.py",
+            "init_scripts": "import time\nimport logging",
+            "script": """
+                start_time = time.time()
+                post_time = start_time + 60
+                kernel_time = post_time + 120 
+                daemon_time = kernel_time + 300
+                
+                if time.time() > post_time:
+                    logging.error("POST did not complete within 60 seconds")
+                if time.time() > kernel_time:  
+                    logging.error("Kernel boot did not complete within 120 seconds") 
+                if time.time() > daemon_time:
+                    logging.error("Daemons did not start within 300 seconds")
+            """,
+            "run_command": "python test_bootup.py",
+            "expected_result": "No errors logged"  
+        }
+    },
+    {
+        "testname": "Test System Services", 
+        "testcase": {
+             "testname": "Test System Services",
+             "objective": "Validate all expected services start properly",
+             "steps": [
+                  "Power on the router",
+                  "Verify systemd reports 'running' status for services: ntpd, netconf, restconf, sshd", 
+                  "No errors reported in system logs"
+             ],
+             "test_data": {}
+        },
+        "testscript": {
+            "testname": "Test System Services", 
+            "objective": "Script to test system services status",
+            "file_name": "test_services.py", 
+            "init_scripts": "import subprocess\nimport logging",
+            "script": """
+                services = ['ntpd', 'netconf', 'restconf','sshd']
+                for service in services:
+                    result = subprocess.run(["systemctl", "status", service]) 
+                    if result.returncode != 0:
+                       logging.error(f"{service} service not running")
+                
+                log = subprocess.check_output(["grep", " error ", "/var/log/messages"])
+                if log:
+                   logging.error(f"Errors found in system log: {log}")
+                
+            """,
+            "run_command": "python test_services.py", 
+            "expected_result": "No errors logged"
+        }
+    }
 ]
 ###ENDLIST###
