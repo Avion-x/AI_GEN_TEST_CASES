@@ -1,178 +1,120 @@
- Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for the Network MSeries Router MX480:
+ Here are 2 Regression Test Cases and python test scripts for Zone-based firewall cases for MX480 router:
 
 ###STARTLIST###
 [
   {
-    "testname": "Test Zone-based Firewall Configuration",
+    "testname": "Test Connectivity between Zones",
     "testcase": {
-      "testname": "Test Zone-based Firewall Configuration",
-      "objective": "Validate that the zone-based firewall is configured correctly with the correct zones, policies and address groups",
+      "testname": "Test Connectivity between Zones", 
+      "objective": "Validate connectivity between different firewall zones",
       "steps": [
-        "1. Verify that the configured zones exist with the expected interfaces assigned", 
-        "2. Verify that the configured zone-based firewall policies exist between the zones with expected source, destination and services",
-        "3. Verify that the configured address groups exist with the expected IP addresses/subnets"
+        "Configure zone-based firewall with multiple zones", 
+        "Add firewall policies to allow traffic between zones",
+        "Verify connectivity between zones by pinging devices in different zones"
       ],
       "test_data": {
-        "zones": ["TRUST", "UNTRUST"], 
-        "interfaces": {"TRUST": ["ge-0/0/2"], "UNTRUST": ["ge-0/0/1"]},
-        "policies": [{"name": "TRUST-to-UNTRUST", "source_zone": "TRUST", "destination_zone": "UNTRUST", "services": ["ANY"]}], 
-        "address_groups": [{"name": "TRUST-SUBNETS", "addresses": ["192.168.1.0/24"]}]
+        "zones": ["zone1", "zone2", "zone3"], 
+        "addresses": ["192.168.1.1", "192.168.2.1", "192.168.3.1"]  
       }
     },
     "testscript": {
-      "testname": "Test Zone-based Firewall Configuration",  
-      "objective": "Validate zone-based firewall configuration using PyEZ",
-      "file_name": "test_zbfw_config.py",
-      "init_scripts": ["pip install junos-eznc"],
+      "testname": "Test Connectivity between Zones",
+      "objective": "Validate connectivity between different firewall zones", 
+      "file_name": "test_zones.py",
+      "init_scripts": [
+        "pip install juniper-eznc",
+        "pip install paramiko"
+      ],
       "script": """
-        from jnpr.junos import Device
-        from jnpr.junos.exception import ConnectError
-        import json
+        import jnpr.junos
+        import paramiko
         
-        def test_zbfw_config(zones, interfaces, policies, address_groups):
-            dev = Device(host='192.168.1.1', user='netconf', password='secret123')
-            try:
-                dev.open()
-            except ConnectError as err:
-                print("Cannot connect to device: {0}".format(err))
-                return False
+        # Test data
+        ZONES = ['zone1', 'zone2', 'zone3'] 
+        ADDRESSES = ['192.168.1.1', '192.168.2.1', '192.168.3.1']
         
-            # Test zones
-            configured_zones = dev.rpc.get_config(filter_xml=f"""
-                <configuration>
-                    <security>
-                        <zones/>
-                    </security>
-                </configuration>""").findall(".//zones/name")
-            
-            if set(zones) != set(configured_zones):
-                print("Configured zones do not match expected")
-                return False
-            
-            # Test interfaces
-            configured_ifs = {} 
-            for z in zones:
-                zone_ifs = dev.rpc.get_interface_information(terse=True, interfaces="fxp0").findall(f".//interface[zone='{z}']/name")
-                configured_ifs[z] = zone_ifs
-                
-            if configured_ifs != interfaces:
-                print("Zone interfaces do not match expected")
-                return False
-                
-            # Test policies
-            configured_policies = dev.rpc.get_config(filter_xml="""
-                <configuration>
-                    <security>
-                        <policies/>
-                    </security>
-                </configuration>""").findall(".//policies/policy")
-                
-            for p in policies:
-                found = False
-                for cp in configured_policies:
-                    if (cp.find("name").text == p["name"] and
-                        cp.find("source-zone").text == p["source_zone"] and 
-                        cp.find("destination-zone").text == p["destination_zone"] and
-                        cp.find("services").text == str(p["services"])):
-                            
-                        found = True
-                        break
-                        
-                if not found:
-                    print("Did not find expected policy configured")
-                    return False
-                    
-            # Test address groups
-            configured_groups = dev.rpc.get_config(filter_xml="""
-                <configuration>
-                    <security>
-                        <address-book>
-                            <address>
-                            </address>
-                        </address-book>
-                    </security>
-                </configuration>""").findall(".//address/name")    
-                
-            for g in address_groups:
-                if g["name"] not in configured_groups:
-                    print("Did not find expected address group configured")  
-                    return False
+        def test_zones_connectivity(zones, addresses):
+          dev = jnpr.junos.Device(host='192.168.0.1', user='netconf', password='paswd')
+          dev.open()
           
-            print("All zone-based firewall checks passed")
-            return True
-        
-        test_zbfw_config(**test_data)
-        dev.close()
+          # Configure zones 
+          for zone in zones:
+            dev.cli('set security zones security-zone ' + zone)
+            
+          # Configure policies
+          dev.cli('set security policies from-zone zone1 to-zone zone2 policy 1 match source-address any destination-address any application any')
+          dev.cli('set security policies from-zone zone2 to-zone zone3 policy 2 match source-address any destination-address any application any')
+          
+          # Test connectivity between zones
+          for src, dst in zip(addresses[:-1], addresses[1:]):
+            ping = dev.cli('ping rapid count 5 source '+ src + ' '+ dst)
+            if ping.find('!!!!!') >= 0:
+              print(src + ' can reach ' + dst)
+            else:
+              print(src + ' failed to reach '+ dst)
+              raise Exception('Connectivity test failed between ' + src + ' and ' + dst)
+              
+        test_zones_connectivity(ZONES, ADDRESSES)
+        print('Zone connectivity test passed')
       """,
-      "run_command": "python3 test_zbfw_config.py",
-      "expected_result": "All zone-based firewall checks passed"
+      "run_command": "python test_zones.py", 
+      "expected_result": "Zone connectivity test passed"
     }
   },
   {
-    "testname": "Test Zone-based Firewall Traffic",
+    "testname": "Test Application Blocking", 
     "testcase": {
-      "testname": "Test Zone-based Firewall Traffic",
-      "objective": "Validate that traffic is handled correctly by the zone-based firewall",
+      "testname": "Test Application Blocking",
+      "objective": "Validate blocking of applications between firewall zones",
       "steps": [ 
-        "1. Initiate HTTP connection from host in TRUST zone to server in UNTRUST zone and verify connection success",
-        "2. Initiate HTTP connection from host in UNTRUST zone to server in TRUST zone and verify connection failure"              
+        "Configure zones and assign interfaces",
+        "Create firewall policy to block certain applications",
+        "Try accessing blocked application and verify it is blocked"   
       ],
       "test_data": {
-        "trusted_client": "192.168.1.5",
-        "untrusted_server": "10.0.0.100"  
+        "zones": ["zone1", "zone2"],
+        "blocked_app": "ftp"  
       }
     },
     "testscript": {
-      "testname": "Test Zone-based Firewall Traffic",
-      "objective": "Validate zone-based firewall traffic handling using Scapy",
-      "file_name": "test_zbfw_traffic.py",
-      "init_scripts": [
-        "pip install scapy"
-      ],
-      "script": """  
-        from scapy.all import *
-        
-        def test_zbfw_traffic(src_host, dst_host):
-            dst_port = 80
-            src_port = 12345
-            
-            # Craft TCP SYN packet from trusted client to untrusted server
-            ip = IP(src=src_host, dst=dst_host)
-            tcp_syn = TCP(sport=src_port, dport=dst_port, flags="S", seq=1000)
-            pkt = ip/tcp_syn
-            
-            # Send packet and receive response
-            resp = sr1(pkt)
-            
-            if (resp is None or 
-                resp.haslayer(TCP) == False or 
-                resp[TCP].flags != "SA"):
-                
-                print("Did not receive expected SYN-ACK response")
-                return False 
-                
-            print("TCP connection success from Trust to Untrust")
-            
-            # Craft TCP SYN packet from untrusted client to trusted server 
-            ip = IP(src=dst_host, dst=src_host)  
-            tcp_syn = TCP(sport=12345, dport=80, flags="S", seq=1000)
-            pkt = ip/tcp_syn
-            
-            # Send packet and receive response
-            resp = sr1(pkt)
-            
-            if resp is not None:
-                print("Unexpectedly received response on blocked connection")
-                return False
-                
-            print("Connection blocked as expected from Untrust to Trust") 
-            return True
+        "testname": "Test Application Blocking",
+        "objective": "Validate blocking of applications between firewall zones",
+        "file_name": "test_app_blocking.py", 
+        "init_scripts": [
+          "pip install juniper-eznc"
+        ],
+        "script": """
+          import jnpr.junos
           
-        test_zbfw_traffic(**test_data)  
-      """,
-      "run_command": "sudo python3 test_zbfw_traffic.py", 
-      "expected_result": "Connection blocked as expected from Untrust to Trust"
+          # Test data
+          ZONES = ['zone1', 'zone2']
+          BLOCKED_APP = 'ftp'
+          
+          def test_app_blocking(zones, blocked_app):
+            dev = jnpr.junos.Device(host='192.168.0.1', user='netconf', password='paswd')
+            dev.open()
+            
+            # Configure zones 
+            for zone in zones:
+              dev.cli('set security zones security-zone ' + zone)
+              
+            # Configure policy
+            dev.cli('set security policies from-zone zone1 to-zone zone2 policy 1 match source-address any destination-address any application ' + blocked_app + ' then deny')
+            
+            # Try ftp from zone1 to zone2
+            result = dev.cli('run ftp 192.168.2.1')
+            
+            if 'ftp: connect: Connection refused' in result:
+              print(blocked_app + ' successfully blocked between zones')
+            else:
+              raise Exception('Failed to block ' + blocked_app)
+            
+          test_app_blocking(ZONES, BLOCKED_APP) 
+          print('Application blocking test passed')
+        """,
+        "run_command": "python test_app_blocking.py",
+        "expected_result": "Application blocking test passed" 
     }
-  }  
+  }
 ]
 ###ENDLIST###
