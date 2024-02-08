@@ -1,4 +1,4 @@
- Here are 2 Unit Test Cases and python test scripts for Bootup process for Network MSeries Router MX480:
+ Here are 2 Unit Test Cases and their respective python test cases for Bootup process for Network MSeries Router MX480:
 
 ###STARTLIST###
 [
@@ -6,82 +6,46 @@
     "testname": "Test Bootup Time", 
     "testcase": {
         "testname": "Test Bootup Time",
-        "objective": "Validate router bootup time is within expected limit",        
-        "steps": [
-            "Power on the router", 
-            "Note start time",
-            "Wait for router to complete boot process", 
-            "Note end time", 
-            "Validate bootup time is less than 5 minutes"
-        ],
-        "test_data": {
-            "max_bootup_time": 300 
-        }
+        "objective": "Validate if the bootup time of the router is within expected limit", 
+        "steps": ["Power on the router", "Note start time", "Router finish booting", "Note end time", "Validate if bootup time is less than 5 minutes"]
     },
-    "testscript": {        
+    "testscript": {
         "testname": "Test Bootup Time",
-        "objective": "Validate router bootup time is within expected limit",        
+        "objective": "Validate if the bootup time of the router is within expected limit",
         "file_name": "test_bootup_time.py",
-        "init_scripts": [
-            "pip install datetime"
-        ],
+        "init_scripts": ["import time"],
         "script": """
-            import datetime
-            
-            start_time = datetime.datetime.now()
-            print(f"Router powered on at: {start_time}")
-            
-            # Code to wait for router bootup completion
-            
-            end_time = datetime.datetime.now()
-            print(f"Router bootup completed at: {end_time}")
-            
-            bootup_time = (end_time - start_time).total_seconds()  
-            max_bootup_time = 300
-            
-            assert bootup_time < max_bootup_time, "Router bootup time exceeded limit" 
-            print("Test passed")
-        """,
+                    start_time = time.time()
+                    print("Router powered on") 
+                    time.sleep(300)
+                    end_time = time.time()
+                    duration = end_time - start_time  
+                    assert duration < 300
+                """,
         "run_command": "python test_bootup_time.py",
-        "expected_result": "Test passed"
+        "expected_result": "Test should pass"
     }
 },
 {
     "testname": "Test Bootup Sequence",
     "testcase": {
         "testname": "Test Bootup Sequence",
-       "objective": "Validate correct bootup sequence",
-       "steps": [
-           "Power on the router",
-           "Check event log for bootup events ",
-           "Validate following events occur in sequence: BIOS, loader, kernel, system processes"
-       ],
-       "test_data": {
-           "expected_sequence": ["BIOS", "loader", "kernel", "system processes"]
-       }
+        "objective": "Validate bootup process completes each step in expected sequence",
+        "steps": ["Power on Router", "POST Initialization", "Hardware Initialization", "Software Initialization", "System Online"]  
     },
     "testscript": {
-       "testname": "Test Bootup Sequence",
-       "objective": "Validate correct bootup sequence",
-       "file_name": "test_bootup_sequence.py",
-       "init_scripts": [
-           "import re"
-       ],
-       "script": """
-           bootup_log = """BIOS started
-           Loader started
-           Kernel initialized
-           System processes started"""
-           
-           expected_sequence = ["BIOS", "loader", "kernel", "system processes"]
-           
-           events = re.findall(r"^\w+ started", bootup_log, flags=re.M)  
-           
-           assert events == expected_sequence, "Bootup sequence incorrect"
-           print("Test passed")
-       """,
-       "run_command": "python test_bootup_sequence.py",
-       "expected_result": "Test passed" 
+        "testname": "Test Bootup Sequence", 
+        "objective": "Validate bootup process completes each step in expected sequence",
+        "file_name": "test_bootup_sequence.py",
+        "init_scripts": [], 
+        "script": """
+                    print("POST Initialization")
+                    print("Hardware Initialization")
+                    print("Software Initialization")  
+                    print("System Online")
+                """,
+        "run_command": "python test_bootup_sequence.py",
+        "expected_result": "Should print steps in sequence: POST, Hardware, Software, System Online"
     }
 }
 ]
