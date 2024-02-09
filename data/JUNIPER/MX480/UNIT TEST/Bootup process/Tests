@@ -1,74 +1,43 @@
- Here are 2 Unit Test Cases with python test scripts for Bootup process for Network MSeries Router MX480:
+ Here are 2 Unit Test Cases and corresponding Python test scripts for Bootup process cases for the Network Router MX480:
 
 ###STARTLIST###
+
 [
-    {
-        "testname": "Test Bootup Sequence", 
-        "testcase": {
-            "testname": "Test Bootup Sequence",
-            "objective": "Validate that the router goes through the expected bootup sequence",
-            "steps": [
-                "Power on the router", 
-                "Verify that POST starts within 60 seconds",
-                "Verify that the Kernel boot starts within 120 seconds after power on",
-                "Verify that user space daemons start within 300 seconds after kernel boot"
-            ],
-            "test_data": {} 
-        },
-        "testscript": {
-            "testname": "Test Bootup Sequence",
-            "objective": "Script to validate bootup sequence timings", 
-            "file_name": "test_bootup.py",
-            "init_scripts": "import time\nimport logging",
-            "script": """
-                start_time = time.time()
-                post_time = start_time + 60
-                kernel_time = post_time + 120 
-                daemon_time = kernel_time + 300
-                
-                if time.time() > post_time:
-                    logging.error("POST did not complete within 60 seconds")
-                if time.time() > kernel_time:  
-                    logging.error("Kernel boot did not complete within 120 seconds") 
-                if time.time() > daemon_time:
-                    logging.error("Daemons did not start within 300 seconds")
-            """,
-            "run_command": "python test_bootup.py",
-            "expected_result": "No errors logged"  
-        }
+
+{
+    "testname": "test_bootup_time", 
+    "testcase": {
+        "testname": "test_bootup_time",
+        "objective": "Validate bootup time is within 120 seconds",
+        "steps": ["Power on the device", "Note start time", "Verify device is fully booted", "Note end time", "Validate bootup time"]
     },
-    {
-        "testname": "Test System Services", 
-        "testcase": {
-             "testname": "Test System Services",
-             "objective": "Validate all expected services start properly",
-             "steps": [
-                  "Power on the router",
-                  "Verify systemd reports 'running' status for services: ntpd, netconf, restconf, sshd", 
-                  "No errors reported in system logs"
-             ],
-             "test_data": {}
-        },
-        "testscript": {
-            "testname": "Test System Services", 
-            "objective": "Script to test system services status",
-            "file_name": "test_services.py", 
-            "init_scripts": "import subprocess\nimport logging",
-            "script": """
-                services = ['ntpd', 'netconf', 'restconf','sshd']
-                for service in services:
-                    result = subprocess.run(["systemctl", "status", service]) 
-                    if result.returncode != 0:
-                       logging.error(f"{service} service not running")
-                
-                log = subprocess.check_output(["grep", " error ", "/var/log/messages"])
-                if log:
-                   logging.error(f"Errors found in system log: {log}")
-                
-            """,
-            "run_command": "python test_services.py", 
-            "expected_result": "No errors logged"
-        }
+    "testscript": {
+        "testname": "test_bootup_time",
+        "objective": "Validate bootup time is within 120 seconds", 
+        "file_name": "test_bootup_time.py",
+        "init_scripts": "\"\"\"\npip install datetime\n\"\"\"",
+        "script": "\"\"\"\nimport datetime\n\nstart_time = datetime.datetime.now()\n# Code to power on device\n# Code to verify device bootup complete\nend_time = datetime.datetime.now()\nbootup_time = (end_time - start_time).total_seconds()\nassert bootup_time <= 120\n\"\"\"",
+        "run_command": "python test_bootup_time.py",
+        "expected_result": "Test script executes successfully and bootup time assertion passes"
     }
-]
+},
+
+{
+    "testname": "test_bootup_sequence",
+    "testcase": {
+        "testname": "test_bootup_sequence", 
+        "objective": "Validate correct bootup sequence",
+        "steps": ["Power on the device", "Verify Module A powers on first", "Verify Module B powers on second", "Verify Module C powers on third"]
+    },
+    "testscript": {
+        "testname": "test_bootup_sequence",
+        "objective": "Validate correct bootup sequence",
+        "file_name": "test_bootup_sequence.py", 
+        "init_scripts": "\"\"\"\npip install unittest\n\"\"\"",
+        "script": "\"\"\"\nimport unittest\n\ndef test_bootup(self):\n    # Code to power on device and capture bootup logs    \n    self.assertTrue('Module A Power ON' in logs)\n    self.assertTrue('Module B Power ON' in logs)\n    self.assertTrue('Module C Power ON' in logs)\n    self.assertLess(logs.index('Module A Power ON'), logs.index('Module B Power ON'))\n    self.assertLess(logs.index('Module B Power ON'), logs.index('Module C Power ON'))\n\nif __name__ == '__main__':\n    unittest.main()\n\"\"\"",
+        "run_command": "python test_bootup_sequence.py",
+        "expected_result": "Test script executes successfully and bootup sequence assertions pass" 
+    }
+}]
+
 ###ENDLIST###
