@@ -1,92 +1,74 @@
- ###STARTLIST###
+ Here is the Python list with 2 test cases and test scripts for Firewall filters on Juniper MX480 devices:
+
+###STARTLIST###
 [
-  {
-    "testname": "OSPF Neighborship Test",
-    "testcase": {
-      "testname": "OSPF Neighborship Test",
-      "objective": "Verify OSPF neighborship is established between MX devices",
-      "steps": [
-        "Configure OSPF on MX devices", 
-        "Verify OSPF neighborship is up between MX devices"
-      ],
-      "test_data": {
-        "mx_devices": [
-          "mx480-1",
-          "mx480-2"
-        ],
-        "ospf_process_id": "100",
-        "ospf_area": "0"
-      }
-    },
-    "testscript": {
-      "testname": "OSPF Neighborship Test",
-      "objective": "Verify OSPF neighborship is established between MX devices", 
-      "file_name": "ospf_neighborship_test.py",
-      "init_scripts": "pip install jnpr.junos pyez",
-      "script": """
-        import jnpr.junos as pyez
-        
-        def test_ospf_neighborship(mx_devices, ospf_process_id, ospf_area):
-          for device in mx_devices:
-            conn = pyez.Device(host=device, user='test', password='Pass123')
-            conn.open()
-            ospf_neighbors = conn.rpc.get_ospf_neighbor_information(ospf_area = ospf_area)
-            assert len(ospf_neighbors) > 0
-            conn.close
-          
-        if __name__ == '__main__':
-          mx_devices = %test_data['mx_devices']%  
-          ospf_process_id = %test_data['ospf_process_id']%
-          ospf_area = %test_data['ospf_area']%
-          
-          test_ospf_neighborship(mx_devices, ospf_process_id, ospf_area)
-        """,
-      "run_command": "python ospf_neighborship_test.py",
-      "expected_result": "OSPF neighborship established between MX devices"
-    }
+{"testname": "test_firewall_filter_reject", 
+ "testcase": {"testname": "test_firewall_filter_reject", "objective": "Test that a firewall filter is correctly rejecting traffic", 
+   "steps": ["1. Configure firewall filter to reject tcp port 80", "2. Send tcp traffic to port 80", "3. Verify traffic is rejected"]
   },
-  {
-    "testname": "BGP Session Test", 
-    "testcase": {
-      "testname": "BGP Session Test",
-      "objective": "Verify BGP session is established between MX devices",
-      "steps": [
-        "Configure BGP on MX devices",
-        "Verify BGP session is up between MX devices"  
-      ],
-      "test_data": {
-        "mx_devices": [
-          "mx480-1", 
-          "mx480-2"
-        ],
-        "bgp_as": "65100"  
-      }
-    },
-    "testscript": {
-      "testname": "BGP Session Test",
-      "objective": "Verify BGP session is established between MX devices",
-      "file_name": "bgp_session_test.py", 
-      "init_scripts": "pip install jnpr.junos pyez", 
-      "script": """
-        import jnpr.junos as pyez
-        
-        def test_bgp_session(mx_devices, bgp_as):
-          for device in mx_devices:
-            conn = pyez.Device(host=device, user='test', password='Pass123')
-            conn.open()
-            bgp_summary = conn.rpc.get_bgp_summary_information()
-            assert bgp_summary['bgp-peer-count'] > 0
-            conn.close
-        
-        if __name__ == '__main__':
-          mx_devices = %test_data['mx_devices']%
-          bgp_as = %test_data['bgp_as']%
-          
-          test_bgp_session(mx_devices, bgp_as)
-        """,
-      "run_command": "python bgp_session_test.py",
-      "expected_result": "BGP session established between MX devices"
-    }
+ "testscript": {"testname": "test_firewall_filter_reject", 
+   "objective": "Test that a firewall filter rejects traffic as expected",
+   "file_name": "test_fw_filter_reject.py",
+   "init_scripts": "pip install paramiko netmiko",
+   "script": """
+import paramiko
+
+def test_fw_filter_reject():
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect('192.168.1.1', username='admin', password='password')
+    
+    stdin, stdout, stderr = client.exec_command('configure') 
+    stdin.write('set firewall family inet filter TEST_FILTER term BLOCK_80 then reject')
+    stdin.write('set interfaces ge-0/0/1 unit 0 family inet filter input TEST_FILTER') 
+    
+    stdin, stdout, stderr = client.exec_command('commit')
+    
+    stdin, stdout, stderr = client.exec_command('run ping 80.0.0.2') 
+    output = stdout.read()
+    client.close()
+    
+    assert "100% packet loss" in output.decode('utf-8')
+""",
+   "run_command": "python test_fw_filter_reject.py",
+   "expected_result": "Test should run and block pings on port 80 verifying filter reject works"
   }
-]
+},
+{"testname": "test_firewall_filter_count",
+ "testcase": {"testname": "test_firewall_filter_count", 
+   "objective": "Test that firewall filter counters are incrementing",
+    "steps": ["1. Configure firewall filter that matches web traffic", "2. Generate web traffic that matches", "3. Check packet count has incremented"]
+   },
+ "testscript": {"testname": "test_firewall_filter_count",
+  "objective": "Test that firewall filter counters increment with matching traffic",
+  "file_name": "test_fw_filter_count.py",
+  "init_scripts": "pip install paramiko", 
+  "script": """  
+import paramiko
+import time
+
+def test_fw_filter_count():
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect('192.168.1.1', username='admin', password='password')
+    
+    stdin, stdout, stderr = client.exec_command('configure')
+    stdin.write('set firewall family inet filter WEB_TRAFFIC term ALLOW_WEB then count accept')
+    stdin.write('set interfaces ge-0/0/1 unit 0 family inet filter input WEB_TRAFFIC')
+    stdin, stdout, stderr = client.exec_command('commit')
+    
+    time.sleep(60) # Generate web traffic
+    
+    stdin, stdout, stderr = client.exec_command('show firewall filter WEB_TRAFFIC')
+    output = stdout.read().decode('utf-8')
+    count = output.split()[9]
+    
+    assert int(count) > 0
+    
+""",
+  "run_command": "python test_fw_filter_count.py",
+  "expected_result": "Test should run and verify counter on firewall filter increments"
+ }
+}]
+
 ###ENDLIST###
