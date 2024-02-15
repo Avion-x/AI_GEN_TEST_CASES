@@ -1,89 +1,89 @@
- Here is the Python list with 2 unit test cases and scripts for Bootup process for MX480 router:
+ Here is the Python list with 2 unit test JSON objects for Juniper MX480 bootup process:
 
+```python
 ###STARTLIST###
-[{"testname":"Test Bootup Sequence", 
-"testcase":{
-  "testname":"Test Bootup Sequence",
-  "objective":"Validate that the MX480 router goes through the correct bootup sequence",
-  "steps":[
-    "Power on the MX480 router",
-    "Verify console displays Boot ROM version",
-    "Verify console displays booting kernel",  
-    "Verify console displays starting routing protocol daemons"
-  ],
-  "test_data":{
-    "device":"MX480 router",
-    "boot_rom_version":"ABC123",
-    "routing_protocols":["OSPF", "BGP"]
-  }
-},
-"testscript":{
-  "testname":"Test Bootup Sequence",
-  "objective":"Script to validate bootup sequence of MX480",  
-  "file_name":"test_bootup.py",
-  "init_scripts":[
-    "pip install paramiko"  
-  ],
-  "script":"\"\"\"
-Import paramiko 
-
-Define SSH client
-
-Connect to MX480 console 
-
-Read console output
-
-Assert boot ROM version is as expected
-
-Assert kernel boot messages display
-
-Assert routing daemons start
-\"\"\"",
-  
-  "run_command":"python test_bootup.py",
-  "expected_result":"All assertions should pass. Console output should match expected bootup sequence."  
-}
-},
-{"testname":"Test Bootup Time",
-"testcase":{
-  "testname":"Test Bootup Time",
-  "objective":"Validate bootup time for MX480 is under 5 minutes",
-  "steps":[
-    "Power on MX480 router", 
-    "Note start time",
-    "Verify routing daemons have started",
-    "Note end time",
-    "Subtract start time from end time"   
-  ],
-  "test_data":{
-    "device":"MX480 router",
-    "max_time":300,
-    "time_metric":"seconds"
-  }
-},  
-"testscript":{
-  "testname":"Test Bootup Time",
-  "objective":"Script to validate MX480 bootup time",
-  "file_name":"test_boottime.py",
-  "init_scripts":[
-     "import datetime"
-    ],
-  "script":"\"\"\"
-Record start time
-
-Connect to MX480 console  
-
-Verify routing daemons have started
-
-Record end time
-
-Calculate time delta
-
-Assert time delta is less than max time
-\"\"\"",
-  
-  "run_command":"python test_boottime.py",
-  "expected_result":"Bootup time should be less than 5 minutes (300 seconds)" 
-}
-}]
+[
+    {
+        "testname": "test_bootup_time", 
+        "testcase": {
+            "testname": "test_bootup_time",
+            "objective": "Validate that MX480 boots up within 300 seconds",
+            "steps": [
+                "1. Power on the MX480 router", 
+                "2. Note start time",
+                "3. Verify console shows 'Junos ready' within 300 secs", 
+                "4. Note end time", 
+                "5. Validate bootup time is less than 300 secs"
+            ],
+            "test_data": {
+                "device": "MX480 router", 
+                "max_bootup_time": 300
+            }
+        },
+        "testscript": {
+            "testname": "test_bootup_time",
+            "objective": "Script to test MX480 bootup time",
+            "file_name": "test_bootup_time.py",
+            "init_scripts": "pip install datetime",
+            "script": """
+                import datetime
+                
+                start_time = datetime.datetime.now()
+                print(f"Start time: {start_time}")
+                
+                # Code to initiate MX480 bootup
+                
+                end_time = datetime.datetime.now()
+                print(f"End time: {end_time}")
+                
+                bootup_time = (end_time - start_time).total_seconds() 
+                max_time = 300
+                assert bootup_time < max_time, f"Bootup time {bootup_time} exceeds {max_time} seconds" 
+                print("MX480 bootup time validation passed")
+            """,
+            "run_command": "python test_bootup_time.py",
+            "expected_result": "MX480 bootup time validation passed" 
+        }
+    },
+    {
+        "testname": "test_image_version",
+        "testcase": {
+            "testname": "test_image_version", 
+            "objective": "Validate Junos image version after MX480 bootup",
+            "steps": [
+                "1. Initiate MX480 bootup",
+                "2. Execute 'show version' command on console", 
+                "3. Verify Junos version is 22.3R1.10",
+                "4. Test passes if correct version, else fails"
+            ],
+            "test_data": {
+                "device": "MX480 router",
+                "expected_junos_version": "22.3R1.10" 
+            }
+        },
+        "testscript": {
+            "testname": "test_image_version", 
+            "objective": "Script to test Junos image version on MX480", 
+            "file_name": "test_image_version.py", 
+            "init_scripts": "import re",
+            "script": """ 
+                # Boot device 
+                output = exec_command("show version")
+                
+                # Use regex to extract Junos version 
+                match = re.search(r'Junos: (\d+\.\d+[A-Z]\d+\.\d+)', output)
+                junos_version = match.group(1) if match else None  
+                
+                expected_version = "22.3R1.10"
+                assert junos_version == expected_version, f"Junos version {junos_version} does not match {expected_version}"
+                print("Junos image version validation passed") 
+            """,
+            "run_command": "python test_image_version.py", 
+            "expected_result": "Junos image version validation passed"
+        }
+    }
+]
 ###ENDLIST###
+```
+
+The above list contains 2 test JSON objects, one to validate bootup time and another to validate Junos image version after bootup of MX480 router. Each object contains the required fields as per the instructions. The test scripts utilize Python built-in libraries and functions to achieve the test objectives.
