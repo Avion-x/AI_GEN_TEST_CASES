@@ -1,102 +1,75 @@
- Here are 2 unit test cases with python test scripts for Juniper MX480 routing protocols:
+ Here is the Python list with 2 test cases and test scripts for Bootup process for Juniper MX480 router:
 
 ###STARTLIST###
 [
-{
-  "testname": "OSPF Neighbor Adjacency Test",
-  "testcase": {
-    "testname": "OSPF Neighbor Adjacency Test",
-    "objective": "Verify OSPF neighbors are coming up properly",
-    "steps": [
-      "Configure OSPF on MX480 interfaces",
-      "Verify OSPF neighbors are seen in show ospf neighbor output"
-    ],
-    "testdata": {
-      "ospf_interfaces": [
-        "ge-0/0/0",
-        "ge-0/0/1" 
-      ],
-      "neighbor_ips": [
-        "192.168.1.2",
-        "192.168.2.2"
-      ]
-    }
-  },
-  "testscript": {
-    "testname": "OSPF Neighbor Adjacency Test",
-    "objective": "Verify OSPF neighbors are coming up properly", 
-    "file_name": "test_ospf_neighbor.py",
-    "init_scripts": [
-      "pip install netmiko",
-      "pip install jnpr"
-    ],
-    "script": """
-    import netmiko
-    from jnpr.junos import Device
-    
-    dev = Device(host='192.168.0.1', user='testuser', password='test123')
-    dev.open()
-    
-    ospf_ints = {{ testdata['ospf_interfaces'] }}
-    
-    output = dev.cli("show ospf neighbor")
-    neighbors = [n.split()[0] for n in output.splitlines() if "Full" in n]
-    
-    assert set(neighbors) == set({{ testdata['neighbor_ips'] }}), "OSPF neighbors did not come up properly"
-    
-    dev.close()
-    """,
-    "run_command": "python test_ospf_neighbor.py", 
-    "expected_result": "Test passed"
-  }
-},
-{
-  "testname": "BGP Session Establishment Test", 
-  "testcase": {
-    "testname": "BGP Session Establishment Test",
-    "objective": "Verify BGP sessions with peers are coming up",
-    "steps": [
-      "Configure BGP on MX480 with peers",
-      "Verify BGP sessions are seen in show bgp summary" 
-    ],
-    "testdata": {
-      "peer_ips": [
-        "10.1.1.2",
-        "10.2.2.2"  
-      ]
-    }
-  },
-  "testscript": {
-    "testname": "BGP Session Establishment Test",
-    "objective": "Verify BGP sessions with peers are coming up",
-    "file_name": "test_bgp_session.py",
-    "init_scripts": [
-      "pip install netmiko",
-      "pip install jnpr"
-    ],
-    "script": """
-    import netmiko
-    from jnpr.junos import Device
-    
-    dev = Device(host='192.168.0.1', user='testuser', password='test123')
-    dev.open()
-    
-    peer_ips = {{ testdata['peer_ips'] }}
-    
-    output = dev.cli("show bgp summary")
-    sessions = [line.split()[0] for line in output.splitlines() if "Established" in line]
-    
-    assert set(sessions) == set(peer_ips), "Not all BGP sessions established"
-    
-    dev.close()
-    """,
-    "run_command": "python test_bgp_session.py",
-    "expected_result": "Test passed"
-  } 
-}
-]
+{"testname":"Test Bootup Time", 
+ "testcase":{"testname":"Test Bootup Time", 
+             "objective":"Validate bootup time is within expected limit",
+             "steps":["Verify device boots up within 180 seconds"],
+             "test_data":{"expected_bootup_time": 180}},
+             
+ "testscript":{"testname":"Test Bootup Time",
+              "objective":"Validate bootup time is within expected limit",
+              "file_name":"test_bootup_time.py",
+              "init_scripts":["pip install paramiko"],
+              "script":"""
+import paramiko
+import time
+
+IP = '192.168.1.1'
+USERNAME = 'admin'
+PASSWORD = 'Juniper123'
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+start_time = time.time()
+client.connect(IP, username=USERNAME, password=PASSWORD) 
+end_time = time.time()
+bootup_time = end_time - start_time
+
+assert bootup_time < 180, "Bootup time exceeded limit"
+print("Bootup test passed")""",  
+
+"run_command":"python test_bootup_time.py",
+"expected_result":"Bootup test passed"}},
+               
+{"testname":"Test Bootup Sequence",
+ "testcase":{"testname":"Test Bootup Sequence",  
+             "objective":"Validate bootup sequence",
+             "steps":["Verify power on self test", 
+                      "Verify boot loader execution",
+                      "Verify kernel load and execution", 
+                      "Verify daemons and processes start"],
+             "test_data":{}},
+             
+ "testscript":{"testname":"Test Bootup Sequence",
+              "objective":"Validate bootup sequence with syslog monitoring",
+              "file_name":"test_bootup_sequence.py",
+              "init_scripts":["pip install paramiko"],       
+              "script":"""  
+import paramiko
+import re
+
+IP = '192.168.1.1'
+USERNAME = 'admin'
+PASSWORD = 'Juniper123'  
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())              
+client.connect(IP, username=USERNAME, password=PASSWORD)
+
+stdin, stdout, stderr = client.exec_command('show log')
+logs = stdout.read().decode()
+
+assert re.search('Power on Self Test', logs)
+assert re.search('Boot loader execution', logs) 
+assert re.search('Loading kernel', logs)
+assert re.search('Daemon initialization complete', logs)
+
+print("Bootup sequence test passed")
+            """,
+            
+"run_command":"python test_bootup_sequence.py", 
+"expected_result":"Bootup sequence test passed"}}]
+
 ###ENDLIST###
-
-The above includes 2 test cases, one for OSPF neighbor adjacency verification and another for BGP session establishment check. The corresponding python test scripts utilize netmiko and jnpr (Juniper pyez) libraries to connect to the Juniper MX480 device and fetch the required show command outputs for asserting the test objectives.
-
-The test cases and scripts are formatted as per the provided instructions, with each test encapsulated within its own JSON object inside a Python list.
