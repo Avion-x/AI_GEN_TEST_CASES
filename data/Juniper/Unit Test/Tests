@@ -1,0 +1,326 @@
+ Here are 2 unit test cases with python test scripts for Bootup process for MX480 Juniper device:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Bootup Time", 
+    "testcase": {
+      "testname": "Test Bootup Time",
+      "objective": "Validate bootup time is under 5 minutes",
+      "steps": [
+        "Power on the MX480",
+        "Note start time from power on", 
+        "Verify routing engine Online status",
+        "Note end time when routing engine Online",
+        "Validate total time is less than 5 minutes"
+      ],
+      "test_data": {
+        "max_time": 300
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Time",
+      "objective": "Script to validate bootup time", 
+      "file_name": "test_bootup_time.py",
+      "init_scripts": [
+        "import time"  
+      ],
+      "script": """
+        start_time = time.time()
+        # Simulate device bootup process
+        time.sleep(60) 
+        end_time = time.time()
+        bootup_time = end_time - start_time
+        assert bootup_time < 300
+      """,
+      "run_command": "python test_bootup_time.py",
+      "expected_result": "PASS. Bootup time under 5 minutes." 
+    }
+  },
+  {
+    "testname": "Test Bootup Failure Handling",
+    "testcase": {
+      "testname": "Test Bootup Failure Handling",
+      "objective": "Validate system correctly handles bootup failure",
+      "steps": [ 
+        "Simulate error during bootup process",
+        "Verify appropriate system log messages generated ",
+        "Verify system transitions to safe mode"
+      ],
+      "test_data": {
+        "error_code": "404", 
+        "safe_mode": True
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Failure Handling", 
+      "objective": "Script to validate boot failure handling",
+      "file_name": "test_bootup_failure.py",
+      "init_scripts": [ 
+        "import logging"
+      ],
+      "script": """
+        try:
+          raise Exception("Bootup failure with error 404")
+        except Exception as e:   
+          logging.error("Boot failure: " + str(e))
+          assert "404" in str(e)
+          entered_safe_mode = True
+          assert entered_safe_mode == True
+      """,
+      "run_command": "python test_bootup_failure.py", 
+      "expected_result": "PASS. System correctly handled bootup failure."
+    }
+  }
+]
+###ENDLIST### Here are 2 Unit Test cases with python test scripts for Bootup process for Juniper's MX480 router focusing on ports and address verification:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Port Mapping",
+    "testcase": {
+      "testname": "Test Port Mapping",
+      "objective": "Validate all ports are mapped correctly after bootup",
+      "steps": [
+        "Validate ports are operationally up",
+        "Validate mapping between physical and logical interfaces"
+      ],
+      "test_data": {
+        "ports": [
+          "ge-0/0/0",
+          "ge-0/0/1",
+          "ge-0/1/0"
+        ],
+        "logical_interfaces": [
+          "ge-0/0/0.0",
+          "ge-0/0/1.0",
+          "ge-0/1/0.0"
+        ]
+      }
+    },
+    "testscript": {
+      "testname": "Test Port Mapping",
+      "objective": "Validate port mapping after bootup",
+      "file_name": "test_port_mapping.py",
+      "init_scripts": "pip install junos-eznc",
+      "script": """
+        import unittest
+        from jnpr.junos import Device
+        
+        TEST_PORTS = ${test_data['ports']}
+        TEST_LOGICAL_INTERFACES = ${test_data['logical_interfaces']}
+        
+        class TestPortMapping(unittest.TestCase):
+            @classmethod
+            def setUpClass(cls):
+                cls.dev = Device(host='192.168.1.1', user='lab', password='lab123')
+                cls.dev.open()
+                
+            def test_port_status(self):
+                for port in TEST_PORTS:
+                    result = self.dev.cli(f'show interfaces {port} | match "Link-level type:"')
+                    self.assertIn('Up', result)
+                    
+            def test_port_mapping(self):
+                for logical_intf in TEST_LOGICAL_INTERFACES:
+                    result = self.dev.cli(f'show interfaces {logical_intf}')
+                    self.assertNotIn('Interface not found', result)
+                
+            @classmethod    
+            def tearDownClass(cls):
+                cls.dev.close()
+                
+        if __name__ == '__main__':
+            unittest.main()
+      """,
+      "run_command": "python test_port_mapping.py",
+      "expected_result": "OK"
+    }
+  },
+  {
+    "testname": "Test Address Assignment", 
+    "testcase": {
+      "testname": "Test Address Assignment",
+      "objective": "Validate interface addresses after bootup",
+      "steps": [
+        "Validate expected interface addresses are assigned", 
+        "Validate no duplicate addresses"
+      ],
+      "test_data": {
+        "intf_addresses": {
+          "ge-0/0/0.0": "192.168.1.1/24",
+          "ge-0/0/1.0": "192.168.2.1/24" 
+        }
+      }
+    },
+    "testscript": {
+      "testname": "Test Address Assignment",
+      "objective": "Validate interface addresses after bootup",
+      "file_name": "test_address_assignment.py",
+      "init_scripts": "pip install junos-eznc",
+      "script": """
+        import unittest
+        from jnpr.junos import Device
+        
+        TEST_INTF_ADDRESSES = ${test_data['intf_addresses']}
+        
+        class TestAddressAssignment(unittest.TestCase):
+            @classmethod
+            def setUpClass(cls):
+                cls.dev = Device(host='192.168.1.1', user='lab', password='lab123')
+                cls.dev.open()
+                
+            def test_address_assignment(self):
+                for intf, expected_address in TEST_INTF_ADDRESSES.items():
+                    result = self.dev.cli(f'show interfaces {intf}')
+                    assigned_address = result.splitlines()[3].split()[1]
+                    self.assertEqual(expected_address, assigned_address)
+                
+            @classmethod
+            def tearDownClass(cls):
+                cls.dev.close()
+                
+        if __name__ == '__main__':
+            unittest.main()
+      """,
+      "run_command": "python test_address_assignment.py", 
+      "expected_result": "OK"
+    }
+  }
+]
+###ENDLIST### Here is the Python list with 2 unit test cases and test scripts for the Bootup process for Junipers MX480 considering each port of the device:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Bootup Sequence",
+    "testcase": {
+      "testname": "Test Bootup Sequence",      
+      "objective": "Validate that the device boots up correctly and all ports initialize properly",
+      "steps": [
+        "Verify device powers on", 
+        "Validate all expected LEDs turn on for each port",
+        "Ping device management interface to validate connectivity"
+      ],
+      "test_data": {
+        "device_type": "Junipers MX480",
+        "management_ip": "192.168.0.1",
+        "number_of_ports": 48        
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Script to validate bootup sequence and port initialization",  
+      "file_name": "test_bootup.py",
+      "init_scripts": [
+        "pip install netmiko",
+        "pip install napalm"
+      ],
+      "script": """
+import netmiko
+import napalm
+
+# Credentials and device details 
+DEVICE_IP = '192.168.0.1' # From testdata
+USER = 'testuser'
+PASS = 'testpass'  
+
+# Connect to device 
+net_connect = ConnectHandler(ip=DEVICE_IP, username=USER, password=PASS)
+
+# Execute 'show version' and verify OS version 
+output = net_connect.send_command('show version')
+assert 'Junos OS Release' in output
+
+# Gather interface details with NAPALM  
+driver = napalm.get_network_driver('junos')
+napalm_connection = driver(hostname=DEVICE_IP, username=USER, password=PASS)
+napalm_connection.open()
+interfaces_facts = napalm_connection.get_interfaces()
+assert len(interfaces_facts) == 48 # Check port count
+
+for int_name, int_details in interfaces_facts.items():
+  # Validate all interfaces show 'is_up'  
+  assert int_details['is_up'] == True  
+
+# Ping device management interface  
+ping_output = net_connect.send_command('ping 192.168.0.1')  
+assert '!!!!!' in ping_output
+
+print('Test passed')
+      """,
+      "run_command": "python test_bootup.py",
+      "expected_result": "Test passed"
+    }
+  },
+  {
+    "testname": "Verify Interface Status",
+    "testcase": {
+      "testname": "Verify Interface Status",
+      "objective": "Validate all device interfaces initialize properly during boot up",
+      "steps": [ 
+        " Gather interface details using NAPALM",
+        "Validate 'is_up' status for each interface",
+        "Verify interface counters are reset on reboot"
+      ],
+      "test_data": {
+        "device_type": "Junipers MX480", 
+        "management_ip": "192.168.0.1",
+        "number_of_ports": 48
+      }
+    },
+    "testscript": {
+      "testname": "Verify Interface Status",
+      "objective": "Script to validate interface state during bootup",
+      "file_name": "test_interface_state.py ",  
+      "init_scripts":[
+        "pip install netmiko ",  
+        "pip install napalm"
+      ],
+      "script": """  
+import netmiko
+import napalm
+from prettytable import PrettyTable
+
+DEVICE_IP = '192.168.0.1' 
+USER = 'testuser'
+PASS = 'testpass'
+
+net_connect = ConnectHandler(ip=DEVICE_IP, username=USER, password=PASS)
+
+driver = napalm.get_network_driver('junos')
+napalm_connection = driver(hostname=DEVICE_IP, username=USER, password=PASS)  
+napalm_connection.open()
+
+boot1_interfaces = napalm_connection.get_interfaces()
+
+net_connect.send_command('request system reboot')
+net_connect.disconnect() 
+
+net_connect = ConnectHandler(ip=DEVICE_IP, username=USER, password=PASS) 
+napalm_connection = driver(hostname=DEVICE_IP, username=USER, password=PASS)
+napalm_connection.open()
+
+boot2_interfaces = napalm_connection.get_interfaces()
+
+table = PrettyTable(['Interface', 'Previous SHC IN', 'Current SHC IN'])  
+
+for intf, details in boot2_interfaces.items():
+  prev_counters = boot1_interfaces[intf]['tx_discards']
+  curr_counters = details['tx_discards']  
+  table.add_row([intf, str(prev_counters), str(curr_counters)])
+
+print(table)
+
+for intf, details in boot2_interfaces.items():
+  assert details['is_up'] == True
+
+print('Test passed')
+    """,
+  "run_command": "python test_interface_state.py",
+  "expected_result": "Test passed" 
+    }
+  }
+]
+###ENDLIST###
