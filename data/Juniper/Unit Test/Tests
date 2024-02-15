@@ -1,86 +1,119 @@
- Here are 2 unit test cases with Python test scripts for Access Control Lists on Juniper MX480 devices:
+ Here is the Python list with 2 test cases and test scripts for QoS configuration on MX480 devices:
 
+```python
 ###STARTLIST###
 [
-  {
-    "testname": "Test ACL to block FTP traffic",
-    "testcase": {
-      "testname": "Test ACL to block FTP traffic", 
-      "objective": "Validate that the ACL blocks all FTP traffic to the device",
-      "steps": [
-        "Configure an ACL to block TCP port 21", 
-        "Verify FTP traffic is blocked"
-      ],
-      "test_data": {
-        "acl_name": "BLOCK_FTP", 
-        "blocked_ip": "1.1.1.1", 
-        "blocked_port": 21
-      }
-    },
-    "testscript": {
-      "testname": "Test ACL to block FTP traffic",
-      "objective": "Validate that the ACL blocks all FTP traffic to the device",
-      "file_name": "test_acl_block_ftp.py",
-      "init_scripts": [
-        "pip install paramiko"  
-      ],
-      "script": """
-        import unittest
-        from device_manager import DeviceManager
-        
-        device = DeviceManager("1.1.1.1", "admin", "password123")
-        
-        device.configure_acl("BLOCK_FTP", "deny tcp host 1.1.1.1 eq 21")
-        
-        result = device.verify_acl_block("1.1.1.1", 21)
-        
-        assert result == True
-      """,
-      "run_command": "python test_acl_block_ftp.py",
-      "expected_result": "OK"
+{
+  "testname": "Test QoS scheduler configuration",
+  "testcase": {
+    "testname": "Test QoS scheduler configuration", 
+    "objective": "Validate that scheduling-policy and schedulers are configured properly on interfaces",
+    "steps": [
+      "Verify scheduler-map is configured with correct schedulers",
+      "Verify scheduling-policy is configured with correct scheduler-map",
+      "Verify policy is applied on interface" 
+    ],
+    "testdata": {
+      "interface": "ge-0/0/1",
+      "scheduler_map": "map1", 
+      "scheduling_policy": "policy1"
     }
   },
-  {
-    "testname": "Test ACL logging", 
-    "testcase": {
-      "testname": "Test ACL logging",
-      "objective": "Validate ACL logging is working correctly",
-      "steps": [  
-        "Configure ACL to log denied HTTP traffic",
-        "Generate HTTP traffic that matches ACL",
-        "Verify logs show denied HTTP traffic"
-      ],
-      "test_data": { 
-        "acl_name": "LOG_HTTP",
-        "log_server": "1.1.1.2",
-        "blocked_ip": "2.2.2.2"
-      }
-    },
-    "testscript": {
-      "testname": "Test ACL logging",   
-      "objective": "Validate ACL logging is working correctly",
-      "file_name": "test_acl_logging.py",
-      "init_scripts": [
-        "pip install paramiko"
-      ],
-      "script": """  
-        import unittest
-        from device_manager import DeviceManager
-        
-        device = DeviceManager("1.1.1.1", "admin", "password123")
-        
-        device.configure_acl("LOG_HTTP", "deny tcp host 2.2.2.2 eq 80 log")
-        device.configure_log_server("1.1.1.2")
-        
-        device.generate_test_traffic(src_ip="2.2.2.2", dest_ip="1.1.1.1", port=80)
-        
-        result = device.verify_acl_logs("2.2.2.2", 80)
-        
-        assert result == True
-      """,
-      "run_command": "python test_acl_logging.py", 
-      "expected_result": "OK"
+  "testscript": {
+    "testname": "Test QoS scheduler configuration",
+    "objective": "Automate validation of QoS scheduler configuration",
+    "file_name": "test_qos_scheduler.py",
+    "init_scripts": [
+      "pip install netmiko",
+      "pip install jsondiff"  
+    ],
+    "script": """  
+import netmiko
+import json
+import jsondiff
+
+device = { 
+  "host": "mx480.example.com", "username": "testuser", 
+  "password": "test123", "device_type": "juniper" 
+}
+
+conn = netmiko.ConnectHandler(**device)
+
+scheduler_cfg = conn.send_command("show configuration schedulers")
+policy_cfg = conn.send_command("show configuration scheduling-policies") 
+iface_cfg = conn.send_command("show configuration interfaces")
+
+expected_scheduler_cfg = ... # from testdata
+expected_policy_cfg = ... # from testdata
+expected_iface_cfg = ... # from testdata
+
+diff_scheduler = jsondiff.diff(scheduler_cfg, expected_scheduler_cfg) 
+diff_policy = jsondiff.diff(policy_cfg, expected_policy_cfg)
+diff_iface = jsondiff.diff(iface_cfg, expected_iface_cfg)
+
+assert len(diff_scheduler) == 0
+assert len(diff_policy) == 0 
+assert len(diff_iface) == 0
+    """,
+    "run_command": "python test_qos_scheduler.py", 
+    "expected_result": "No diffs found in scheduler, policy and interface configurations"
+  }
+},
+{ 
+  "testname": "Test Traffic Control Profile", 
+  "testcase": {
+    "testname": "Test Traffic Control Profile",
+    "objective": "Validate traffic control profile configuration", 
+    "steps": [
+      "Verify TCP configuration",
+      "Verify TCP association with scheduler map",
+      "Verify policy and TCP association"
+    ],
+    "testdata": {
+      "tcp_name": "tcp1",
+      "scheduler_map": "map1",
+      "policy_name": "policy1" 
     }
-  } 
+  },
+  "testscript": {
+    "testname": "Test Traffic Control Profile", 
+    "objective": "Automate validation of TCP configuration",
+    "file_name": "test_tcp.py",
+    "init_scripts": [ 
+      "pip install paramiko",
+      "pip install ntc-templates"
+    ],
+    "script": """
+import paramiko
+from ntc_templates.parse import parse_output
+
+device = {
+  "host": "mx480.example.com", "username": "testuser",  
+  "password": "test123" 
+}
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(**device) 
+
+tcp_cfg = ssh.send_command("show configuration traffic-control-profiles")
+map_cfg = ssh.send_command("show configuration scheduler-maps")
+policy_cfg = ssh.send_command("show configuration scheduling-policies")
+
+parsed_tcp = parse_output(platform="juniper_junos", command="show configuration traffic-control-profiles", data=tcp_cfg)
+parsed_map = parse_output(platform="juniper_junos", command="show configuration scheduler-maps", data=map_cfg) 
+parsed_policy = parse_output(platform="juniper_junos", command="show configuration scheduling-policies", data=policy_cfg)
+
+assert "tcp1" in parsed_tcp 
+assert "map1" in parsed_map
+assert "policy1" in parsed_policy
+    """,
+    "run_command": "python test_tcp.py",
+    "expected_result": "All assertions passed successfully" 
+  }
+} 
 ]
 ###ENDLIST###
+```
+
+The above list contains 2 test cases along with their test scripts to validate QoS configuration on MX480 devices. Each test case and script is enclosed in a separate JSON object. The scripts use Netmiko, Paramiko, NTC-Templates and other libraries to fetch configurations and validate against expected values.
