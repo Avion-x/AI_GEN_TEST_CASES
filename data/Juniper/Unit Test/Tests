@@ -1,343 +1,89 @@
- Here are 2 unit test cases with python test scripts for Juniper MX480 routing protocols:
+ Here is the Python list with 2 unit test cases and scripts for Bootup process for MX480 router:
 
 ###STARTLIST###
-
-[
-  {
-    "testname": "OSPF Neighborship Establishment",
-    "testcase": {
-      "testname": "OSPF Neighborship Establishment",
-      "objective": "Verify OSPF neighborship gets established between 2 MX480 routers",
-      "steps": [
-        "Configure OSPF on 2 MX480 routers",
-        "Verify OSPF neighbors are seen in show ospf neighbor output"
-      ],
-      "testdata": {
-        "router1": {
-          "ipaddress": "192.168.1.1",
-          "ospf": {
-            "process_id": 10,
-            "area_id": 0
-          }
-        },
-        "router2": {  
-          "ipaddress": "192.168.1.2",
-          "ospf": {
-            "process_id": 10,
-            "area_id": 0
-          }
-        }
-      }
-    },
-    "testscript": {
-      "testname": "OSPF Neighborship Establishment", 
-      "objective": "Verify OSPF neighborship gets established between 2 MX480 routers",
-      "file_name": "test_ospf_neighbor.py",
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install jinja2"
-      ],
-      "script": """
-        import netmiko
-        from jinja2 import Template
-    
-        R1_IP = "{{ router1.ipaddress }}"
-        R2_IP = "{{ router2.ipaddress }}"
-    
-        R1_OSPF_CONFIG = Template("""
-          set protocols ospf area 0.0.0.0 interface all
-          set protocols ospf area 0.0.0.0 interface fxp0.0 disable
-        """)
-    
-        R2_OSPF_CONFIG = Template("""
-          set protocols ospf area 0.0.0.0 interface all  
-          set protocols ospf area 0.0.0.0 interface fxp0.0 disable
-        """)
-    
-        def config_ospf(device, ospf_config):
-          net_connect = netmiko.ConnectHandler(device_type='juniper', ip=device['ip'])
-          net_connect.send_config_set(ospf_config.render(device))
-    
-        r1 = {"ip": R1_IP}
-        r2 = {"ip": R2_IP}
-    
-        config_ospf(r1, R1_OSPF_CONFIG) 
-        config_ospf(r2, R2_OSPF_CONFIG)
-      """,
-      "run_command": "python test_ospf_neighbor.py",
-      "expected_result": "OSPF neighborship established between test routers"
-    }
-  },
-  {
-    "testname": "BGP Route Advertisement", 
-    "testcase": {
-      "testname": "BGP Route Advertisement",
-      "objective": "Verify routes advertised from 1 router gets installed in routing table of other after BGP is configured",
-      "steps": [
-        "Configure eBGP between 2 MX480 routers", 
-        "Verify routes of 1 router shows up in routing table of other"
-      ],
-      "testdata": {
-        "router1": {
-          "ipaddress": "192.168.1.1", 
-          "asn": 65001
-        },
-        "router2": {
-          "ipaddress": "192.168.1.2",
-          "asn": 65002  
-        }
-      }
-    },
-    "testscript": {
-      "testname": "BGP Route Advertisement",
-      "objective": "Verify routes advertised from 1 router gets installed in routing table of other after BGP is configured", 
-      "file_name": "test_bgp_routes.py",
-      "init_scripts": [ 
-        "pip install netmiko",
-        "pip install jinja2"
-      ],
-      "script": """  
-        import netmiko
-        from jinja2 import Template
-       
-        R1_IP = "{{ router1.ipaddress }}" 
-        R1_ASN = "{{ router1.asn }}"
-       
-        R2_IP = "{{ router2.ipaddress }}"
-        R2_ASN = "{{ router2.asn }}"
-   
-        R1_BGP_CONFIG = Template("""
-          set protocols bgp group EBGP peer-as {{ R2_ASN }}
-          set protocols bgp group EBGP local-address {{ R1_IP }}  
-        """)
-   
-        R2_BGP_CONFIG = Template("""
-          set protocols bgp group EBGP peer-as {{ R1_ASN }} 
-          set protocols bgp group EBGP local-address {{ R2_IP }}
-        """)
-   
-        def config_bgp(device, bgp_config):
-          net_connect = netmiko.ConnectHandler(device_type='juniper', ip=device['ip'])
-          net_connect.send_config_set(bgp_config.render(device))
-   
-        r1 = {"ip": R1_IP, "asn": R1_ASN}
-        r2 = {"ip": R2_IP, "asn": R2_ASN}
-   
-        config_bgp(r1, R1_BGP_CONFIG)
-        config_bgp(r2, R2_BGP_CONFIG) 
-      """,
-      "run_command": "python test_bgp_routes.py",
-      "expected_result": "Routes from 1 router installed in routing table of other after BGP configured"
-    }
+[{"testname":"Test Bootup Sequence", 
+"testcase":{
+  "testname":"Test Bootup Sequence",
+  "objective":"Validate that the MX480 router goes through the correct bootup sequence",
+  "steps":[
+    "Power on the MX480 router",
+    "Verify console displays Boot ROM version",
+    "Verify console displays booting kernel",  
+    "Verify console displays starting routing protocol daemons"
+  ],
+  "test_data":{
+    "device":"MX480 router",
+    "boot_rom_version":"ABC123",
+    "routing_protocols":["OSPF", "BGP"]
   }
-]
-
-###ENDLIST### Here are 2 unit test cases with python test scripts for OSPF routing protocol on Juniper MX480 router focusing on ports and address verification:
-
-###STARTLIST###
-[
-  {
-    "testname": "Test OSPF neighbors", 
-    "testcase": {
-      "testname": "Test OSPF neighbors",
-      "objective": "Verify OSPF neighbors are correctly formed",
-      "steps": [
-        "Configure OSPF on interfaces", 
-        "Verify OSPF neighbors are formed"
-      ],
-      "test_data": {
-        "interfaces": ["ge-0/0/1", "ge-0/0/2"], 
-        "ospf_area": "0.0.0.0"
-      }
-    },
-    "testscript": {
-      "testname": "Test OSPF neighbors",
-      "objective": "Verify OSPF neighbors are correctly formed", 
-      "file_name": "test_ospf_neighbors.py",
-      "init_scripts": [
-        "pip install jnpr.junos",
-        "pip install networkx",
-        "pip install pytest"
-      ],
-      "script": \"\"\"
-        import jnpr.junos as pyez
-        from jnpr.junos import Device
-        
-        dev = Device(host='192.168.1.1', user='netconf', password='abcd1234')
-        dev.open()
-        
-        dev.bind(cu=Config)
-        cfg = Config(dev)
-        
-        cfg.load('set interfaces ge-0/0/1 unit 0 family inet address 10.0.1.1/24', format='set')
-        cfg.load('set interfaces ge-0/0/2 unit 0 family inet address 10.0.2.1/24', format='set')
-        
-        cfg.load('set protocols ospf area 0.0.0.0 interface ge-0/0/1', format='set')
-        cfg.load('set protocols ospf area 0.0.0.0 interface ge-0/0/2', format='set')
-        
-        cfg.pdiff()
-        cfg.commit()
-        
-        assert dev.cli('show ospf neighbor').get('neighbor-address') == ['10.0.1.2', '10.0.2.2']  
-      \"\"\",
-      "run_command": "pytest test_ospf_neighbors.py", 
-      "expected_result": "2 passed, 0 failed"
-    }
-  },
-  {
-    "testname": "Test OSPF routes",
-    "testcase": {
-      "testname": "Test OSPF routes",
-      "objective": "Verify OSPF routes are correctly populated",
-      "steps": [ 
-        "Configure OSPF on interfaces",
-        "Verify routes learned via OSPF"  
-      ],
-      "test_data": {
-        "interfaces": ["ge-0/0/1", "ge-0/0/2"],
-        "ospf_area": "0.0.0.0",
-        "routes": ["10.0.1.0/24", "10.0.2.0/24"]  
-      }
-    },
-    "testscript": {
-      "testname": "Test OSPF routes",
-      "objective": "Verify OSPF routes are correctly populated",
-      "file_name": "test_ospf_routes.py",
-      "init_scripts": [ 
-        "pip install jnpr.junos",
-        "pip install networkx",
-        "pip install pytest"
-      ],
-      "script": \"\"\"
-        import jnpr.junos as pyez
-        from jnpr.junos import Device
-        
-        dev = Device(host='192.168.1.1', user='netconf', password='abcd1234')
-        dev.open()
-        
-        dev.bind(cu=Config)
-        cfg = Config(dev)
-        
-        cfg.load('set interfaces ge-0/0/1 unit 0 family inet address 10.0.1.1/24', format='set') 
-        cfg.load('set interfaces ge-0/0/2 unit 0 family inet address 10.0.2.1/24', format='set')
-        
-        cfg.load('set protocols ospf area 0.0.0.0 interface ge-0/0/1', format='set')
-        cfg.load('set protocols ospf area 0.0.0.0 interface ge-0/0/2', format='set')
-        
-        cfg.pdiff()  
-        cfg.commit()
-        
-        routes = dev.cli('show route protocol ospf').get('rt')
-        assert '10.0.1.0/24' in [r['rt-destination'] for r in routes]
-        assert '10.0.2.0/24' in [r['rt-destination'] for r in routes]
-      \"\"\",
-      "run_command": "pytest test_ospf_routes.py",
-      "expected_result": "1 passed, 0 failed"
-    }
-  }
-]
-###ENDLIST###
-
-The test cases cover OSPF neighbor verification and route population on specified interfaces of the Juniper MX480 router. The test scripts leverage the PyEZ library to programmatically connect to the device, configure interfaces and OSPF, and validate the results. They are structured as standalone pytest scripts with all dependencies installed. The overall structure follows the requested format of a Python list containing JSON objects for each testcase+script pair. Here are 2 unit test cases with Python test scripts for OSPF routing protocol on Juniper's MX480 router:
-
-###STARTLIST###
-[
-{
-    "testname": "Test OSPF neighbors",
-    "testcase": {
-        "testname": "Test OSPF neighbors",
-        "objective": "Validate all OSPF neighbors are established", 
-        "steps": ["Verify OSPF process is running", "Verify OSPF neighbors state is Full for all interfaces"]
-    },
-    "testscript": {
-        "testname": "Test OSPF neighbors",
-        "objective": "Validate all OSPF neighbors are established",
-        "file_name": "test_ospf_neighbors.py",
-        "init_scripts": [
-            "pip install pyez",
-            "pip install unittest"
-        ],
-        "script": """
-import unittest
-from jnpr.junos import Device
-from jnpr.junos.exception import ConnectError
-
-class TestOspfNeighbors(unittest.TestCase):
-
-    def test_ospf_neighbors(self):
-        dev = Device(host='192.168.1.1', user='test', password='Tester@123')
-        try:
-            dev.open()
-        except ConnectError as err:
-            print("Cannot connect to device: {0}".format(err))
-            return
-        
-        assert dev.rpc.get_ospf_neighbor_information()
-        for intf in dev.rpc.get_interface_information():
-            if intf.get('interface-type') == 'Physical':
-                ospf_intf = dev.rpc.get_ospf_interface_information(interface_name=intf.get('name'))
-                if ospf_intf:
-                    self.assertEqual(ospf_intf.get('ospf-interface-state'), 'Point-To-Point')
-        
-        dev.close()
-        
-if __name__ == '__main__':
-    unittest.main()""",
-        "run_command": "python test_ospf_neighbors.py",
-        "expected_result": "All OSPF neighbors up, PASS"
-    }
 },
-{
-    "testname": "Test OSPF routes", 
-    "testcase": {
-        "testname": "Test OSPF routes",
-        "objective": "Validate all OSPF routes installed in routing table",
-        "steps": ["Verify OSPF process is running", "Verify routes in routing table learned via OSPF"]
-    },
-    "testscript": {
-        "testname": "Test OSPF routes",
-        "objective": "Validate all OSPF routes installed in routing table", 
-        "file_name": "test_ospf_routes.py",
-        "init_scripts": [
-            "pip install pyez",
-            "pip install unittest"
-        ],
-        "script": """  
-import unittest
-from jnpr.junos import Device
-from jnpr.junos.exception import ConnectError
+"testscript":{
+  "testname":"Test Bootup Sequence",
+  "objective":"Script to validate bootup sequence of MX480",  
+  "file_name":"test_bootup.py",
+  "init_scripts":[
+    "pip install paramiko"  
+  ],
+  "script":"\"\"\"
+Import paramiko 
 
-class TestOspfRoutes(unittest.TestCase):
+Define SSH client
 
-    def test_ospf_routes(self):
-        dev = Device(host='192.168.1.1', user='test', password='Tester@123')
-        try:
-            dev.open()
-        except ConnectError as err:
-            print("Cannot connect to device: {0}".format(err))
-            return
-            
-        routes = dev.rpc.get_route_information()
-        ospf_routes = [r for r in routes if r.get('route-table') == 'inet.0' and r.get('protocol-name') == 'OSPF']
-        
-        assert len(ospf_routes) > 0
-        
-        dev.close()
-        
-if __name__ == '__main__':
-    unittest.main()""",
-        "run_command": "python test_ospf_routes.py", 
-        "expected_result": "OSPF routes installed in routing table, PASS"
-    }
+Connect to MX480 console 
+
+Read console output
+
+Assert boot ROM version is as expected
+
+Assert kernel boot messages display
+
+Assert routing daemons start
+\"\"\"",
+  
+  "run_command":"python test_bootup.py",
+  "expected_result":"All assertions should pass. Console output should match expected bootup sequence."  
 }
-]
+},
+{"testname":"Test Bootup Time",
+"testcase":{
+  "testname":"Test Bootup Time",
+  "objective":"Validate bootup time for MX480 is under 5 minutes",
+  "steps":[
+    "Power on MX480 router", 
+    "Note start time",
+    "Verify routing daemons have started",
+    "Note end time",
+    "Subtract start time from end time"   
+  ],
+  "test_data":{
+    "device":"MX480 router",
+    "max_time":300,
+    "time_metric":"seconds"
+  }
+},  
+"testscript":{
+  "testname":"Test Bootup Time",
+  "objective":"Script to validate MX480 bootup time",
+  "file_name":"test_boottime.py",
+  "init_scripts":[
+     "import datetime"
+    ],
+  "script":"\"\"\"
+Record start time
+
+Connect to MX480 console  
+
+Verify routing daemons have started
+
+Record end time
+
+Calculate time delta
+
+Assert time delta is less than max time
+\"\"\"",
+  
+  "run_command":"python test_boottime.py",
+  "expected_result":"Bootup time should be less than 5 minutes (300 seconds)" 
+}
+}]
 ###ENDLIST###
-
-The above includes 2 test cases for OSPF routing protocol with respective Python test scripts leveraging Junos PyEZ library and unittest framework:
-
-1. Test OSPF neighbors - Validates all OSPF neighbors are in Full state 
-2. Test OSPF routes - Validates routes learned via OSPF are installed in routing table
-
-Each test case and script is encapsulated as a separate JSON object within a Python list. The scripts use PyEZ for interacting with Junos devices and unittest for test automation.
-
-Let me know if you need any clarification or have additional requirements for the test cases.
