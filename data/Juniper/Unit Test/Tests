@@ -1,117 +1,110 @@
- Here are 2 unit test cases with test scripts for Interface configuration on Juniper MX480:
+ Here are 2 unit test cases with python test scripts for VLAN configuration on MX480 Juniper device:
 
 ###STARTLIST###
 [
-  {
-    "testname": "Test Ethernet Interface Configuration",
-    "testcase": {
-      "testname": "Test Ethernet Interface Configuration",
-      "objective": "Validate Ethernet interface configuration using NETCONF",  
-      "steps": [
-        "Validate interface is configured with expected IP address", 
-        "Validate interface description is configured",
-        "Validate interface is operationally up"
-      ],
-      "test_data": {
-        "interface_name": "ge-0/0/0",
-        "ip_address": "10.0.0.1/24", 
-        "description": "Uplink to ISP"
-      }
-    },
-    "testscript": {
-      "testname": "Test Ethernet Interface Configuration",
-      "objective": "Validate Ethernet interface configuration using NETCONF",
-      "file_name": "test_ethernet_interface.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """
-        from ncclient import manager
-        import xmltodict
-        
-        HOST = "10.10.10.1"
-        PORT = 830
-        USER = "netconfuser"
-        PASS = "netconf123"
-        
-        interface_filter = \"\"\"
-          <interfaces>
-            <interface>
-              <name>ge-0/0/0</name>
-            </interface>
-          </interfaces>
-        \"\"\"
-        
-        with manager.connect(host=HOST, port=PORT, username=USER, password=PASS, hostkey_verify=False) as m:
-        
-          netconf_reply = m.get(interface_filter)
-          interface_config = xmltodict.parse(netconf_reply.xml)["rpc-reply"]["data"]
-          
-          ip_address = interface_config["interfaces"]["interface"][0]["unit"][0]["family"][0]["inet"][0]["address"][0]["name"]
-          description = interface_config["interfaces"]["interface"][0]["description"]
-          oper_status = interface_config["interfaces"]["interface"][0]["oper-status"]
-          
-          assert ip_address == "10.0.0.1/24"
-          assert description == "Uplink to ISP" 
-          assert oper_status == "up"
-      """,
-      "run_command": "python test_ethernet_interface.py",
-      "expected_result": "All assertions should pass"
+{
+  "testname": "Test VLAN creation",
+  "testcase": {
+    "testname": "Test VLAN creation",
+    "objective": "Validate creation of VLAN on MX480 device",
+    "steps": [
+      "Create VLAN 500 on MX480 device", 
+      "Verify VLAN 500 exists in VLAN table"
+    ],
+    "test_data": {
+      "vlan_id": 500,
+      "vlan_name": "test-vlan"  
     }
   },
   
-  {
-    "testname": "Test VLAN Configuration", 
-    "testcase": {
-      "testname": "Test VLAN Configuration",
-      "objective": "Validate VLAN interface configuration using NETCONF",
-      "steps": [ 
-        "Validate vlan interface exists in configuration",
-        "Validate vlan interface IP address" 
-      ],
-      "test_data": {
-        "vlan_interface": "vlan.100",
-        "ip_address": "192.168.100.1/24"  
-      }
-    },
-    "testscript": {    
-      "testname": "Test VLAN Configuration",
-      "objective": "Validate VLAN interface configuration using NETCONF", 
-      "file_name": "test_vlan_interface.py",
-      "init_scripts": [ 
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """ 
-        from ncclient import manager  
-        import xmltodict
+  "testscript": {
+    "testname": "Test VLAN creation",  
+    "objective": "Validate creation of VLAN on MX480 device",
+    "file_name": "test_create_vlan.py",
+    "init_scripts": [
+      "pip install netmiko",
+      "pip install unittest"
+    ],
+    "script": """  
+import netmiko
+from netmiko import ConnectHandler
+import unittest
+
+class TestCreateVlan(unittest.TestCase):
+    
+    def test_create_vlan(self):
+        device = {
+            'device_type': 'juniper',
+            'host': 'mx480', 
+            'username': 'netconf', 
+            'password': 'juniper123',
+        }
         
-        HOST = "10.10.10.1"
-        PORT = 830 
-        USER = "netconfuser"
-        PASS = "netconf123"
+        net_connect = ConnectHandler(**device)
+        config_commands = [
+            'set vlans test-vlan vlan-id 500',
+        ]
+        output = net_connect.send_config_set(config_commands) 
+        self.assertIn(' vlan-id 500 ', output)
         
-        vlan_filter = \"\"\"
-          <interfaces>
-            <interface>
-              <name>vlan.100</name> 
-            </interface>
-          </interfaces>  
-        \"\"\"
-        
-        with manager.connect(host=HOST, port=PORT, username=USER, 
-                            password=PASS, hostkey_verify=False) as m:
-                            
-          netconf_reply = m.get(vlan_filter)
-          interface_config = xmltodict.parse(netconf_reply.xml)["rpc-reply"]["data"]
-          
-          assert interface_config["interfaces"]["interface"]  
-          assert interface_config["interfaces"]["interface"][0]["unit"][0]["family"][0]["inet"][0]["address"][0]["name"] == "192.168.100.1/24"
-      """,
-      "run_command": "python test_vlan_interface.py", 
-      "expected_result": "All assertions should pass"
+if __name__ == '__main__':
+    unittest.main()     
+    """,
+    "run_command": "python test_create_vlan.py",
+    "expected_result": "OK" 
+  }
+},
+
+{
+  "testname": "Test VLAN deletion", 
+  "testcase": {
+    "testname": "Test VLAN deletion",
+    "objective": "Validate deletion of VLAN 500 from MX480 device",
+    "steps": [
+      "Delete VLAN 500 from MX480 device ",
+      "Verify VLAN 500 removed from VLAN table"  
+    ],
+    "test_data": {
+      "vlan_id": 500
     }
-  } 
+  },
+  
+  "testscript": {
+    "testname": "Test VLAN deletion",
+    "objective": "Validate deletion of VLAN 500 from MX480 device", 
+    "file_name": "test_delete_vlan.py",
+    "init_scripts": [
+      "pip install netmiko",
+      "pip install unittest"
+    ],
+    "script": """
+import netmiko
+from netmiko import ConnectHandler  
+import unittest
+
+class TestDeleteVlan(unittest.TestCase):
+    
+    def test_delete_vlan(self):
+        device = {
+            'device_type': 'juniper',
+            'host': 'mx480',
+            'username': 'netconf',  
+            'password': 'juniper123',
+        }
+        
+        net_connect = ConnectHandler(**device)
+        config_commands = [
+            'delete vlans test-vlan vlan-id 500', 
+        ]
+        output = net_connect.send_config_set(config_commands)
+        self.assertNotIn('vlan-id 500', output)
+        
+if __name__ == '__main__':
+    unittest.main()
+    """,
+    "run_command": "python test_delete_vlan.py",
+    "expected_result": "OK"
+  }
+}
 ]
 ###ENDLIST###
