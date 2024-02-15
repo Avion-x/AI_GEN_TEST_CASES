@@ -1,93 +1,99 @@
- Here are 2 unit test cases with Python test scripts for Bootup process for MX480 Juniper device:
+ Here are 2 unit test cases with python test scripts for Bootup process for Juniper MX480 router:
 
 ###STARTLIST###
 [
-{
-  "testname": "Test Bootup Sequence",
-  "testcase": {
-    "testname": "Test Bootup Sequence",
-    "objective": "Validate that the MX480 goes through the expected bootup sequence",
-    "steps": [
-      "Power on the MX480",
-      "Verify the POWER LED turns green",
-      "Verify the STATUS LED turns amber then green",
-      "Verify the MGMT ethernet link LED turns green",
-      "Verify you can login via console successfully"
-    ],
-    "test_data": {
-      "device": "MX480"
-    }
-  },
-  "testscript": {
+  {
     "testname": "Test Bootup Sequence", 
-    "objective": "Automate validation of MX480 bootup sequence",
-    "file_name": "test_bootup.py",
-    "init_scripts": [
-      "pip install paramiko"
-    ],
-    "script": """
-import paramiko
-
-HOST = "192.168.0.1"
-USERNAME = "admin"
-PASSWORD = "admin123"
-
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-try:
-  client.connect(HOST, username=USERNAME, password=PASSWORD)
-  print("Bootup sequence completed successfully")
-except:
-  print("Failed to connect. Bootup test failed")
-    """,
-    "run_command": "python test_bootup.py",
-    "expected_result": "Bootup sequence completed successfully"
-  }
-},
-{
-  "testname": "Test Interface Status", 
-  "testcase": {
-    "testname": "Test Interface Status ",
-    "objective": "Validate all interfaces are up after bootup ",
-    "steps": [
-      "Power on the MX480",
-      "Verify all interface status using 'show interface terse'", 
-      "Verify status is up for all interfaces"
-    ],
-    "test_data": {
-      "device": "MX480" 
+    "testcase": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Validate bootup sequence of MX480 router",
+      "steps": [
+        "Power on the router", 
+        "Check console prints Booting sequence initiated message",
+        "Validate all cards are detected",
+        "Validate Junos image is loaded",
+        "Validate router stays up after completing boot sequence"
+      ],
+      "test_data": {
+        "router_model": "MX480", 
+        "junos_image": "junos-release-x86-64" 
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Script to validate bootup logs", 
+      "file_name": "test_bootup.py",
+      "init_scripts": "pip install paramiko",
+      "script": """
+        import paramiko
+        
+        router_ip = "192.168.1.1"
+        username = "pyuser" 
+        password = "pypass123"
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+        ssh.connect(router_ip, username=username, password=password)
+        
+        print("Validating console prints Booting sequence initiated ")
+        stdin, stdout, stderr = ssh.exec_command("show log messages | match 'Booting sequence initiated'")  
+        bootup_initiated = stdout.read().decode('utf-8')
+        assert "Booting sequence initiated" in bootup_initiated 
+        
+        print("Checking Routing Engines detection") 
+        stdin, stdout, stderr = ssh.exec_command("show chassis routing-engines")  
+        re_details = stdout.read().decode('utf-8') 
+        assert "RE detected" in re_details
+        
+        print("Test script execution completed")
+      """,
+      "run_command": "python test_bootup.py", 
+      "expected_result": "All test steps should pass"
     }
   },
-  "testscript": {
-    "testname": "Test Interface Status",
-    "objective": "Automate validation of interface status after bootup", 
-    "file_name": "test_interface.py",
-    "init_scripts": [
-      "pip install jnpr.junos"
-    ],
-    "script": """  
-from jnpr.junos import Device
-from jnpr.junos.exception import ConnectError
-
-HOST = '192.168.0.1'
-USER = 'admin'
-PASSWORD = 'admin123'
-
-def test_interfaces(dev):
-  intf_status = dev.cli('show interfaces terse')  
-  assert 'up' in intf_status 
-
-try:
-  dev = Device(host=HOST, user=USER, password=PASSWORD).open()  
-  test_interfaces(dev)
-  print('All interfaces are up')
-except ConnectError as err:
-  print('Cannot connect to device:', err)
-    """,
-    "run_command": "python test_interface.py", 
-    "expected_result": "All interfaces are up"
-  } 
-}
+  {
+    "testname": "Test Interface Detection",
+    "testcase": {
+      "testname": "Test Interface Detection", 
+      "objective": "Validate all interfaces are detected after bootup",
+      "steps": [ 
+        "Get interface details after bootup completion", 
+        "Validate all expected Interfaces are present in output"   
+      ],
+      "test_data": {
+        "expected_ifaces": ["ge-0/0/0", "ge-0/0/1"]  
+      }
+    },
+    "testscript": {
+        "testname": "Test Interface Detection",
+        "objective": "Script to validate interface detection",
+        "file_name": "test_interfaces.py", 
+        "init_scripts": "pip install paramiko", 
+        "script": """
+          import paramiko
+          
+          router_ip = "192.168.1.1"
+          username = "pyuser"
+          password = "pypass123"
+          
+          ssh = paramiko.SSHClient()
+          ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+          ssh.connect(router_ip, username=username, password=password)
+          
+          stdin, stdout, stderr = ssh.exec_command("show interfaces terse")
+          ifaces = stdout.read().decode('utf-8')
+          
+          print("Validating ge-0/0/0 interface") 
+          assert "ge-0/0/0" in ifaces
+          
+          print("Validating ge-0/0/1 interface")  
+          assert "ge-0/0/1" in ifaces
+          
+          print("Test script execution completed")
+        """,
+        "run_command": "python test_interfaces.py",
+        "expected_result": "All test steps should pass"  
+    }
+  }
 ]
 ###ENDLIST###
