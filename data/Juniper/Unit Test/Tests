@@ -1,119 +1,117 @@
- Here is the Python list with 2 test cases and test scripts for QoS configuration on MX480 devices:
+ Here are 2 unit test cases with test scripts for Interface configuration on Juniper MX480:
 
-```python
 ###STARTLIST###
 [
-{
-  "testname": "Test QoS scheduler configuration",
-  "testcase": {
-    "testname": "Test QoS scheduler configuration", 
-    "objective": "Validate that scheduling-policy and schedulers are configured properly on interfaces",
-    "steps": [
-      "Verify scheduler-map is configured with correct schedulers",
-      "Verify scheduling-policy is configured with correct scheduler-map",
-      "Verify policy is applied on interface" 
-    ],
-    "testdata": {
-      "interface": "ge-0/0/1",
-      "scheduler_map": "map1", 
-      "scheduling_policy": "policy1"
+  {
+    "testname": "Test Ethernet Interface Configuration",
+    "testcase": {
+      "testname": "Test Ethernet Interface Configuration",
+      "objective": "Validate Ethernet interface configuration using NETCONF",  
+      "steps": [
+        "Validate interface is configured with expected IP address", 
+        "Validate interface description is configured",
+        "Validate interface is operationally up"
+      ],
+      "test_data": {
+        "interface_name": "ge-0/0/0",
+        "ip_address": "10.0.0.1/24", 
+        "description": "Uplink to ISP"
+      }
+    },
+    "testscript": {
+      "testname": "Test Ethernet Interface Configuration",
+      "objective": "Validate Ethernet interface configuration using NETCONF",
+      "file_name": "test_ethernet_interface.py",
+      "init_scripts": [
+        "pip install ncclient",
+        "pip install xmltodict"
+      ],
+      "script": """
+        from ncclient import manager
+        import xmltodict
+        
+        HOST = "10.10.10.1"
+        PORT = 830
+        USER = "netconfuser"
+        PASS = "netconf123"
+        
+        interface_filter = \"\"\"
+          <interfaces>
+            <interface>
+              <name>ge-0/0/0</name>
+            </interface>
+          </interfaces>
+        \"\"\"
+        
+        with manager.connect(host=HOST, port=PORT, username=USER, password=PASS, hostkey_verify=False) as m:
+        
+          netconf_reply = m.get(interface_filter)
+          interface_config = xmltodict.parse(netconf_reply.xml)["rpc-reply"]["data"]
+          
+          ip_address = interface_config["interfaces"]["interface"][0]["unit"][0]["family"][0]["inet"][0]["address"][0]["name"]
+          description = interface_config["interfaces"]["interface"][0]["description"]
+          oper_status = interface_config["interfaces"]["interface"][0]["oper-status"]
+          
+          assert ip_address == "10.0.0.1/24"
+          assert description == "Uplink to ISP" 
+          assert oper_status == "up"
+      """,
+      "run_command": "python test_ethernet_interface.py",
+      "expected_result": "All assertions should pass"
     }
   },
-  "testscript": {
-    "testname": "Test QoS scheduler configuration",
-    "objective": "Automate validation of QoS scheduler configuration",
-    "file_name": "test_qos_scheduler.py",
-    "init_scripts": [
-      "pip install netmiko",
-      "pip install jsondiff"  
-    ],
-    "script": """  
-import netmiko
-import json
-import jsondiff
-
-device = { 
-  "host": "mx480.example.com", "username": "testuser", 
-  "password": "test123", "device_type": "juniper" 
-}
-
-conn = netmiko.ConnectHandler(**device)
-
-scheduler_cfg = conn.send_command("show configuration schedulers")
-policy_cfg = conn.send_command("show configuration scheduling-policies") 
-iface_cfg = conn.send_command("show configuration interfaces")
-
-expected_scheduler_cfg = ... # from testdata
-expected_policy_cfg = ... # from testdata
-expected_iface_cfg = ... # from testdata
-
-diff_scheduler = jsondiff.diff(scheduler_cfg, expected_scheduler_cfg) 
-diff_policy = jsondiff.diff(policy_cfg, expected_policy_cfg)
-diff_iface = jsondiff.diff(iface_cfg, expected_iface_cfg)
-
-assert len(diff_scheduler) == 0
-assert len(diff_policy) == 0 
-assert len(diff_iface) == 0
-    """,
-    "run_command": "python test_qos_scheduler.py", 
-    "expected_result": "No diffs found in scheduler, policy and interface configurations"
-  }
-},
-{ 
-  "testname": "Test Traffic Control Profile", 
-  "testcase": {
-    "testname": "Test Traffic Control Profile",
-    "objective": "Validate traffic control profile configuration", 
-    "steps": [
-      "Verify TCP configuration",
-      "Verify TCP association with scheduler map",
-      "Verify policy and TCP association"
-    ],
-    "testdata": {
-      "tcp_name": "tcp1",
-      "scheduler_map": "map1",
-      "policy_name": "policy1" 
+  
+  {
+    "testname": "Test VLAN Configuration", 
+    "testcase": {
+      "testname": "Test VLAN Configuration",
+      "objective": "Validate VLAN interface configuration using NETCONF",
+      "steps": [ 
+        "Validate vlan interface exists in configuration",
+        "Validate vlan interface IP address" 
+      ],
+      "test_data": {
+        "vlan_interface": "vlan.100",
+        "ip_address": "192.168.100.1/24"  
+      }
+    },
+    "testscript": {    
+      "testname": "Test VLAN Configuration",
+      "objective": "Validate VLAN interface configuration using NETCONF", 
+      "file_name": "test_vlan_interface.py",
+      "init_scripts": [ 
+        "pip install ncclient",
+        "pip install xmltodict"
+      ],
+      "script": """ 
+        from ncclient import manager  
+        import xmltodict
+        
+        HOST = "10.10.10.1"
+        PORT = 830 
+        USER = "netconfuser"
+        PASS = "netconf123"
+        
+        vlan_filter = \"\"\"
+          <interfaces>
+            <interface>
+              <name>vlan.100</name> 
+            </interface>
+          </interfaces>  
+        \"\"\"
+        
+        with manager.connect(host=HOST, port=PORT, username=USER, 
+                            password=PASS, hostkey_verify=False) as m:
+                            
+          netconf_reply = m.get(vlan_filter)
+          interface_config = xmltodict.parse(netconf_reply.xml)["rpc-reply"]["data"]
+          
+          assert interface_config["interfaces"]["interface"]  
+          assert interface_config["interfaces"]["interface"][0]["unit"][0]["family"][0]["inet"][0]["address"][0]["name"] == "192.168.100.1/24"
+      """,
+      "run_command": "python test_vlan_interface.py", 
+      "expected_result": "All assertions should pass"
     }
-  },
-  "testscript": {
-    "testname": "Test Traffic Control Profile", 
-    "objective": "Automate validation of TCP configuration",
-    "file_name": "test_tcp.py",
-    "init_scripts": [ 
-      "pip install paramiko",
-      "pip install ntc-templates"
-    ],
-    "script": """
-import paramiko
-from ntc_templates.parse import parse_output
-
-device = {
-  "host": "mx480.example.com", "username": "testuser",  
-  "password": "test123" 
-}
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(**device) 
-
-tcp_cfg = ssh.send_command("show configuration traffic-control-profiles")
-map_cfg = ssh.send_command("show configuration scheduler-maps")
-policy_cfg = ssh.send_command("show configuration scheduling-policies")
-
-parsed_tcp = parse_output(platform="juniper_junos", command="show configuration traffic-control-profiles", data=tcp_cfg)
-parsed_map = parse_output(platform="juniper_junos", command="show configuration scheduler-maps", data=map_cfg) 
-parsed_policy = parse_output(platform="juniper_junos", command="show configuration scheduling-policies", data=policy_cfg)
-
-assert "tcp1" in parsed_tcp 
-assert "map1" in parsed_map
-assert "policy1" in parsed_policy
-    """,
-    "run_command": "python test_tcp.py",
-    "expected_result": "All assertions passed successfully" 
-  }
-} 
+  } 
 ]
 ###ENDLIST###
-```
-
-The above list contains 2 test cases along with their test scripts to validate QoS configuration on MX480 devices. Each test case and script is enclosed in a separate JSON object. The scripts use Netmiko, Paramiko, NTC-Templates and other libraries to fetch configurations and validate against expected values.
