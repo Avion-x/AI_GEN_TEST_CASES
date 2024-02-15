@@ -1,96 +1,101 @@
- Here is the Python list with 2 test cases and scripts for NAT configuration on Juniper MX480 devices:
+ Here are 2 unit test cases with python test scripts for VPN configuration on Juniper MX480:
 
 ###STARTLIST###
 [
 {
-  "testname": "Test basic NAT configuration",
-  "testcase": {
-    "testname": "Test basic NAT configuration",
-    "objective": "Validate basic NAT configuration on MX480 device",
-    "steps": [
-      "NAT rule created successfully", 
-      "Traffic matched NAT rule and got translated"
-    ],
-    "testdata": {
-      "nat_rule": {
-        "name": "NAT-Rule1", 
-        "source_addr": "10.1.1.0/24", 
-        "translated_addr": "192.168.1.0/24" 
-      }
+    "testname": "Test VPN tunnel establishment",
+    "testcase": {
+        "testname": "Test VPN tunnel establishment", 
+        "objective": "Validate IPsec VPN tunnel establishment between MX480 and remote peer",
+        "steps": [
+            "Verify tunnel interface status is up/up",
+            "Validate tunnel statistics incrementing",
+            "Confirm encryption algorithm negotiated as expected"
+        ],
+        "test_data": {
+            "peer_ip": "10.20.30.1",
+            "ike_policy": "IKE-POLICY1",
+            "ike_gateway": "IKE-GATEWAY1",
+            "ipsec_policy": "IPSEC-POLICY1" 
+        }
+    },
+    "testscript": {
+        "testname": "Test VPN tunnel establishment",
+        "objective": "Automated validation of VPN tunnel establishment",
+        "file_name": "test_vpn_establish.py",
+        "init_scripts":[
+            "pip install paramiko",
+            "pip install jnpr.junos"
+        ],
+        "script": """
+            import unittest
+            from jnpr.junos import Device
+            
+            ip = test_data['peer_ip']
+            ike_policy = test_data['ike_policy']
+            ike_gateway = test_data['ike_gateway']
+            
+            dev = Device(host='mx480', user='pyuser', password='pyPass')
+            dev.open()
+            
+            tunnel_state = dev.rpc.get_tunnel_information(destination=ip)
+            assert tunnel_state.findtext('ipsec-tunnel-interface-information/tunnel-state') == 'up/up'
+            
+            counters = dev.rpc.get_security_ike_security_associations_information()
+            assert int(counters.findtext('count')) > 0
+            
+            ike_policy_details = dev.rpc.get_configuration(inherit=True, groups='security ike')
+            negotiated_ike_alg = ike_policy_details.findtext("security/ike/policy[name='{}']/authentication-algorithm".format(ike_policy))
+            assert negotiated_ike_alg == 'sha1'
+            
+            dev.close()
+        """,
+        "run_command": "python test_vpn_establish.py",
+        "expected_result": "All assertions should pass, validating VPN tunnel established successfully"
     }
-  },
-  "testscript": {
-    "testname": "Test basic NAT configuration",
-    "objective": "Validate basic NAT configuration on MX480 device", 
-    "file_name": "test_basic_nat.py",
-    "init_scripts": [
-      "pip install jnpr.junos",
-      "pip install paramiko"
-    ],
-    "script": """
-import jnpr.junos as pyez
-
-dev = pyez.Device(host='192.168.1.1', user='netconf', password='password')
-dev.open()
-
-nat_rule = {
-  "name": "NAT-Rule1",
-  "source_addr": "10.1.1.0/24",
-  "translated_addr": "192.168.1.0/24"
-}
-
-dev.cu.load(template_path="/path/to/nat_template.json", template_vars=nat_rule)
-
-dev.close()
-    """,
-    "run_command": "python test_basic_nat.py",
-    "expected_result": "NAT rule configured successfully"
-  }
 },
 {
-  "testname": "Test NAT pool configuration",
-  "testcase": {
-    "testname": "Test NAT pool configuration",
-    "objective": "Validate NAT pool configuration on MX480",
-    "steps": [
-      "NAT pool created successfully",
-      "Traffic matched NAT pool and got translated" 
-    ],
-    "testdata": {
-      "nat_pool": {
-        "name": "Nat-Pool1",
-        "start_address": "192.168.100.200",
-        "end_address": "192.168.100.250"  
-      }
+    "testname": "Validate VPN tunnel traffic encryption",
+    "testcase": { 
+        "testname": "Validate VPN tunnel traffic encryption",
+        "objective": "Confirm VPN tunnel traffic is encrypted/decrypted properly", 
+        "steps": [
+            "Generate traffic from src->dest with known patterns", 
+            "Capture traffic on dest side of tunnel interface",
+            "Confirm traffic patterns not visible in captured packets"
+        ],
+        "test_data": {
+            "src_ip": "192.168.1.5",
+            "dest_ip": "10.20.30.5",
+            "tunnel_if": "st0.0" 
+        }
+    },
+    "testscript": {
+        "testname": "Validate VPN tunnel traffic encryption", 
+        "objective": "Automated validation of VPN traffic encryption",
+        "file_name": "test_vpn_encrypt.py", 
+        "init_scripts":[
+             "pip install scapy"
+        ],
+        "script": """
+            from scapy.all import *
+            
+            src_ip = test_data['src_ip']
+            dest_ip = test_data['dest_ip']
+            tunnel_if = test_data['tunnel_if']
+            
+            distinct_bytes = b'\\x12\\x34\\x45\\xab'
+            
+            send(IP(src=src_ip,dst=dest_ip)/TCP()/distinct_bytes)
+            
+            pkt = sniff(iface=tunnel_if,count=1)[0]
+            tunnel_traffic = bytes(pkt[TCP])
+            
+            assert distinct_bytes not in tunnel_traffic
+        """,
+        "run_command": "sudo python test_vpn_encrypt.py", 
+        "expected_result": "Traffic patterns should not be found in captured tunnel traffic"
     }
-  },
-  "testscript": {
-    "testname": "Test NAT pool configuration",
-    "objective": "Validate NAT pool configuration on MX480",
-    "file_name": "test_nat_pool.py",
-    "init_scripts": [
-      "pip install jnpr.junos",
-      "pip install paramiko"
-    ],
-    "script": """  
-import jnpr.junos as pyez
-
-dev = pyez.Device(host='192.168.1.1', user='netconf', password='password')  
-dev.open()
-
-nat_pool = {
-  "name": "Nat-Pool1",
-  "start_address": "192.168.100.200", 
-  "end_address": "192.168.100.250"   
-}
-
-dev.cu.load(template_path="/path/to/nat_pool_template.json", template_vars=nat_pool)
-
-dev.close()
-    """,
-    "run_command": "python test_nat_pool.py",
-    "expected_result": "NAT pool configured successfully"
-  }
-}
+} 
 ]
 ###ENDLIST###
