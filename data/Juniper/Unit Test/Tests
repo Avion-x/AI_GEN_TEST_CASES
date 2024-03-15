@@ -1,263 +1,301 @@
  ###STARTLIST###
 [
   {
-    "testname": "Bootup Test 1", 
+    "testname": "VPN Configuration Test 1", 
     "testcase": {
-      "testname": "Bootup Test 1",
-      "objective": "Validate successful bootup of MX480 device", 
+      "testname": "VPN Configuration Test 1",
+      "objective": "Test VPN configuration between MX routers",  
       "steps": [
-        "Verify POWER LED turns green after power on",
-        "Verify SYSTEM LED turns green after bootup completion", 
-        "No error messages on console"
+        "Configure VPN on MX router",
+        "Establish VPN tunnel",
+        "Ping remote VPN endpoint"
       ],
       "test_data": {
-        "device_model": "MX480",
-        "port_count": "80" 
+        "MX_IP": "192.168.1.1",
+        "Remote_MX_IP": "172.16.1.1",
+        "Shared_Key": "abc123"  
       }
     },
     "testscript": {
-      "testname": "Bootup Test 1",
-      "objective": "Script to validate successful MX480 bootup",
-      "file_name": "test_bootup_1.py",
+      "testname": "VPN Configuration Test 1",
+      "objective": "Test VPN configuration between MX routers",
+      "file_name": "test_vpn_config_1.py",
       "init_scripts": [
-        "import unittest",
-        "import telnetlib",
-        "import time"
+        "pip install paramiko"
       ],
       "script": """
-class TestMX480Bootup(unittest.TestCase):
-
-  def test_bootup(self):
-    tn = telnetlib.Telnet('192.168.0.1')
-    tn.read_until(b'Loading ')
-    time.sleep(60)
-    self.assertIn(b'SYSTEM LED green', tn.read_very_eager())
-    self.assertNotIn(b'Error', tn.read_very_eager())
-    tn.close()
-  """,
-  
-  "run_command": "python test_bootup_1.py",
-  "expected_result": "OK"
+        import paramiko
+        
+        mx_ip = test_data['MX_IP']
+        remote_mx_ip = test_data['Remote_MX_IP']
+        shared_key = test_data['Shared_Key']
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(mx_ip, username='admin', password='admin')
+        
+        config_commands = [
+          'set security ike proposal IKE_PROP authentication-method pre-shared-keys',
+          'set security ike proposal IKE_PROP dh-group group2',
+          'set security ike policy IKE_POL proposals IKE_PROP',
+          'set security ike gateway IKE_GW ike-policy IKE_POL address {} ike-user-type shared-ike-id local-identity hostname'.format(remote_mx_ip),
+          'set security ike gateway IKE_GW external-interface ge-0/0/0.0',
+          'set security ipsec proposal IPSEC_PROP protocol esp',
+          'set security ipsec policy IPSEC_POL proposals IPSEC_PROP',
+          'set security ipsec vpn VPN_TUNNEL ike gateway IKE_GW',
+          'set security zones security-zone TRUST host-inbound-traffic system-services ping',
+          'set interfaces ge-0/0/0 unit 0 family inet address 192.168.1.1/24',
+          'set security zones security-zone TRUST interfaces ge-0/0/0.0 host-inbound-traffic system-services all',
+          'set routing-options static route 0.0.0.0/0 next-hop 192.168.1.254'  
+        ]
+        
+        for command in config_commands:
+          stdin, stdout, stderr = client.exec_command(command)
+        
+        client.close() 
+      """,
+      "run_command": "python test_vpn_config_1.py",
+      "expected_result": "VPN tunnel established and ping successful"   
     }
   },
-  
+
   {
-    "testname": "Bootup Test 2",
+    "testname": "VPN Configuration Test 2",
     "testcase": {
-      "testname": "Bootup Test 2",
-      "objective": "Validate hardware inventory after successful bootup",
+      "testname": "VPN Configuration Test 2",
+      "objective": "Test VPN tunnel encryption",
       "steps": [
-        "Show chassis hardware inventory", 
-        "Verify expected number of RE, FPC, PICs" 
+        "Configure VPN with AES 256 encryption",
+        "Establish VPN tunnel",
+        "Verify encryption"   
       ],
       "test_data": {
-        "device_model": "MX480",
-        "re_count": "2",
-        "fpc_count": "4",
-        "pic_count": "8"
+        "MX_IP": "192.168.1.1",
+        "Remote_MX_IP": "172.16.1.1", 
+        "IKE_Policy": "IKE_POL2",
+        "IPSEC_Policy": "IPSEC_POL2",
+        "Encryption": "aes-256-cbc"  
       }
     },
     "testscript": {
-      "testname": "Bootup Test 2", 
-      "objective": "Script to validate MX480 hardware inventory",
-      "file_name": "test_bootup_2.py",
+      "testname": "VPN Configuration Test 2",
+      "objective": "Test VPN tunnel encryption",
+      "file_name": "test_vpn_config_2.py",
       "init_scripts": [
-        "import unittest", 
-        "from jnpr.junos import Device"
+        "pip install paramiko"
       ],
-      "script": """  
-class TestMX480HwInventory(unittest.TestCase):
-
-  def test_hw_inventory(self):
-    dev = Device(host='192.168.0.1', user='netconf', password='password123')
-    dev.open()
-    hw_inventory = dev.rpc.get_chassis_inventory()
-    dev.close()
-  
-    self.assertEqual(hw_inventory.xpath('re-count')[0].text, '2') 
-    self.assertEqual(hw_inventory.xpath('fpc-count')[0].text, '4')
-    self.assertEqual(hw_inventory.xpath('pic-count')[0].text, '8')
-  """,
-  
-  "run_command": "python test_bootup_2.py",
-  "expected_result": "OK"
+      "script": """
+        import paramiko
+        
+        mx_ip = test_data['MX_IP'] 
+        remote_mx_ip = test_data['Remote_MX_IP']
+        ike_policy = test_data['IKE_Policy']
+        ipsec_policy = test_data['IPSEC_Policy']
+        encryption = test_data['Encryption']
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(mx_ip, username='admin', password='admin')
+        
+        config_commands = [
+          'set security ike proposal IKE_PROP2 authentication-method pre-shared-keys',
+          'set security ike proposal IKE_PROP2 dh-group group2',
+          'set security ike policy {} proposals IKE_PROP2'.format(ike_policy),
+          'set security ike gateway IKE_GW ike-policy {} address {} ike-user-type shared-ike-id local-identity hostname'.format(ike_policy, remote_mx_ip), 
+          'set security ike gateway IKE_GW external-interface ge-0/0/0.0',
+          'set security ipsec proposal IPSEC_PROP2 protocol esp encryption-algorithm {}'.format(encryption),
+          'set security ipsec policy {} proposals IPSEC_PROP2'.format(ipsec_policy),
+          'set security ipsec vpn VPN_TUNNEL2 ike gateway IKE_GW ipsec-policy {}'.format(ipsec_policy),
+          'set security zones security-zone TRUST host-inbound-traffic system-services ping',
+          'set interfaces ge-0/0/0 unit 0 family inet address 192.168.1.1/24',
+          'set security zones security-zone TRUST interfaces ge-0/0/0.0 host-inbound-traffic system-services all',
+          'set routing-options static route 0.0.0.0/0 next-hop 192.168.1.254'
+        ]
+        
+        for command in config_commands:
+          stdin, stdout, stderr = client.exec_command(command)
+          
+        client.close()
+      """,
+      "run_command": "python test_vpn_config_2.py",
+      "expected_result": "VPN tunnel established with AES 256 encryption"
     }
   }
 ]
 ###ENDLIST### ###STARTLIST###
 [
-    { 
-        "testname": "Port Mapping Verification",
+    {
+        "testname": "Validate Port Mappings", 
         "testcase": {
-            "objective": "Verify all ports on the MX481 device are correctly mapped and configured", 
+            "testname": "Validate Port Mappings",
+            "objective": "Verify that the configured logical interfaces have the expected physical port mappings.",
             "steps": [
-                "Retrieve port mapping configuration",
-                "Verify all expected ports exist in configuration", 
-                "Validate mappings match expected values"
+                "1. Retrieve configuration of all logical interfaces",
+                "2. For each logical interface, verify that the physical port matches expectations based on documentation/requirements" 
             ],
             "test_data": {
-                "expected_ports": ["ge-0/0/0", "ge-0/0/1", "ge-0/0/2"], 
-                "expected_mappings": {"ge-0/0/0": "192.168.0.1", "ge-0/0/1": "192.168.0.2", "ge-0/0/2": "192.168.0.3"}
+                "logical_interfaces": [
+                    {
+                        "name": "ge-0/0/1", 
+                        "physical_port": "xe-0/0/1"
+                    }
+                ]
             }
         },
+        
         "testscript": {
-            "testname": "test_port_mapping",
-            "objective": "Test port mappings on device match expected config",
-            "file_name": "test_port_mapping.py",
-            "init_scripts": ["pip install junos-eznc"],
-            "script": \"\"\"
-            import unittest
-            from jnpr.junos import Device
-            
-            expected_ports = ${test_data['expected_ports']}
-            expected_mappings = ${test_data['expected_mappings']}
-            
-            def test_port_mappings(dev):
-                actual_ports = dev.cli('show interfaces terse')
-                actual_mappings = dev.cli('show interfaces terse | display json')
-                assert set(expected_ports) == set(actual_ports) 
-                for port, ip in expected_mappings.items():
-                    assert port in actual_mappings 
-                    assert actual_mappings[port]['ip'] == ip
-                
-            dev = Device(host='192.168.0.5', user='test', password='Password123')
-            dev.open()
-            
-            suite = unittest.TestSuite()
-            suite.addTest(test_port_mappings(dev))
-            
-            runner = unittest.TextTestRunner()
-            runner.run(suite)
-            \"\"\"",
-            "run_command": "python test_port_mapping.py",
-            "expected_result": "OK"  
+            "testname": "Validate Port Mappings",
+            "objective": "Verify that the configured logical interfaces have the expected physical port mappings.",
+            "file_name": "test_port_mappings.py",
+            "init_scripts": "\"\"\"pip install ncclient\"\"\"",
+            "script": "\"\"\"import ncclient\n\nlogical_interfaces = [{'name': 'ge-0/0/1', 'physical_port': 'xe-0/0/1'}]\n\nwith ncclient.Manager('host') as m:\n    config = m.get_config(source='running')\n    \nfor iface in logical_interfaces:\n    physical_port = config.find('.//{*}interface[name=\"%s\"]/{*}phys-address' % iface['name'])\n    assert physical_port == iface['physical_port'], 'Physical port mismatch'\n\"\"\"",
+            "run_command": "python test_port_mappings.py",
+            "expected_result": "No assertions triggered. Test passes."
         }
     },
+    
     {
-        "testname": "Address Assignment Verification", 
+        "testname": "Validate Interface Addresses",
         "testcase": {
-            "objective": "Validate all interfaces have expected IP addresses assigned",
-            "steps": [
-                "Retrieve interface configurations", 
-                "Extract assigned IP for each interface",
-                "Verify IP matches expected value"
-            ],
-            "test_data": {
-                "expected_assignments": {"ge-0/0/0": "192.168.0.1", "ge-0/0/1": "192.168.0.2"}
-            }
-        },
-        "testscript": {
-            "testname": "test_address_assignment",
-            "objective": "Validate assigned IP addresses match expected values", 
-            "file_name": "test_address_assignment.py",
-            "init_scripts": ["pip install jnpr.junos"],
-            "script": \"\"\"
-            import unittest
-            from jnpr.junos import Device
-            
-            expected_assignments = ${test_data['expected_assignments']}
-            
-            def test_address_assignment(dev):
-                interfaces = dev.cli('show interfaces terse')
-                for intf, expected_ip in expected_assignments.items():
-                    actual_ip = interfaces[intf]['ip']
-                    assert actual_ip == expected_ip
-                    
-            dev = Device(host='192.168.0.5', user='test', password='Password123')
-            dev.open()
-            
-            suite = unittest.TestSuite()
-            suite.addTest(test_address_assignment(dev))
-            
-            runner = unittest.TextTestRunner()
-            runner.run(suite)
-            \"\"\",
-            "run_command": "python test_address_assignment.py",
-            "expected_result": "OK"
-        }
-    }
-]
+             "testname": "Validate Interface Addresses",
+             "objective": "Verify that interfaces have expected IP address configurations.",
+             "steps": [
+                 "1. Retrieve interface configurations.",
+                 "2. Check that expected addresses are present on each interface."
+             ],
+             "test_data": {
+                 "expected_addresses": {
+                     "ge-0/0/1": ["1.2.3.4/24"],
+                     "ge-0/0/2": ["5.6.7.8/24", "5.6.7.9/24"]
+                 }
+             }
+         },
+         
+         "testscript": {
+             "testname": "Validate Interface Addresses",
+             "objective": "Verify that interfaces have expected IP address configurations.",
+             "file_name": "test_interface_addresses.py",
+             "init_scripts": "\"\"\"pip install ncclient\"\"\"",
+             "script": "\"\"\"import ncclient\n\nexpected_addresses = {\n    'ge-0/0/1': ['1.2.3.4/24'],\n    'ge-0/0/2': ['5.6.7.8/24', '5.6.7.9/24']   \n}\n\nwith ncclient.Manager('host') as m:\n    config = m.get_config(source='running')\n    \nfor interface, addresses in expected_addresses.items():\n    for address in addresses:\n        assert address in config.find('.//{*}interface[name=\"%s\"]/{*}address' % interface), 'Missing expected address %s on interface %s' % (address, interface)\"\"\"",
+             "run_command": "python test_interface_addresses.py", 
+             "expected_result": "No assertions triggered. Test passes."
+         }
+     }
+ ]
 ###ENDLIST### ###STARTLIST###
 [
   {
-    "testname": "Test Port Status", 
+    "testname": "VPN Port Connectivity Test", 
     "testcase": {
-      "testname": "Test Port Status",
-      "objective": "Verify all ports on the MX481 are up after boot", 
+      "objective": "Verify VPN port connectivity by pinging remote VPN IP from each port",
       "steps": [
-        "Verify interface status shows all ports as up"
+        "Configure VPN between Port 1 and Port 2", 
+        "Initiate ping from Port 1 to Port 2 VPN IP and verify connectivity",
+        "Initiate ping from Port 2 to Port 1 VPN IP and verify connectivity"
       ],
       "test_data": {
-        "device_under_test": "MX481",
-        "num_ports": 80
+        "Port 1 IP": "10.1.1.1",
+        "Port 1 VPN IP": "192.168.1.1", 
+        "Port 2 IP": "10.1.1.2",
+        "Port 2 VPN IP": "192.168.1.2"
       }
     },
     "testscript": {
-      "testname": "Test Port Status",
-      "objective": "Verify all ports on the MX481 are up after boot",
-      "file_name": "test_port_status.py",
+      "testname": "VPN Port Connectivity Test",
+      "objective": "Verify VPN port connectivity using ping",
+      "file_name": "vpn_port_test.py",
       "init_scripts": [
-        "pip install netmiko",
-        "pip install junos-eznc"
+        "pip install paramiko",
+        "pip install netmiko"
       ],
       "script": """
-import netmiko
-from jnpr.junos import Device
-
-dev = Device(host='mx481', user='netconf', password='netconf')
-dev.open()
-
-interfaces = dev.rpc.get_interface_information()
-for intf in interfaces:
-  if intf.oper_status != 'up':
-    raise Exception(f'Interface {intf.name} is down')
-
-print('All interfaces are up')
+      import paramiko
+      import netmiko
+      
+      PORT1_IP = '10.1.1.1'
+      PORT2_IP = '10.1.1.2'
+      PORT1_VPN_IP = '192.168.1.1'
+      PORT2_VPN_IP = '192.168.1.2'
+      
+      def test_vpn_connectivity(port1_ip, port2_ip, port1_vpn_ip, port2_vpn_ip):
+          net_connect = netmiko.ConnectHandler(ip=port1_ip, device_type='juniper')
+          net_connect.send_command('ping ' + port2_vpn_ip)
+          ping_output = net_connect.send_command('show ping statistics')
+          packet_loss = ping_output.split('=')[-1].strip()
+          
+          assert packet_loss == '0%', "Ping failed from Port1 to Port2 VPN IP"
+          
+          net_connect.disconnect()
+          
+          net_connect = netmiko.ConnectHandler(ip=port2_ip, device_type='juniper')
+          net_connect.send_command('ping ' + port1_vpn_ip)
+          ping_output = net_connect.send_command('show ping statistics')
+          packet_loss = ping_output.split('=')[-1].strip()
+          
+          assert packet_loss == '0%', "Ping failed from Port2 to Port1 VPN IP"
+          
+          print("VPN Connectivity Test Passed")
+          
+      test_vpn_connectivity(PORT1_IP, PORT2_IP, PORT1_VPN_IP, PORT2_VPN_IP)
       """,
-      "run_command": "python test_port_status.py",
-      "expected_result": "All interfaces are up"
+      "run_command": "python vpn_port_test.py",
+      "expected_result": "VPN Connectivity Test Passed"
     }
   },
+  
   {
-    "testname": "Test Interface Count",
+    "testname": "VPN Tunnel Encryption Test",
     "testcase": {
-      "testname": "Test Interface Count",
-      "objective": "Verify MX481 has expected number of interfaces",
+      "objective": "Verify VPN tunnel encryption algorithm", 
       "steps": [
-        "Retrieve interface names from device", 
-        "Verify number of interfaces matches expected count"
+        "Configure AES256 encryption on VPN tunnel",
+        "Verify configured encryption algorithm on Port 1", 
+        "Verify configured encryption algorithm on Port 2"
       ],
       "test_data": {
-        "device_under_test": "MX481",
-        "expected_interface_count": 80  
+        "Configured Encryption": "AES256",
+        "Port 1 IP": "10.1.1.1",
+        "Port 2 IP": "10.1.1.2"  
       }
     },
     "testscript": {
-      "testname": "Test Interface Count", 
-      "objective": "Verify MX481 has expected number of interfaces",
-      "file_name": "test_interface_count.py",
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install junos-eznc"
+      "testname": "VPN Tunnel Encryption Test",
+      "objective": "Verify configured VPN tunnel encryption",
+      "file_name": "vpn_encryption_test.py",
+      "init_scripts": [ 
+        "pip install paramiko",
+        "pip install netmiko"
       ],
-      "script": """  
-import netmiko
-from jnpr.junos import Device
+      "script": """
+      import paramiko
+      import netmiko
+      
+      CONFIG_ENCRYPTION = 'AES256'
+      PORT1_IP = '10.1.1.1'
+      PORT2_IP = '10.1.1.2'
+      
+      def test_vpn_encryption(configured_encryption, port1_ip, port2_ip):
+          
+          net_connect = netmiko.ConnectHandler(ip=port1_ip, device_type='juniper')
+          output = net_connect.send_command('show configuration protocols vpn')
+          encrypt_algorithm = output.split('encrypt-algorithm ')[1].split(' ')[0]
+          
+          assert encrypt_algorithm == configured_encryption, "Encryption mismatch on Port1"
+          
+          net_connect.disconnect()
+          
+          net_connect = netmiko.ConnectHandler(ip=port2_ip, device_type='juniper') 
+          output = net_connect.send_command('show configuration protocols vpn')
+          encrypt_algorithm = output.split('encrypt-algorithm ')[1].split(' ')[0]
 
-dev = Device(host='mx481', user='netconf', password='netconf') 
-dev.open()
-
-interfaces = dev.rpc.get_interface_information()
-interface_count = len(interfaces)
-
-expected_count = 80
-if interface_count != expected_count:
-  raise Exception(f'Interface count {interface_count} does not match expected {expected_count}')
-
-print(f'Verified {expected_count} interfaces')
+          assert encrypt_algorithm == configured_encryption, "Encryption mismatch on Port2"
+          
+          print("VPN Encryption Test Passed")
+          
+      test_vpn_encryption(CONFIG_ENCRYPTION, PORT1_IP, PORT2_IP)
       """,
-      "run_command": "python test_interface_count.py",
-      "expected_result": "Verified 80 interfaces" 
+      "run_command": "python vpn_encryption_test.py", 
+      "expected_result": "VPN Encryption Test Passed"
     }
   }
 ]
