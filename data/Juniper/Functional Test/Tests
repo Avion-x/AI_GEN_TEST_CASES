@@ -1,0 +1,323 @@
+ ###STARTLIST###
+[
+  {
+    "testname": "Verify sFlow Configuration", 
+    "testcase": {
+      "testname": "Verify sFlow Configuration",
+      "objective": "Verify sFlow is configured and working properly on MX481 device", 
+      "steps": [
+        "Connect to MX481 console/ssh",
+        "Show sflow configuration using 'show configuration sflow'", 
+        "Verify sFlow is enabled under [edit sflow]",
+        "Verify collector IP and UDP port is configured",
+        "Verify interfaces are added for sFlow monitoring" 
+      ],
+      "testdata": {
+        "sflow": {
+          "collector_ip": "1.1.1.1",
+          "collector_port": 6343
+        },
+        "interfaces": [
+          "ge-0/0/1",
+          "ge-0/0/2"
+        ]
+      }
+    },
+    "testscript": {
+      "testname": "Verify sFlow Configuration",
+      "objective": "Automate verification of sFlow configuration",
+      "file_name": "verify_sflow_config.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install junos-eznc"
+      ],
+      "script": """
+        import json
+        from jnpr.junos import Device
+        
+        with open('testdata.json') as f:
+            testdata = json.load(f)
+            
+        dev = Device(host='1.1.1.1', user='netconf', password='netconf123')
+        dev.open()
+        
+        sflow = dev.rpc.get_config(filter_xml="""
+            <configuration>
+                <sflow />
+            </configuration>
+        """)
+        
+        collector_ip = sflow.findtext(".//destination-address")
+        collector_port = sflow.findtext(".//port")
+        
+        assert collector_ip == testdata['sflow']['collector_ip']
+        assert int(collector_port) == testdata['sflow']['collector_port']
+        
+        interfaces = [intf.text for intf in sflow.findall(".//interfaces/interface")]
+        
+        assert set(interfaces) == set(testdata['interfaces'])
+        
+        print("sFlow configuration verified successfully")
+      """,
+      "run_command": "python verify_sflow_config.py",
+      "expected_result": "sFlow configuration verified successfully"
+    }
+  },
+
+  {
+    "testname": "Verify sFlow Traffic", 
+    "testcase": {
+      "testname": "Verify sFlow Traffic",
+      "objective": "Verify sFlow traffic is being sent to collector", 
+      "steps": [
+        "Connect to MX481 console/ssh", 
+        "Start packet capture on MX481 egress interface to collector",
+        "Verify sFlow packets are seen in capture",
+        "Analyze sFlow packet contents"
+      ],
+      "testdata": {
+        "collector_ip": "1.1.1.1",
+        "collector_intf": "ge-0/0/1", 
+        "sflow_port": 6343
+      }
+    },
+    "testscript": {
+      "testname": "Verify sFlow Traffic",
+      "objective": "Automate verification of sFlow traffic to collector",
+      "file_name": "verify_sflow_traffic.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install scapy"  
+      ],
+      "script": """
+        import json
+        from scapy.all import *
+        
+        with open('testdata.json') as f:
+            testdata = json.load(f)
+            
+        pkt_filter = 'udp dst port {} and icmp'.format(testdata['sflow_port'])
+        pkts = sniff(iface=testdata['collector_intf'], filter=pkt_filter, count=5)
+        
+        assert all([UDP in pkt and pkt[UDP].dport == testdata['sflow_port'] for pkt in pkts])
+        
+        print("sFlow traffic verified successfully")
+      """,
+      "run_command": "python verify_sflow_traffic.py",
+      "expected_result": "sFlow traffic verified successfully"
+    }
+  }
+]
+###ENDLIST### ###STARTLIST###
+
+[
+  {
+    "testname": "Port Mappings", 
+    "testcase": {
+      "testname": "Port Mappings",
+      "objective": "Verify port mappings by checking interface statistics", 
+      "steps": [
+        "Check interface statistics on device",
+        "Verify rx/tx packet counts incrementing on configured interfaces", 
+        "Validate interface names match configured mappings"
+      ],
+      "test_data": {
+        "device_address": "10.1.1.1",
+        "username": "admin",
+        "password": "juniper123",
+        "interfaces": ["ge-0/0/1", "ge-0/0/2"]  
+      }
+    },
+    "testscript": {
+      "testname": "Port Mappings",
+      "objective": "Verify port mappings by checking interface statistics",
+      "file_name": "test_port_mappings.py",
+      "init_scripts": [
+        "pip install jnpr.junos",
+        "pip install paramiko"
+      ],
+      "script": \"\"\"
+        import jnpr.junos
+        from jnpr.junos import Device
+        
+        dev = Device(host='10.1.1.1', user='admin', password='juniper123')
+        dev.open()
+        
+        interfaces = ['ge-0/0/1', 'ge-0/0/2']
+        for interface in interfaces:
+          intf_stats = dev.rpc.get_interface_information(interface_name=interface)
+          print(f'Interface {interface} rx packets: {intf_stats.rx_packets}')
+          print(f'Interface {interface} tx packets: {intf_stats.tx_packets}')
+          
+        dev.close()
+      \"\"\",
+      "run_command": "python test_port_mappings.py",
+      "expected_result": "Script prints rx/tx packet counts for interfaces ge-0/0/1 and ge-0/0/2"
+    }
+  },
+  
+  {
+    "testname": "Address Verification",
+    "testcase": {
+      "testname": "Address Verification",
+      "objective": "Verify interface addresses match configured addresses",
+      "steps": [
+        "Establish NETCONF session to device", 
+        "Retrieve configuration for interfaces",
+        "Parse interface addresses from configuration",
+        "Validate parsed addresses match configured addresses"
+      ],
+      "test_data": {
+        "device_address": "10.1.1.1",
+        "username": "admin",
+        "password": "juniper123",
+        "interfaces": [
+          {"name": "ge-0/0/1", "address": "10.10.1.1/24"},
+          {"name": "ge-0/0/2", "address": "10.10.2.1/24"}
+        ]
+      }
+    },
+    "testscript": {
+      "testname": "Address Verification",
+      "objective": "Verify interface addresses match configured addresses", 
+      "file_name": "test_address_verification.py",
+      "init_scripts": [
+        "pip install ncclient"
+      ],
+      "script": \"\"\"
+        from ncclient import manager
+        
+        m = manager.connect(
+            host='10.1.1.1',
+            port=830,
+            username='admin',
+            password='juniper123',
+            hostkey_verify=False
+        )
+        
+        config = m.get_config(source='running').data_xml
+        interfaces = [{'name': 'ge-0/0/1', 'address': '10.10.1.1/24'}, {'name': 'ge-0/0/2', 'address': '10.10.2.1/24'}]
+        
+        for interface in interfaces:
+          intf_config = config.find(f".//interface[name='{interface['name']}']")
+          address = intf_config.find('.//ipv4/address')
+          print(f"Interface {interface['name']} address: {address.text}")
+          assert address.text == interface['address']
+        
+        print("All interface addresses matched configured")
+        
+      \"\"\",
+      "run_command": "python test_address_verification.py", 
+      "expected_result": "Prints interface addresses and assertion passes"
+    }
+  }
+]
+
+###ENDLIST### ###STARTLIST###
+[
+  {
+    "testname": "sFlow Port Monitoring Test", 
+    "testcase": {
+      "testname": "sFlow Port Monitoring Test",
+      "objective": "Validate sFlow monitoring is working on all ports of MX481 device",
+      "steps": [
+        "1. Enable sFlow monitoring on all ports of MX481 device", 
+        "2. Send test traffic on each port",
+        "3. Verify sFlow packets are received for each port"
+      ],
+      "test_data": {
+        "device_type": "Juniper MX481",
+        "port_count": 48,
+        "sflow_collector_ip": "192.168.1.100",
+        "test_traffic_profile": "1Mbps UDP traffic"  
+      }
+    },
+    "testscript": {
+      "testname": "sFlow Port Monitoring Test",
+      "objective": "Script to validate sFlow monitoring on MX481 ports",  
+      "file_name": "sflow_port_test.py",
+      "init_scripts": [
+        "pip install py-junos-eznc",
+        "pip install scapy"
+      ],
+      "script": \"\"\"
+        import pyez
+        from scapy.all import *
+        
+        # Connect to device
+        dev = Device(host='192.168.1.1', user='netconf', password='password')
+        
+        # Enable sFlow monitoring on all ports
+        for i in range(48):
+            dev.cu.load(f'set interfaces ge-0/0/{i} unit 0 family inet sampling input')
+        
+        # Send test traffic
+        pkt = IP(dst='192.168.1.100')/UDP(dport=6343)
+        sendp(pkt, iface='ge-0/0/1', count=1000)
+        
+        # Verify sFlow packets received
+        collector = IP(dst='192.168.1.100')
+        assert len(sniff(lfilter=lambda p: IP in p and p[IP].dst == '192.168.1.100', timeout=10)) > 0
+      \"\"\",
+      "run_command": "python sflow_port_test.py",
+      "expected_result": "sFlow packets received for all ports" 
+    }
+  },
+
+  {
+    "testname": "sFlow Polling Interval Test",
+    "testcase": {
+      "testname": "sFlow Polling Interval Test",  
+      "objective": "Validate sFlow polling interval configuration",
+      "steps": [
+        "1. Configure sFlow polling interval on device to 30 seconds",
+        "2. Send constant test traffic on interface", 
+        "3. Verify sFlow packets are received approximately every 30 seconds"   
+      ],
+      "test_data": {
+        "device_type": "Juniper MX480",
+        "test_interface": "ge-0/0/1",
+        "sflow_collector_ip": "192.168.1.100",
+        "polling_interval": 30
+      }
+    },
+    "testscript": {
+      "testname": "sFlow Polling Interval Test",
+      "objective": "Script to validate sFlow polling interval",
+      "file_name": "sflow_polling_test.py",
+      "init_scripts": [ 
+        "pip install pyez",
+        "pip install scapy"
+      ],
+      "script": \"\"\"
+        import pyez
+        from scapy.all import *
+        
+        # Connect to device  
+        dev = Device(host='192.168.1.1', user='netconf', password='password')
+        
+        # Configure polling interval
+        dev.cu.load('set interfaces ge-0/0/1 unit 0 family inet sampling input')
+        dev.cu.load('set interfaces ge-0/0/1 unit 0 family inet sampling output')
+        dev.cu.load('set interfaces ge-0/0/1 unit 0 family inet sampling polling-interval 30')
+        
+        # Send constant traffic
+        pkt = IP(dst='192.168.1.100')/UDP(dport=6343)
+        send(pkt, iface='ge-0/0/1', loop=1)
+        
+        # Verify interval
+        intervals = []
+        collector = IP(dst='192.168.1.100')
+        pkts = sniff(lfilter=lambda p: IP in p and p[IP].dst == '192.168.1.100', timeout=90)
+        for i in range(len(pkts)-1):
+            intervals.append(pkts[i+1].time-pkts[i].time)
+        
+        avg_interval = sum(intervals)/len(intervals) 
+        assert avg_interval > 25 and avg_interval < 35
+      \"\"\",  
+      "run_command": "python sflow_polling_test.py",
+      "expected_result": "sFlow packets received at configured interval"
+    }
+  } 
+]
+###ENDLIST###
