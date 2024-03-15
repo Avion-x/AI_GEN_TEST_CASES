@@ -1,110 +1,276 @@
- Here are 2 unit test cases with python test scripts for VLAN configuration on MX480 Juniper device:
-
-###STARTLIST###
+ ###STARTLIST###
 [
-{
-  "testname": "Test VLAN creation",
-  "testcase": {
-    "testname": "Test VLAN creation",
-    "objective": "Validate creation of VLAN on MX480 device",
-    "steps": [
-      "Create VLAN 500 on MX480 device", 
-      "Verify VLAN 500 exists in VLAN table"
-    ],
-    "test_data": {
-      "vlan_id": 500,
-      "vlan_name": "test-vlan"  
+  {
+    "testname": "Test Bootup Sequence", 
+    "testcase": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Validate that the router boots up correctly through all stages",
+      "steps": [
+        "Power on the router",
+        "Validate POST completes successfully",
+        "Validate BIOS loads successfully", 
+        "Validate loader menu is displayed",
+        "Validate Junos kernel loads",
+        "Validate kernel initialization is complete",
+        "Validate daemons start successfully"
+      ],
+      "test_data": {
+        "router_model": "MX480",
+        "junos_version": "17.3R3.10"  
+      }
+    },
+    "testscript": {
+      "testname": "Test Bootup Sequence",
+      "objective": "Automated test script to validate bootup sequence",
+      "file_name": "test_bootup.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install netmiko"
+      ],
+      "script": \"\"\"
+        import paramiko
+        import time
+        
+        ROUTER_IP = '192.168.1.1'
+        USERNAME = 'admin'
+        PASSWORD = 'Juniper123'
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        print("Connecting to router")
+        client.connect(ROUTER_IP, username=USERNAME, password=PASSWORD)
+        
+        print("Powering on router")
+        client.exec_command("request chassis power on")
+        
+        time.sleep(60)
+        
+        print("Verifying POST completion")
+        output = client.exec_command("show chassis hardware")
+        if "Power-on self-test LED: OK" in output:
+            print("POST completed successfully")
+        else:
+            raise Exception("POST failed")
+            
+        print("Verifying Junos kernel load")
+        output = client.exec_command("show version")
+        if "JUNOS OS Kernel 64-bit" in output:
+            print("Junos kernel loaded successfully")
+        else:
+            raise Exception("Junos kernel load failed")
+            
+        print("All tests passed")
+      \"\"\",
+      "run_command": "python test_bootup.py",
+      "expected_result": "All tests passed"
     }
   },
   
-  "testscript": {
-    "testname": "Test VLAN creation",  
-    "objective": "Validate creation of VLAN on MX480 device",
-    "file_name": "test_create_vlan.py",
-    "init_scripts": [
-      "pip install netmiko",
-      "pip install unittest"
-    ],
-    "script": """  
-import netmiko
-from netmiko import ConnectHandler
-import unittest
-
-class TestCreateVlan(unittest.TestCase):
-    
-    def test_create_vlan(self):
-        device = {
-            'device_type': 'juniper',
-            'host': 'mx480', 
-            'username': 'netconf', 
-            'password': 'juniper123',
-        }
+  {
+    "testname": "Test CLI Access", 
+    "testcase": {
+      "testname": "Test CLI Access",
+      "objective": "Validate CLI accessibility using default credentials",
+      "steps": [
+        "Initiate SSH connection to router",
+        "Login using default username and password",
+        "Validate login is successful and CLI prompt is displayed"  
+      ],
+      "test_data": {
+        "router_ip": "192.168.1.1",
+        "username": "admin",
+        "password": "Juniper123"
+      }
+    },
+    "testscript": {
+      "testname": "Test CLI Access", 
+      "objective": "Automated test script to validate CLI access",
+      "file_name": "test_cli_access.py",
+      "init_scripts": [
+        "pip install paramiko"  
+      ],
+      "script": \"\"\"
+        import paramiko
         
-        net_connect = ConnectHandler(**device)
-        config_commands = [
-            'set vlans test-vlan vlan-id 500',
-        ]
-        output = net_connect.send_config_set(config_commands) 
-        self.assertIn(' vlan-id 500 ', output)
+        ROUTER_IP = '192.168.1.1'
+        USERNAME = 'admin'
+        PASSWORD = 'Juniper123'
         
-if __name__ == '__main__':
-    unittest.main()     
-    """,
-    "run_command": "python test_create_vlan.py",
-    "expected_result": "OK" 
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        print("Connecting to router")
+        client.connect(ROUTER_IP, username=USERNAME, password=PASSWORD)
+        print("Login successful")
+        
+        client.invoke_shell()
+        output = client.recv(1000)
+        
+        if '>' in output.decode('utf-8'):
+            print("Test passed")
+        else:
+            print("Test failed")
+            raise Exception("Expected prompt > not found")
+        
+      \"\"\",
+      "run_command": "python test_cli_access.py", 
+      "expected_result": "Test passed"
+    }
   }
-},
+]
+###ENDLIST### ###STARTLIST###
+[
+    {
+        "testname": "Port Mappings Test", 
+        "testcase": {
+            "testname": "Port Mappings Test",
+            "objective": "Verify all expected ports are detected and mapped correctly after bootup", 
+            "steps": [
+                "Check physical port inventory and match to expected ports",
+                "Verify logical interfaces match expected mappings and naming",
+                "Validate no unexpected/unmapped ports exist"
+            ]
+        },
+        "testscript": {
+            "testname": "Port Mappings Test",
+            "objective": "Verify port mappings after bootup",
+            "file_name": "test_portmappings.py",
+            "init_scripts": "\"\"\"\npip install napalm\n\"\"\"",
+            "script": "\"\"\"\nimport napalm\n\nEXPECTED_PORTS = ['ge-0/0/0', 'ge-0/0/1'] \n\ndriver = napalm.get_network_driver('junos')\ndevice = driver('192.168.0.1', 'netconf_username', 'netconf_password')\n\ndevice.open()\nports = device.get_facts()['interface_list']\n\nassert EXPECTED_PORTS == ports\n\"\"\",
+            "run_command": "python test_portmappings.py",
+            "expected_result": "All expected ports detected and mapped correctly"
+        }
+    },
+    {
+        "testname": "IP Address Validation Test",
+        "testcase": {
+            "testname": "IP Address Validation Test", 
+            "objective": "Confirm assigned IP addresses match expected values after bootup",
+            "steps": [
+                "Get interface IP address assignments from device", 
+                "Validate IP addresses match expected values"
+            ],
+            "test_data": {
+                "expected_addresses": {
+                    "ge-0/0/0": "192.168.0.1/24",
+                    "ge-0/0/1": "192.168.1.1/24"
+                }
+            }
+        },
+        "testscript": {
+            "testname": "IP Address Validation Test",
+            "objective": "Validate interface IP addresses after bootup",
+            "file_name": "test_ipvalidation.py",
+            "init_scripts": "\"\"\"\npip install napalm\n\"\"\"",
+            "script": "\"\"\"\nimport napalm\nfrom testdata import expected_addresses\n\ndriver = napalm.get_network_driver('junos')\ndevice = driver('192.168.0.1', 'netconf_username', 'netconf_password')\n\ndevice.open()\ninterfaces = device.get_interfaces()\n\nfor iface, addr in expected_addresses.items():\n    assert interfaces[iface]['ipv4']['address'] == addr\n\"\"\",
+            "run_command": "python test_ipvalidation.py", 
+            "expected_result": "All interface IP addresses match expected values"
+        }
+    }
+]
+###ENDLIST### ###STARTLIST###
+[
+  {
+    "testname": "Bootup Test Port 1",  
+    "testcase": {
+      "testname": "Bootup Test Port 1",
+      "objective": "To verify port 1 boots up correctly", 
+      "steps": [
+        "Plug in power cable to device",
+        "Verify port 1 LED turns green"
+      ],
+      "test_data": {
+        "device_id": "mx481-01", 
+        "port_number": 1
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Test Port 1",
+      "objective": "To verify port 1 boots up correctly with Python",
+      "file_name": "bootup_test_port1.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install netmiko"
+      ],
+      "script": """
+import paramiko
+import time
 
-{
-  "testname": "Test VLAN deletion", 
-  "testcase": {
-    "testname": "Test VLAN deletion",
-    "objective": "Validate deletion of VLAN 500 from MX480 device",
-    "steps": [
-      "Delete VLAN 500 from MX480 device ",
-      "Verify VLAN 500 removed from VLAN table"  
-    ],
-    "test_data": {
-      "vlan_id": 500
+DEVICE_IP = '192.168.1.1'
+USERNAME = 'admin' 
+PASSWORD = 'password'
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
+
+print("Connected to device")
+
+stdin, stdout, stderr = client.exec_command("show interfaces")
+output = stdout.read().decode()
+
+if "Port 1 is up" in output:
+  print("Test Passed")
+else:
+  print("Test Failed")
+            
+client.close()
+      """,
+      "run_command": "python bootup_test_port1.py",
+      "expected_result": "Test Passed"
     }
   },
-  
-  "testscript": {
-    "testname": "Test VLAN deletion",
-    "objective": "Validate deletion of VLAN 500 from MX480 device", 
-    "file_name": "test_delete_vlan.py",
-    "init_scripts": [
-      "pip install netmiko",
-      "pip install unittest"
-    ],
-    "script": """
-import netmiko
-from netmiko import ConnectHandler  
-import unittest
 
-class TestDeleteVlan(unittest.TestCase):
-    
-    def test_delete_vlan(self):
-        device = {
-            'device_type': 'juniper',
-            'host': 'mx480',
-            'username': 'netconf',  
-            'password': 'juniper123',
-        }
-        
-        net_connect = ConnectHandler(**device)
-        config_commands = [
-            'delete vlans test-vlan vlan-id 500', 
-        ]
-        output = net_connect.send_config_set(config_commands)
-        self.assertNotIn('vlan-id 500', output)
-        
-if __name__ == '__main__':
-    unittest.main()
-    """,
-    "run_command": "python test_delete_vlan.py",
-    "expected_result": "OK"
+  {
+    "testname": "Bootup Test Port 2",
+    "testcase": {
+      "testname": "Bootup Test Port 2",
+      "objective": "To verify port 2 boots up correctly",
+      "steps": [
+        "Plug in power cable to device", 
+        "Verify port 2 LED turns green"
+      ],
+      "test_data": {
+        "device_id": "mx481-01",
+        "port_number": 2  
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Test Port 2",
+      "objective": "To verify port 2 boots up correctly with Python",  
+      "file_name": "bootup_test_port2.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install netmiko"  
+      ],
+      "script": """
+import paramiko
+import time
+
+DEVICE_IP = '192.168.1.1'
+USERNAME = 'admin'
+PASSWORD = 'password'  
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
+
+print("Connected to device")
+
+stdin, stdout, stderr = client.exec_command("show interfaces")
+output = stdout.read().decode()
+
+if "Port 2 is up" in output:
+  print("Test Passed")  
+else:
+  print("Test Failed")
+          
+client.close()
+      """,
+      "run_command": "python bootup_test_port2.py",
+      "expected_result": "Test Passed"
+    }
   }
-}
 ]
 ###ENDLIST###
