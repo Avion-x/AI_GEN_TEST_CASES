@@ -1,275 +1,263 @@
  ###STARTLIST###
 [
   {
-    "testname": "Test Bootup Sequence", 
+    "testname": "Bootup Test 1", 
     "testcase": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Validate that the router boots up correctly through all stages",
+      "testname": "Bootup Test 1",
+      "objective": "Validate successful bootup of MX480 device", 
       "steps": [
-        "Power on the router",
-        "Validate POST completes successfully",
-        "Validate BIOS loads successfully", 
-        "Validate loader menu is displayed",
-        "Validate Junos kernel loads",
-        "Validate kernel initialization is complete",
-        "Validate daemons start successfully"
+        "Verify POWER LED turns green after power on",
+        "Verify SYSTEM LED turns green after bootup completion", 
+        "No error messages on console"
       ],
       "test_data": {
-        "router_model": "MX480",
-        "junos_version": "17.3R3.10"  
+        "device_model": "MX480",
+        "port_count": "80" 
       }
     },
     "testscript": {
-      "testname": "Test Bootup Sequence",
-      "objective": "Automated test script to validate bootup sequence",
-      "file_name": "test_bootup.py",
+      "testname": "Bootup Test 1",
+      "objective": "Script to validate successful MX480 bootup",
+      "file_name": "test_bootup_1.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
+        "import unittest",
+        "import telnetlib",
+        "import time"
       ],
-      "script": \"\"\"
-        import paramiko
-        import time
-        
-        ROUTER_IP = '192.168.1.1'
-        USERNAME = 'admin'
-        PASSWORD = 'Juniper123'
-        
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        
-        print("Connecting to router")
-        client.connect(ROUTER_IP, username=USERNAME, password=PASSWORD)
-        
-        print("Powering on router")
-        client.exec_command("request chassis power on")
-        
-        time.sleep(60)
-        
-        print("Verifying POST completion")
-        output = client.exec_command("show chassis hardware")
-        if "Power-on self-test LED: OK" in output:
-            print("POST completed successfully")
-        else:
-            raise Exception("POST failed")
-            
-        print("Verifying Junos kernel load")
-        output = client.exec_command("show version")
-        if "JUNOS OS Kernel 64-bit" in output:
-            print("Junos kernel loaded successfully")
-        else:
-            raise Exception("Junos kernel load failed")
-            
-        print("All tests passed")
-      \"\"\",
-      "run_command": "python test_bootup.py",
-      "expected_result": "All tests passed"
+      "script": """
+class TestMX480Bootup(unittest.TestCase):
+
+  def test_bootup(self):
+    tn = telnetlib.Telnet('192.168.0.1')
+    tn.read_until(b'Loading ')
+    time.sleep(60)
+    self.assertIn(b'SYSTEM LED green', tn.read_very_eager())
+    self.assertNotIn(b'Error', tn.read_very_eager())
+    tn.close()
+  """,
+  
+  "run_command": "python test_bootup_1.py",
+  "expected_result": "OK"
     }
   },
   
   {
-    "testname": "Test CLI Access", 
+    "testname": "Bootup Test 2",
     "testcase": {
-      "testname": "Test CLI Access",
-      "objective": "Validate CLI accessibility using default credentials",
+      "testname": "Bootup Test 2",
+      "objective": "Validate hardware inventory after successful bootup",
       "steps": [
-        "Initiate SSH connection to router",
-        "Login using default username and password",
-        "Validate login is successful and CLI prompt is displayed"  
+        "Show chassis hardware inventory", 
+        "Verify expected number of RE, FPC, PICs" 
       ],
       "test_data": {
-        "router_ip": "192.168.1.1",
-        "username": "admin",
-        "password": "Juniper123"
+        "device_model": "MX480",
+        "re_count": "2",
+        "fpc_count": "4",
+        "pic_count": "8"
       }
     },
     "testscript": {
-      "testname": "Test CLI Access", 
-      "objective": "Automated test script to validate CLI access",
-      "file_name": "test_cli_access.py",
+      "testname": "Bootup Test 2", 
+      "objective": "Script to validate MX480 hardware inventory",
+      "file_name": "test_bootup_2.py",
       "init_scripts": [
-        "pip install paramiko"  
+        "import unittest", 
+        "from jnpr.junos import Device"
       ],
-      "script": \"\"\"
-        import paramiko
-        
-        ROUTER_IP = '192.168.1.1'
-        USERNAME = 'admin'
-        PASSWORD = 'Juniper123'
-        
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        
-        print("Connecting to router")
-        client.connect(ROUTER_IP, username=USERNAME, password=PASSWORD)
-        print("Login successful")
-        
-        client.invoke_shell()
-        output = client.recv(1000)
-        
-        if '>' in output.decode('utf-8'):
-            print("Test passed")
-        else:
-            print("Test failed")
-            raise Exception("Expected prompt > not found")
-        
-      \"\"\",
-      "run_command": "python test_cli_access.py", 
-      "expected_result": "Test passed"
+      "script": """  
+class TestMX480HwInventory(unittest.TestCase):
+
+  def test_hw_inventory(self):
+    dev = Device(host='192.168.0.1', user='netconf', password='password123')
+    dev.open()
+    hw_inventory = dev.rpc.get_chassis_inventory()
+    dev.close()
+  
+    self.assertEqual(hw_inventory.xpath('re-count')[0].text, '2') 
+    self.assertEqual(hw_inventory.xpath('fpc-count')[0].text, '4')
+    self.assertEqual(hw_inventory.xpath('pic-count')[0].text, '8')
+  """,
+  
+  "run_command": "python test_bootup_2.py",
+  "expected_result": "OK"
     }
   }
 ]
 ###ENDLIST### ###STARTLIST###
 [
-    {
-        "testname": "Port Mappings Test", 
+    { 
+        "testname": "Port Mapping Verification",
         "testcase": {
-            "testname": "Port Mappings Test",
-            "objective": "Verify all expected ports are detected and mapped correctly after bootup", 
+            "objective": "Verify all ports on the MX481 device are correctly mapped and configured", 
             "steps": [
-                "Check physical port inventory and match to expected ports",
-                "Verify logical interfaces match expected mappings and naming",
-                "Validate no unexpected/unmapped ports exist"
-            ]
-        },
-        "testscript": {
-            "testname": "Port Mappings Test",
-            "objective": "Verify port mappings after bootup",
-            "file_name": "test_portmappings.py",
-            "init_scripts": "\"\"\"\npip install napalm\n\"\"\"",
-            "script": "\"\"\"\nimport napalm\n\nEXPECTED_PORTS = ['ge-0/0/0', 'ge-0/0/1'] \n\ndriver = napalm.get_network_driver('junos')\ndevice = driver('192.168.0.1', 'netconf_username', 'netconf_password')\n\ndevice.open()\nports = device.get_facts()['interface_list']\n\nassert EXPECTED_PORTS == ports\n\"\"\",
-            "run_command": "python test_portmappings.py",
-            "expected_result": "All expected ports detected and mapped correctly"
-        }
-    },
-    {
-        "testname": "IP Address Validation Test",
-        "testcase": {
-            "testname": "IP Address Validation Test", 
-            "objective": "Confirm assigned IP addresses match expected values after bootup",
-            "steps": [
-                "Get interface IP address assignments from device", 
-                "Validate IP addresses match expected values"
+                "Retrieve port mapping configuration",
+                "Verify all expected ports exist in configuration", 
+                "Validate mappings match expected values"
             ],
             "test_data": {
-                "expected_addresses": {
-                    "ge-0/0/0": "192.168.0.1/24",
-                    "ge-0/0/1": "192.168.1.1/24"
-                }
+                "expected_ports": ["ge-0/0/0", "ge-0/0/1", "ge-0/0/2"], 
+                "expected_mappings": {"ge-0/0/0": "192.168.0.1", "ge-0/0/1": "192.168.0.2", "ge-0/0/2": "192.168.0.3"}
             }
         },
         "testscript": {
-            "testname": "IP Address Validation Test",
-            "objective": "Validate interface IP addresses after bootup",
-            "file_name": "test_ipvalidation.py",
-            "init_scripts": "\"\"\"\npip install napalm\n\"\"\"",
-            "script": "\"\"\"\nimport napalm\nfrom testdata import expected_addresses\n\ndriver = napalm.get_network_driver('junos')\ndevice = driver('192.168.0.1', 'netconf_username', 'netconf_password')\n\ndevice.open()\ninterfaces = device.get_interfaces()\n\nfor iface, addr in expected_addresses.items():\n    assert interfaces[iface]['ipv4']['address'] == addr\n\"\"\",
-            "run_command": "python test_ipvalidation.py", 
-            "expected_result": "All interface IP addresses match expected values"
+            "testname": "test_port_mapping",
+            "objective": "Test port mappings on device match expected config",
+            "file_name": "test_port_mapping.py",
+            "init_scripts": ["pip install junos-eznc"],
+            "script": \"\"\"
+            import unittest
+            from jnpr.junos import Device
+            
+            expected_ports = ${test_data['expected_ports']}
+            expected_mappings = ${test_data['expected_mappings']}
+            
+            def test_port_mappings(dev):
+                actual_ports = dev.cli('show interfaces terse')
+                actual_mappings = dev.cli('show interfaces terse | display json')
+                assert set(expected_ports) == set(actual_ports) 
+                for port, ip in expected_mappings.items():
+                    assert port in actual_mappings 
+                    assert actual_mappings[port]['ip'] == ip
+                
+            dev = Device(host='192.168.0.5', user='test', password='Password123')
+            dev.open()
+            
+            suite = unittest.TestSuite()
+            suite.addTest(test_port_mappings(dev))
+            
+            runner = unittest.TextTestRunner()
+            runner.run(suite)
+            \"\"\"",
+            "run_command": "python test_port_mapping.py",
+            "expected_result": "OK"  
+        }
+    },
+    {
+        "testname": "Address Assignment Verification", 
+        "testcase": {
+            "objective": "Validate all interfaces have expected IP addresses assigned",
+            "steps": [
+                "Retrieve interface configurations", 
+                "Extract assigned IP for each interface",
+                "Verify IP matches expected value"
+            ],
+            "test_data": {
+                "expected_assignments": {"ge-0/0/0": "192.168.0.1", "ge-0/0/1": "192.168.0.2"}
+            }
+        },
+        "testscript": {
+            "testname": "test_address_assignment",
+            "objective": "Validate assigned IP addresses match expected values", 
+            "file_name": "test_address_assignment.py",
+            "init_scripts": ["pip install jnpr.junos"],
+            "script": \"\"\"
+            import unittest
+            from jnpr.junos import Device
+            
+            expected_assignments = ${test_data['expected_assignments']}
+            
+            def test_address_assignment(dev):
+                interfaces = dev.cli('show interfaces terse')
+                for intf, expected_ip in expected_assignments.items():
+                    actual_ip = interfaces[intf]['ip']
+                    assert actual_ip == expected_ip
+                    
+            dev = Device(host='192.168.0.5', user='test', password='Password123')
+            dev.open()
+            
+            suite = unittest.TestSuite()
+            suite.addTest(test_address_assignment(dev))
+            
+            runner = unittest.TextTestRunner()
+            runner.run(suite)
+            \"\"\",
+            "run_command": "python test_address_assignment.py",
+            "expected_result": "OK"
         }
     }
 ]
 ###ENDLIST### ###STARTLIST###
 [
   {
-    "testname": "Bootup Test Port 1",  
+    "testname": "Test Port Status", 
     "testcase": {
-      "testname": "Bootup Test Port 1",
-      "objective": "To verify port 1 boots up correctly", 
+      "testname": "Test Port Status",
+      "objective": "Verify all ports on the MX481 are up after boot", 
       "steps": [
-        "Plug in power cable to device",
-        "Verify port 1 LED turns green"
+        "Verify interface status shows all ports as up"
       ],
       "test_data": {
-        "device_id": "mx481-01", 
-        "port_number": 1
+        "device_under_test": "MX481",
+        "num_ports": 80
       }
     },
     "testscript": {
-      "testname": "Bootup Test Port 1",
-      "objective": "To verify port 1 boots up correctly with Python",
-      "file_name": "bootup_test_port1.py",
+      "testname": "Test Port Status",
+      "objective": "Verify all ports on the MX481 are up after boot",
+      "file_name": "test_port_status.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
+        "pip install netmiko",
+        "pip install junos-eznc"
       ],
       "script": """
-import paramiko
-import time
+import netmiko
+from jnpr.junos import Device
 
-DEVICE_IP = '192.168.1.1'
-USERNAME = 'admin' 
-PASSWORD = 'password'
+dev = Device(host='mx481', user='netconf', password='netconf')
+dev.open()
 
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
+interfaces = dev.rpc.get_interface_information()
+for intf in interfaces:
+  if intf.oper_status != 'up':
+    raise Exception(f'Interface {intf.name} is down')
 
-print("Connected to device")
-
-stdin, stdout, stderr = client.exec_command("show interfaces")
-output = stdout.read().decode()
-
-if "Port 1 is up" in output:
-  print("Test Passed")
-else:
-  print("Test Failed")
-            
-client.close()
+print('All interfaces are up')
       """,
-      "run_command": "python bootup_test_port1.py",
-      "expected_result": "Test Passed"
+      "run_command": "python test_port_status.py",
+      "expected_result": "All interfaces are up"
     }
   },
-
   {
-    "testname": "Bootup Test Port 2",
+    "testname": "Test Interface Count",
     "testcase": {
-      "testname": "Bootup Test Port 2",
-      "objective": "To verify port 2 boots up correctly",
+      "testname": "Test Interface Count",
+      "objective": "Verify MX481 has expected number of interfaces",
       "steps": [
-        "Plug in power cable to device", 
-        "Verify port 2 LED turns green"
+        "Retrieve interface names from device", 
+        "Verify number of interfaces matches expected count"
       ],
       "test_data": {
-        "device_id": "mx481-01",
-        "port_number": 2  
+        "device_under_test": "MX481",
+        "expected_interface_count": 80  
       }
     },
     "testscript": {
-      "testname": "Bootup Test Port 2",
-      "objective": "To verify port 2 boots up correctly with Python",  
-      "file_name": "bootup_test_port2.py",
+      "testname": "Test Interface Count", 
+      "objective": "Verify MX481 has expected number of interfaces",
+      "file_name": "test_interface_count.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"  
+        "pip install netmiko",
+        "pip install junos-eznc"
       ],
-      "script": """
-import paramiko
-import time
+      "script": """  
+import netmiko
+from jnpr.junos import Device
 
-DEVICE_IP = '192.168.1.1'
-USERNAME = 'admin'
-PASSWORD = 'password'  
+dev = Device(host='mx481', user='netconf', password='netconf') 
+dev.open()
 
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
+interfaces = dev.rpc.get_interface_information()
+interface_count = len(interfaces)
 
-print("Connected to device")
+expected_count = 80
+if interface_count != expected_count:
+  raise Exception(f'Interface count {interface_count} does not match expected {expected_count}')
 
-stdin, stdout, stderr = client.exec_command("show interfaces")
-output = stdout.read().decode()
-
-if "Port 2 is up" in output:
-  print("Test Passed")  
-else:
-  print("Test Failed")
-          
-client.close()
+print(f'Verified {expected_count} interfaces')
       """,
-      "run_command": "python bootup_test_port2.py",
-      "expected_result": "Test Passed"
+      "run_command": "python test_interface_count.py",
+      "expected_result": "Verified 80 interfaces" 
     }
   }
 ]
