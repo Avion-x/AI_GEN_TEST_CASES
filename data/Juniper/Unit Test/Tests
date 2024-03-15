@@ -1,114 +1,94 @@
  ###STARTLIST###
 [
   {
-    "testname": "VPN IKE Phase 1 Configuration",
+    "testname": "VLAN creation", 
     "testcase": {
-      "testname": "VPN IKE Phase 1 Configuration", 
-      "objective": "Verify IKE Phase 1 VPN configuration on MX480 device",
+      "testname": "VLAN creation",
+      "objective": "Verify VLANs can be created on the MX480",
       "steps": [
-        "Configure IKE proposal", 
-        "Bind IKE policy and proposal to vpn interface",
-        "Verify IKE policy and proposal are applied"
+        "Configure VLAN 100 on interface ge-0/0/0", 
+        "Verify VLAN 100 is configured and up"
       ],
-      "test_data": {
-        "ike_proposal_name": "ike_prop_1",
-        "ike_policy_name": "ike_policy_1", 
-        "vpn_interface": "ge-0/0/1"
+      "data": {
+        "vlan_id": 100, 
+        "interface": "ge-0/0/0" 
       }
     },
     "testscript": {
-      "testname": "VPN IKE Phase 1 Configuration",
-      "objective": "Automate IKE Phase 1 VPN configuration test",
-      "file_name": "test_vpn_ike_phase1.py",
+      "testname": "VLAN creation",
+      "objective": "Automate VLAN creation test case",
+      "file_name": "test_vlan_creation.py",
       "init_scripts": [
-        "pip install jnpr.junos",
-        "pip install paramiko"
+        "pip install netmiko",
+        "pip install junos-eznc"
       ],
       "script": """
-        import jnpr.junos
-        from jnpr.junos import Device
-        
-        def test_ike_phase1_config(ike_proposal, ike_policy, interface):
-          dev = Device(host='192.168.1.1', user='netconf', password='juniper!')
-          dev.open()
-          
-          ike_proposal_cfg = dev.rpc.request_security_ike_proposal_set_information(ike_proposal_name=ike_proposal)
-          print('Configured IKE proposal ' + ike_proposal)
-          
-          ike_policy_cfg = dev.rpc.request_security_ike_policy_set_information(
-            ike_policy_name=ike_policy, 
-            ike_proposal_name=ike_proposal)
-          print('Configured IKE policy ' + ike_policy)
-          
-          interface_cfg = dev.rpc.request_security_ike_gateway_set_interface_peer(interface, 
-            ike_policy=ike_policy)
-          print('Bound IKE policy ' + ike_policy + ' to interface ' + interface)
-          
-          dev.close()
-        
-        test_ike_phase1_config(**DATA)
-      """,
-      "run_command": "python test_vpn_ike_phase1.py", 
-      "expected_result": "IKE proposal, policy and interface binding configured successfully"
+import netmiko
+from junos_eznc import Device
+
+vlan_id = 100
+interface = "ge-0/0/0"
+
+with Device() as dev:
+  dev.cli('configure')
+  dev.cli(f'set vlans {vlan_id} vlan-id {vlan_id}')
+  dev.cli(f'set interfaces {interface} unit 0 family ethernet-switching vlan members {vlan_id}')
+  dev.cli('commit')
+  
+  output = dev.cli('show vlans')
+  assert f'vlan-{vlan_id}' in output
+""",
+"run_command": "python test_vlan_creation.py",
+"expected_result": "VLAN 100 configured on ge-0/0/0"
     }
   },
-  
+
   {
-    "testname": "VPN IKE Phase 2 Configuration", 
+    "testname": "VLAN deletion",
     "testcase": {
-      "testname": "VPN IKE Phase 2 Configuration",
-      "objective": "Verify IKE Phase 2 VPN configuration on MX480 device", 
+      "testname": "VLAN deletion",
+      "objective": "Verify VLANs can be deleted on the MX480",
       "steps": [
-        "Configure IKE proposal",
-        "Configure IPsec proposal", 
-        "Bind IKE and IPsec proposals to vpn policy", 
-        "Bind vpn policy to vpn interface" 
+        "Configure VLAN 200 on interface ge-0/0/1",
+        "Delete VLAN 200",
+        "Verify VLAN 200 is removed"  
       ],
-      "test_data": {
-        "ike_proposal": "ike_prop_2",
-        "ipsec_proposal": "ipsec_prop_1",
-        "vpn_policy": "vpn_policy_1",
-        "vpn_interface": "ge-0/0/2"  
+      "data": {
+        "vlan_id": 200,
+        "interface": "ge-0/0/1"
       }
     },
     "testscript": {
-      "testname": "VPN IKE Phase 2 Configuration",
-      "objective": "Automate IKE Phase 2 VPN configuration test", 
-      "file_name": "test_vpn_ike_phase2.py",
+      "testname": "VLAN deletion",
+      "objective": "Automate VLAN deletion test case", 
+      "file_name": "test_vlan_deletion.py",
       "init_scripts": [
-        "pip install jnpr.junos",
-        "pip install paramiko"
+        "pip install netmiko",
+        "pip install junos-eznc"  
       ],
-      "script": """  
-        import jnpr.junos
-        from jnpr.junos import Device
-        
-        def test_ike_phase2_config(ike_proposal, ipsec_proposal, vpn_policy, interface):
-          dev = Device(host='192.168.1.1', user='netconf', password='juniper!')
-          dev.open()
-        
-          ike_proposal_cfg = dev.rpc.request_security_ike_proposal_set_information(ike_proposal_name=ike_proposal)
-          print('Configured IKE proposal ' + ike_proposal)
-        
-          ipsec_proposal_cfg = dev.rpc.request_security_ipsec_proposal_set_information(ipsec_proposal_name=ipsec_proposal)
-          print('Configured IPsec proposal ' + ipsec_proposal)
-        
-          vpn_policy_cfg = dev.rpc.request_security_ipsec_vpn_config(vpn_policy_name=vpn_policy, 
-            ike_gateway=ike_proposal, 
-            ipsec_proposal=ipsec_proposal)
-          print('Configured VPN policy ' + vpn_policy)
-        
-          interface_cfg = dev.rpc.request_security_ipsec_vpn_bind_interface(interface, 
-            vpn_policy=vpn_policy)
-          print('Bound VPN policy ' + vpn_policy + ' to interface ' + interface)
-        
-          dev.close()
-        
-        test_ike_phase2_config(**DATA)
-      """,
-      "run_command": "python test_vpn_ike_phase2.py",
-      "expected_result": "IKE, IPsec proposals and VPN policy bound to interface successfully"
+      "script": """
+import netmiko
+from junos_eznc import Device
+
+vlan_id = 200
+interface = "ge-0/0/1"
+
+with Device() as dev:
+  dev.cli('configure')
+  dev.cli(f'set vlans {vlan_id} vlan-id {vlan_id}') 
+  dev.cli(f'set interfaces {interface} unit 0 family ethernet-switching vlan members {vlan_id}')
+  dev.cli('commit')
+  
+  dev.cli('configure')
+  dev.cli(f'delete vlans {vlan_id}')
+  dev.cli('commit')
+
+  output = dev.cli('show vlans')
+  assert f'vlan-{vlan_id}' not in output
+""",
+"run_command": "python test_vlan_deletion.py", 
+"expected_result": "VLAN 200 removed from ge-0/0/1"
     }
-  } 
+  }
 ]
 ###ENDLIST###
