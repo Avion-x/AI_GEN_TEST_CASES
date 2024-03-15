@@ -1,374 +1,120 @@
  ###STARTLIST###
 [
-  {
-    "testname": "VLAN Creation", 
-    "testcase": {
-      "testname": "VLAN Creation",
-      "objective": "Verify VLANs can be created on MX480",
-      "steps": [
-        "Connect to MX480 CLI",
-        "Enter configure mode",
-        "Create VLAN with ID 10",
-        "Verify VLAN 10 exists in configuration"
-      ],
-      "test_data": {
-        "vlan_id": 10
-      }
-    },
-    "testscript": {
-      "testname": "VLAN Creation",
-      "objective": "Automate VLAN creation test case",
-      "file_name": "test_vlan_creation.py",
-      "init_scripts": [
-        "pip install paramiko"
-      ],
-      "script": """
-      import paramiko
-      
-      def test_vlan_creation(vlan_id):
-          client = paramiko.SSHClient()
-          client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-          client.connect('mx480', username='admin', password='password')
-      
-          channel = client.invoke_shell()
-          channel.send('configure\\n')
-          channel.send(f'set vlans {vlan_id} vlan-id {vlan_id}\\n')
-          output = channel.recv(1000)
-      
-          if f'vlan {vlan_id}' in output.decode('utf-8'):
-              print('Test passed')
-              return True
-          else:
-              print('Test failed')
-              return False
-      """,
-      "run_command": "python test_vlan_creation.py",
-      "expected_result": "Test passed"
-    }
-  },
+  {"testname":"Bootup Test 1",
+   "testcase":{
+     "testname":"Bootup Test 1",
+     "objective":"Verify bootup process completes successfully within expected time",
+     "steps":["Device boots up in under 5 minutes","All processes start without errors","Management interface comes up"]
+   }, 
+   "testscript":{
+     "testname":"Bootup Test 1",
+     "objective":"Verify bootup process completes successfully within expected time",
+     "file_name":"bootup_test1.py",
+     "init_scripts":[
+       "pip install paramiko"
+     ],
+     "script":"""      
+import paramiko
+import time
+
+DEVICE_IP = '10.1.1.1'
+USERNAME = 'admin'
+PASSWORD = 'juniper123'
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+print("Connecting to device...")
+ssh.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
+
+start = time.time()
+
+print("Waiting for device to finish booting...")
+while True:
+  if time.time() - start > 300:
+    raise Exception("Bootup took longer than 5 minutes")
   
-  {
-    "testname": "VLAN Deletion",
-    "testcase": {
-      "testname": "VLAN Deletion",
-      "objective": "Verify VLANs can be deleted on MX480", 
-      "steps": [
-        "Connect to MX480 CLI",
-        "Enter configure mode", 
-        "Delete VLAN 10",
-        "Verify VLAN 10 no longer exists"
-      ],
-      "test_data": {
-        "vlan_id": 10  
-      }
-    },
-    "testscript": {
-      "testname": "VLAN Deletion",
-      "objective": "Automate VLAN deletion test case",
-      "file_name": "test_vlan_deletion.py", 
-      "init_scripts": [
-        "pip install paramiko"
-      ],
-      "script": """
-      import paramiko
-      
-      def test_vlan_deletion(vlan_id):
-          client = paramiko.SSHClient()
-          client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-          client.connect('mx480', username='admin', password='password')
-      
-          channel = client.invoke_shell()
-          channel.send('configure\\n')
-          channel.send(f'delete vlans {vlan_id}\\n')
-          output = channel.recv(1000)
-      
-          if f'vlan {vlan_id}' not in output.decode('utf-8'):
-              print('Test passed')
-              return True
-          else:
-              print('Test failed')  
-              return False
-      """,
-      "run_command": "python test_vlan_deletion.py",
-      "expected_result": "Test passed"
-    }
-  }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "VLAN Port Mapping Configuration Test", 
-    "testcase": {
-      "testname": "VLAN Port Mapping Configuration Test",
-      "objective": "Verify VLAN port mappings and address configurations",  
-      "steps": [
-        "Configure VLAN with ID 100 and name TESTVLAN", 
-        "Map interfaces ge-0/0/1 to ge-0/0/4 to VLAN 100",
-        "Configure IP address 192.168.100.1/24 on VLAN 100"
-      ],
-      "test_data": {
-        "vlan_id": 100,
-        "vlan_name": "TESTVLAN",
-        "interfaces": ["ge-0/0/1", "ge-0/0/2", "ge-0/0/3", "ge-0/0/4"],
-        "address": "192.168.100.1/24"  
-      }
-    },
-    "testscript": {
-      "testname": "VLAN Port Mapping Configuration Test",
-      "objective": "Verify VLAN port mappings and address configurations",
-      "file_name": "test_vlan_config.py",
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install jsonschema"
-      ],
-      "script": """
-        import netmiko
-        import jsonschema
-        
-        device = {
-          'device_type': 'juniper_junos',
-          'host': '192.168.0.1',
-          'username': 'testuser',
-          'password': 'test123'
-        }
-        
-        test_data = {
-          "vlan_id": 100,
-          "vlan_name": "TESTVLAN",
-          "interfaces": ["ge-0/0/1", "ge-0/0/2", "ge-0/0/3", "ge-0/0/4"],
-          "address": "192.168.100.1/24"  
-        }
-        
-        vlan_schema = {
-          "type": "object",
-          "properties": {
-            "vlan_id": {"type": "integer"},
-            "vlan_name": {"type": "string"},
-            "interfaces": {"type": "array", "items": {"type": "string"}}, 
-            "address": {"type": "string"}  
-          },
-          "required": ["vlan_id", "vlan_name", "interfaces", "address"]
-        }
-        
-        def test_vlan_config():
-          net_connect = netmiko.ConnectHandler(**device)
-          
-          config_commands = [
-            f"set vlans TESTVLAN vlan-id {test_data['vlan_id']}",
-            "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members TESTVLAN",
-            "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members TESTVLAN", 
-            "set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members TESTVLAN",
-            "set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members TESTVLAN",
-            f"set interfaces vlan unit 100 family inet address {test_data['address']}"  
-          ]
-          
-          net_connect.send_config_set(config_commands)
-          
-          jsonschema.validate(test_data, vlan_schema)
-          
-          print("Test passed")
-        
-        test_vlan_config()
-      """,
-      "run_command": "python test_vlan_config.py",
-      "expected_result": "Test passed"  
-    }
+  stdin, stdout, stderr = ssh.exec_command("show chassis routing-engine")
+  output = stdout.read().decode()
+
+  if "Online" in output:
+    print("Bootup finished successfully")
+    break
+
+  time.sleep(10)
+
+print("Management interface validation...")  
+stdin, stdout, stderr = ssh.exec_command("show interfaces terse | match mgmt")
+output = stdout.read().decode()
+
+if "up" in output:
+  print("Management interface is up")
+else:
+  raise Exception("Management interface did not come up")
+
+ssh.close()
+
+print("Test passed")    
+     """
+   ,
+   "run_command":"python3 bootup_test1.py",
+   "expected_result":"Test passed"
+   }
+ },
+ {"testname":"Bootup Test 2",
+  "testcase":{
+    "testname":"Bootup Test 2",  
+    "objective":"Verify all key processes come up without errors",
+    "steps":["Check log for errors","Verify key processes are running"]
   },
+  "testscript":{
+    "testname":"Bootup Test 2",
+    "objective":"Verify all key processes come up without errors", 
+    "file_name":"bootup_test2.py",
+    "init_scripts":[
+      "pip install paramiko"
+    ],
+    "script":"""
+import paramiko
 
-  {
-    "testname": "VLAN Address Configuration Test",
-    "testcase": {
-      "testname": "VLAN Address Configuration Test",
-      "objective": "Verify VLAN interface address configuration",
-      "steps": [
-        "Configure VLAN with ID 200 and name TESTVLAN2",
-        "Configure IP address 192.168.200.1/24 on VLAN interface"  
-      ],
-      "test_data": {
-        "vlan_id": 200,
-        "vlan_name": "TESTVLAN2",
-        "address": "192.168.200.1/24"
-      }
-    },
-    "testscript": {
-      "testname": "VLAN Address Configuration Test",
-      "objective": "Verify VLAN interface address configuration",
-      "file_name": "test_vlan_address.py",
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install jsonschema"
-      ],
-      "script": """
-        import netmiko
-        import jsonschema
-        
-        device = {
-          'device_type': 'juniper_junos',
-          'host': '192.168.0.1',
-          'username': 'testuser',
-          'password': 'test123'
-        }
-        
-        test_data = {
-          "vlan_id": 200,
-          "vlan_name": "TESTVLAN2",
-          "address": "192.168.200.1/24" 
-        }
-        
-        vlan_schema = {
-          "type": "object",
-          "properties": {
-            "vlan_id": {"type": "integer"},
-            "vlan_name": {"type": "string"},
-            "address": {"type": "string"}
-          },
-          "required": ["vlan_id", "vlan_name", "address"]  
-        }
-        
-        def test_vlan_address():
-          net_connect = netmiko.ConnectHandler(**device)
-          
-          config_commands = [
-            f"set vlans TESTVLAN2 vlan-id {test_data['vlan_id']}",  
-            f"set interfaces vlan unit {test_data['vlan_id']} family inet address {test_data['address']}"
-          ]
-          
-          net_connect.send_config_set(config_commands)
-          
-          jsonschema.validate(test_data, vlan_schema)
-          
-          print("Test passed") 
-          
-        test_vlan_address()
-      """,
-      "run_command": "python test_vlan_address.py",
-      "expected_result": "Test passed"
-    }
+DEVICE_IP = '10.1.1.1'
+USERNAME = 'admin'
+PASSWORD = 'juniper123'
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+print("Connecting to device...")
+ssh.exec_command("start shell pfe network fpc0")
+
+print("Checking log for errors...")
+stdin, stdout, stderr = ssh.exec_command("show log messages | match error")
+errors = stdout.read().decode().strip()
+
+if errors:
+  print("Errors found in log:")
+  print(errors)
+  raise Exception("Errors found in log")
+else:
+  print("No errors found in log")  
+
+print("Verifying processes...")
+stdin, stdout, stderr = ssh.exec_command("show system processes extensive")
+output = stdout.read().decode()
+
+if "rpd" not in output:
+  raise Exception("RPD process not running")
+
+if "dfwd" not in output:
+  raise Exception("DFWD process not running")  
+
+print("Key processes verified successfully")
+
+ssh.close()
+print("Test passed")
+    """,
+    "run_command":"python3 bootup_test2.py",
+    "expected_result":"Test passed"
   }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "VLAN Port Assignment", 
-    "testcase": {
-      "testname": "VLAN Port Assignment",
-      "objective": "Verify VLAN ports are assigned correctly",
-      "steps": [
-        "Configure VLANs on the device", 
-        "Assign ports to VLANs",
-        "Verify ports are assigned to correct VLANs"
-      ],
-      "test_data": {
-        "vlans": [10, 20, 30],
-        "vlan_ports": {
-          10: [0/0/1, 0/0/2],
-          20: [0/0/3, 0/0/4], 
-          30: [0/0/5, 0/0/6]
-        }  
-      }
-    },
-    "testscript": {
-      "testname": "VLAN Port Assignment",
-      "objective": "Verify VLAN ports are assigned correctly",
-      "file_name": "test_vlan_ports.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """
-        import ncclient
-        import xmltodict
-        
-        HOST = 'router_ip'
-        PORT = 830
-        USER = 'netconf_user'
-        PASS = 'netconf_password'
-        
-        VLANS = [10, 20, 30]
-        VLAN_PORTS = {
-          10: [0/0/1, 0/0/2],
-          20: [0/0/3, 0/0/4],
-          30: [0/0/5, 0/0/6]  
-        }
-        
-        def test_vlan_ports():
-          with ncclient.manager.connect(
-            host=HOST, port=PORT, username=USER, password=PASS, 
-            device_params={'name':'junos'}, hostkey_verify=False) as m:
-          
-            resp = m.get_config(source='running')
-            config = xmltodict.parse(resp.xml)['rpc-reply']['configuration']['interfaces']
-          
-            print('Testing VLAN Port assignments...')
-            for vlan, ports in VLAN_PORTS.items():
-              print(f'Checking VLAN {vlan} ports...')
-              vlan_if = config['interface'][f'ae{vlan}']
-              assert set(vlan_if['unit']['name']) == set(ports), f'VLAN {vlan} port mismatch'  
-              print(f'VLAN {vlan} ports assigned correctly')
-          
-        if __name__ == '__main__':
-          test_vlan_ports()
-      """,
-      "run_command": "python test_vlan_ports.py",
-      "expected_result": "All VLAN ports assigned correctly, test passes"
-    }
-  },
-
-  {
-    "testname": "VLAN Interface Status",
-    "testcase": {
-      "testname": "VLAN Interface Status",
-      "objective": "Verify VLAN interfaces are operationally up",
-      "steps": [
-        "Configure VLAN interfaces on device",
-        "Verify interfaces are showing as up/up" 
-      ],
-      "test_data": {
-        "vlans": [10, 20, 30]
-      }
-    },
-    "testscript": {
-      "testname": "VLAN Interface Status",      
-      "objective": "Verify VLAN interfaces are operationally up",
-      "file_name": "test_vlan_status.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """
-        import ncclient
-        import xmltodict
-        
-        HOST = 'router_ip'
-        PORT = 830
-        USER = 'netconf_user'
-        PASS = 'netconf_password'
-        
-        VLANS = [10, 20, 30]
-        
-        def test_vlan_status():
-          with ncclient.manager.connect(
-            host=HOST, port=PORT, username=USER, password=PASS,
-            device_params={'name':'junos'}, hostkey_verify=False) as m:
-
-            resp = m.get_config(source='running')
-            config = xmltodict.parse(resp.xml)['rpc-reply']['configuration']
-          
-            print('Testing VLAN interface status...')
-            for vlan in VLANS:
-              int_name = f'ae{vlan}'
-              oper_status = config['interfaces']['interface'][int_name]['oper-status']
-              admin_status = config['interfaces']['interface'][int_name]['enabled']
-
-              assert oper_status == 'up' and admin_status == 'up', f'Interface {int_name} is not up/up'
-              print(f'VLAN {vlan} interface is up/up')
-          
-        if __name__ == '__main__':
-            test_vlan_status()
-      """,
-      "run_command": "python test_vlan_status.py",
-      "expected_result": "All VLAN interfaces are up/up, test passes"
-    }
-  }
-]
+}]
 ###ENDLIST###
