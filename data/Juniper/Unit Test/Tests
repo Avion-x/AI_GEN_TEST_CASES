@@ -1,120 +1,114 @@
  ###STARTLIST###
 [
-  {"testname":"Bootup Test 1",
-   "testcase":{
-     "testname":"Bootup Test 1",
-     "objective":"Verify bootup process completes successfully within expected time",
-     "steps":["Device boots up in under 5 minutes","All processes start without errors","Management interface comes up"]
-   }, 
-   "testscript":{
-     "testname":"Bootup Test 1",
-     "objective":"Verify bootup process completes successfully within expected time",
-     "file_name":"bootup_test1.py",
-     "init_scripts":[
-       "pip install paramiko"
-     ],
-     "script":"""      
-import paramiko
-import time
-
-DEVICE_IP = '10.1.1.1'
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-print("Connecting to device...")
-ssh.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
-
-start = time.time()
-
-print("Waiting for device to finish booting...")
-while True:
-  if time.time() - start > 300:
-    raise Exception("Bootup took longer than 5 minutes")
-  
-  stdin, stdout, stderr = ssh.exec_command("show chassis routing-engine")
-  output = stdout.read().decode()
-
-  if "Online" in output:
-    print("Bootup finished successfully")
-    break
-
-  time.sleep(10)
-
-print("Management interface validation...")  
-stdin, stdout, stderr = ssh.exec_command("show interfaces terse | match mgmt")
-output = stdout.read().decode()
-
-if "up" in output:
-  print("Management interface is up")
-else:
-  raise Exception("Management interface did not come up")
-
-ssh.close()
-
-print("Test passed")    
-     """
-   ,
-   "run_command":"python3 bootup_test1.py",
-   "expected_result":"Test passed"
-   }
- },
- {"testname":"Bootup Test 2",
-  "testcase":{
-    "testname":"Bootup Test 2",  
-    "objective":"Verify all key processes come up without errors",
-    "steps":["Check log for errors","Verify key processes are running"]
+  {
+    "testname": "VPN IKE Phase 1 Configuration",
+    "testcase": {
+      "testname": "VPN IKE Phase 1 Configuration", 
+      "objective": "Verify IKE Phase 1 VPN configuration on MX480 device",
+      "steps": [
+        "Configure IKE proposal", 
+        "Bind IKE policy and proposal to vpn interface",
+        "Verify IKE policy and proposal are applied"
+      ],
+      "test_data": {
+        "ike_proposal_name": "ike_prop_1",
+        "ike_policy_name": "ike_policy_1", 
+        "vpn_interface": "ge-0/0/1"
+      }
+    },
+    "testscript": {
+      "testname": "VPN IKE Phase 1 Configuration",
+      "objective": "Automate IKE Phase 1 VPN configuration test",
+      "file_name": "test_vpn_ike_phase1.py",
+      "init_scripts": [
+        "pip install jnpr.junos",
+        "pip install paramiko"
+      ],
+      "script": """
+        import jnpr.junos
+        from jnpr.junos import Device
+        
+        def test_ike_phase1_config(ike_proposal, ike_policy, interface):
+          dev = Device(host='192.168.1.1', user='netconf', password='juniper!')
+          dev.open()
+          
+          ike_proposal_cfg = dev.rpc.request_security_ike_proposal_set_information(ike_proposal_name=ike_proposal)
+          print('Configured IKE proposal ' + ike_proposal)
+          
+          ike_policy_cfg = dev.rpc.request_security_ike_policy_set_information(
+            ike_policy_name=ike_policy, 
+            ike_proposal_name=ike_proposal)
+          print('Configured IKE policy ' + ike_policy)
+          
+          interface_cfg = dev.rpc.request_security_ike_gateway_set_interface_peer(interface, 
+            ike_policy=ike_policy)
+          print('Bound IKE policy ' + ike_policy + ' to interface ' + interface)
+          
+          dev.close()
+        
+        test_ike_phase1_config(**DATA)
+      """,
+      "run_command": "python test_vpn_ike_phase1.py", 
+      "expected_result": "IKE proposal, policy and interface binding configured successfully"
+    }
   },
-  "testscript":{
-    "testname":"Bootup Test 2",
-    "objective":"Verify all key processes come up without errors", 
-    "file_name":"bootup_test2.py",
-    "init_scripts":[
-      "pip install paramiko"
-    ],
-    "script":"""
-import paramiko
-
-DEVICE_IP = '10.1.1.1'
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-print("Connecting to device...")
-ssh.exec_command("start shell pfe network fpc0")
-
-print("Checking log for errors...")
-stdin, stdout, stderr = ssh.exec_command("show log messages | match error")
-errors = stdout.read().decode().strip()
-
-if errors:
-  print("Errors found in log:")
-  print(errors)
-  raise Exception("Errors found in log")
-else:
-  print("No errors found in log")  
-
-print("Verifying processes...")
-stdin, stdout, stderr = ssh.exec_command("show system processes extensive")
-output = stdout.read().decode()
-
-if "rpd" not in output:
-  raise Exception("RPD process not running")
-
-if "dfwd" not in output:
-  raise Exception("DFWD process not running")  
-
-print("Key processes verified successfully")
-
-ssh.close()
-print("Test passed")
-    """,
-    "run_command":"python3 bootup_test2.py",
-    "expected_result":"Test passed"
-  }
-}]
+  
+  {
+    "testname": "VPN IKE Phase 2 Configuration", 
+    "testcase": {
+      "testname": "VPN IKE Phase 2 Configuration",
+      "objective": "Verify IKE Phase 2 VPN configuration on MX480 device", 
+      "steps": [
+        "Configure IKE proposal",
+        "Configure IPsec proposal", 
+        "Bind IKE and IPsec proposals to vpn policy", 
+        "Bind vpn policy to vpn interface" 
+      ],
+      "test_data": {
+        "ike_proposal": "ike_prop_2",
+        "ipsec_proposal": "ipsec_prop_1",
+        "vpn_policy": "vpn_policy_1",
+        "vpn_interface": "ge-0/0/2"  
+      }
+    },
+    "testscript": {
+      "testname": "VPN IKE Phase 2 Configuration",
+      "objective": "Automate IKE Phase 2 VPN configuration test", 
+      "file_name": "test_vpn_ike_phase2.py",
+      "init_scripts": [
+        "pip install jnpr.junos",
+        "pip install paramiko"
+      ],
+      "script": """  
+        import jnpr.junos
+        from jnpr.junos import Device
+        
+        def test_ike_phase2_config(ike_proposal, ipsec_proposal, vpn_policy, interface):
+          dev = Device(host='192.168.1.1', user='netconf', password='juniper!')
+          dev.open()
+        
+          ike_proposal_cfg = dev.rpc.request_security_ike_proposal_set_information(ike_proposal_name=ike_proposal)
+          print('Configured IKE proposal ' + ike_proposal)
+        
+          ipsec_proposal_cfg = dev.rpc.request_security_ipsec_proposal_set_information(ipsec_proposal_name=ipsec_proposal)
+          print('Configured IPsec proposal ' + ipsec_proposal)
+        
+          vpn_policy_cfg = dev.rpc.request_security_ipsec_vpn_config(vpn_policy_name=vpn_policy, 
+            ike_gateway=ike_proposal, 
+            ipsec_proposal=ipsec_proposal)
+          print('Configured VPN policy ' + vpn_policy)
+        
+          interface_cfg = dev.rpc.request_security_ipsec_vpn_bind_interface(interface, 
+            vpn_policy=vpn_policy)
+          print('Bound VPN policy ' + vpn_policy + ' to interface ' + interface)
+        
+          dev.close()
+        
+        test_ike_phase2_config(**DATA)
+      """,
+      "run_command": "python test_vpn_ike_phase2.py",
+      "expected_result": "IKE, IPsec proposals and VPN policy bound to interface successfully"
+    }
+  } 
+]
 ###ENDLIST###
