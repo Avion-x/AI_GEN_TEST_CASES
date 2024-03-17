@@ -1,94 +1,102 @@
  ###STARTLIST###
 [
   {
-    "testname": "VLAN creation", 
+    "testname": "Test LACP Link Aggregation",
     "testcase": {
-      "testname": "VLAN creation",
-      "objective": "Verify VLANs can be created on the MX480",
+      "testname": "Test LACP Link Aggregation",  
+      "objective": "Verify LACP link aggregation functionality",
       "steps": [
-        "Configure VLAN 100 on interface ge-0/0/0", 
-        "Verify VLAN 100 is configured and up"
+        "Configure LACP link aggregation on ports ge-0/0/1 and ge-0/0/2",
+        "Verify LACP neighbor is established",
+        "Send traffic across link aggregation and verify traffic forwarding"
       ],
-      "data": {
-        "vlan_id": 100, 
-        "interface": "ge-0/0/0" 
+      "testdata": {
+        "lacp_interfaces": ["ge-0/0/1", "ge-0/0/2"],
+        "peer_ip": "192.168.1.2"
       }
     },
     "testscript": {
-      "testname": "VLAN creation",
-      "objective": "Automate VLAN creation test case",
-      "file_name": "test_vlan_creation.py",
+      "testname": "Test LACP Link Aggregation",
+      "objective": "Automate LACP link aggregation test case",
+      "file_name": "test_lacp.py",
       "init_scripts": [
-        "pip install netmiko",
-        "pip install junos-eznc"
-      ],
+        "pip install junos-eznc",
+        "pip install paramiko"
+       ],
       "script": """
-import netmiko
-from junos_eznc import Device
-
-vlan_id = 100
-interface = "ge-0/0/0"
-
-with Device() as dev:
-  dev.cli('configure')
-  dev.cli(f'set vlans {vlan_id} vlan-id {vlan_id}')
-  dev.cli(f'set interfaces {interface} unit 0 family ethernet-switching vlan members {vlan_id}')
-  dev.cli('commit')
-  
-  output = dev.cli('show vlans')
-  assert f'vlan-{vlan_id}' in output
-""",
-"run_command": "python test_vlan_creation.py",
-"expected_result": "VLAN 100 configured on ge-0/0/0"
+        import jnpr.junos
+        import unittest
+        
+        dev = jnpr.junos.Device(host='192.168.1.1', user='john', password='secret123')
+        dev.open()
+        
+        lacp_ports = {{lacp_interfaces}}
+        
+        dev.cli('set interfaces ' + str(lacp_ports[0]) + ' ether-options 802.3ad ' + str(lacp_ports[1]))
+        dev.cli('set protocols lacp interfaces ' + str(lacp_ports[0]) + ' link-protection')
+        
+        result = dev.cli('show lacp interfaces')
+        assert 'Aggregated interface: ae0' in result
+        
+        dev.cli('ping ' + {{peer_ip}})
+        
+        dev.close()
+      """,
+      "run_command": "python test_lacp.py",
+      "expected_result": "LACP neighbor established and traffic passes"
     }
   },
 
   {
-    "testname": "VLAN deletion",
+    "testname": "Test LACP Failure Detection",
     "testcase": {
-      "testname": "VLAN deletion",
-      "objective": "Verify VLANs can be deleted on the MX480",
+      "testname": "Test LACP Failure Detection",
+      "objective": "Verify LACP failure detection and failover",
       "steps": [
-        "Configure VLAN 200 on interface ge-0/0/1",
-        "Delete VLAN 200",
-        "Verify VLAN 200 is removed"  
+        "Configure LACP between two links", 
+        "Shut down one link",
+        "Verify traffic fails over to remaining link"
       ],
-      "data": {
-        "vlan_id": 200,
-        "interface": "ge-0/0/1"
+      "testdata": {
+        "lacp_links": ["ge-0/0/1", "ge-0/0/2"],
+        "shut_interface": "ge-0/0/1"  
       }
     },
     "testscript": {
-      "testname": "VLAN deletion",
-      "objective": "Automate VLAN deletion test case", 
-      "file_name": "test_vlan_deletion.py",
+      "testname": "Test LACP Failure Detection",
+      "objective": "Automate LACP failure test case",
+      "file_name": "test_lacp_failover.py",
       "init_scripts": [
-        "pip install netmiko",
-        "pip install junos-eznc"  
+        "pip install junos-eznc",
+        "pip install paramiko"
       ],
       "script": """
-import netmiko
-from junos_eznc import Device
-
-vlan_id = 200
-interface = "ge-0/0/1"
-
-with Device() as dev:
-  dev.cli('configure')
-  dev.cli(f'set vlans {vlan_id} vlan-id {vlan_id}') 
-  dev.cli(f'set interfaces {interface} unit 0 family ethernet-switching vlan members {vlan_id}')
-  dev.cli('commit')
-  
-  dev.cli('configure')
-  dev.cli(f'delete vlans {vlan_id}')
-  dev.cli('commit')
-
-  output = dev.cli('show vlans')
-  assert f'vlan-{vlan_id}' not in output
-""",
-"run_command": "python test_vlan_deletion.py", 
-"expected_result": "VLAN 200 removed from ge-0/0/1"
+        import jnpr.junos
+        import time
+        import unittest
+        
+        dev = jnpr.junos.Device(host='192.168.1.1', user='john', password='secret123')
+        dev.open()
+        
+        lacp_ports = {{lacp_links}}
+        
+        dev.cli('set interfaces ' + str(lacp_ports[0]) + ' ether-options 802.3ad ' + str(lacp_ports[1]))
+        dev.cli('set protocols lacp interfaces ' + str(lacp_ports[0]) + ' link-protection')
+        
+        dev.cli('ping 192.168.1.2')
+        
+        dev.cli('deactivate interfaces ' + {{shut_interface}})
+        time.sleep(5)
+        
+        result = dev.cli('ping 192.168.1.2')
+        assert '!!!' not in result
+        
+        dev.close()
+      """,
+      "run_command": "python test_lacp_failover.py", 
+      "expected_result": "Traffic fails over after link shutdown"
     }
+
   }
 ]
 ###ENDLIST###
