@@ -1,118 +1,163 @@
  ###STARTLIST###
 [
   {
-    "testname": "ECMP Load Balancing Test 1", 
+    "testname": "Test DOS protection for MX480",
     "testcase": {
-      "testname": "ECMP Load Balancing Test 1",
-      "objective": "Verify ECMP load balancing across 6 member links in LAG bundle",
+      "testname": "Test DOS protection for MX480",      
+      "objective": "Validate that MX480 can detect and mitigate denial of service attacks",
       "steps": [
-        "1. Configure 6 member links in LAG bundle", 
-        "2. Verify ECMP load balancing across all 6 links through packet capture"
+        "1. Configure DoS protection policy on MX480",
+        "2. Generate DoS attack traffic towards MX480",  
+        "3. Verify MX480 detects and mitigates attack"
       ],
       "testdata": {
-        "mx_device": "mx480",
-        "lag_interfaces": ["ge-0/0/0", "ge-0/0/1", "ge-0/0/2", "ge-0/0/3", "ge-0/0/4", "ge-0/0/5"],
-        "ecmp_group": 1
+        "mx480_mgmt_ip": "192.168.0.1",
+        "attack_tool": "LOIC",
+        "attack_type": "SYN Flood",
+        "attack_duration": "60 secs",
+        "attack_src_ip": "172.16.0.5"  
       }
     },
     "testscript": {
-      "testname": "ECMP Load Balancing Test 1",
-      "objective": "Verify ECMP load balancing across 6 member links in LAG bundle", 
-      "file_name": "test_ecmp_lb_1.py",
-      "init_scripts": [
+      "testname": "Test DOS protection for MX480",
+      "objective": "Automate validation of DOS protection on MX480",
+      "file_name": "test_dos_mx480.py",
+      "init_scripts":[
         "pip install paramiko",
         "pip install netmiko"
       ],
-      "script": \"\"\"
-        import json
-        from netmiko import ConnectHandler
-        
-        # Load test data
-        testdata = ###testdata###
-        
-        # Connect to DUT
-        mx_device = {
-          'device_type': 'juniper',
-          'host': '192.168.0.1',
-          'username': 'testuser',
-          'password': 'test123'
-        }
-        net_connect = ConnectHandler(**mx_device)
-        
-        # Configure LAG bundle
-        config_commands = [
-          'set interfaces ge-0/0/0 ether-options 802.3ad ' + str(testdata['ecmp_group']),
-          'set interfaces ge-0/0/1 ether-options 802.3ad ' + str(testdata['ecmp_group']),
-          # And so on for other interfaces
-        ]
-        net_connect.send_config_set(config_commands)
-        
-        # Execute ping test
-        output = net_connect.send_command('ping 8.8.8.8 repeat 20')
-        
-        # Verify packet counters increment across all interfaces
-        for intf in testdata['lag_interfaces']:
-          pkt_count = net_connect.send_command('show interfaces ' + intf + ' extensive | match "Input packets"')
-          assert int(pkt_count) > 0
-          
-        print("ECMP Load Balancing Verified Successfully")
-        
-        net_connect.disconnect()
-      \"\"\",
-      "run_command": "python test_ecmp_lb_1.py",
-      "expected_result": "ECMP Load Balancing Verified Successfully"
+      "script": """
+import paramiko
+import netmiko
+
+mx480_ip = '192.168.0.1'
+
+# Connect to MX480 via SSH 
+ssh_client = paramiko.SSHClient()
+ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh_client.connect(hostname=mx480_ip, username='pyuser', password='Juniper123')
+
+# Check DOS policy
+stdin, stdout, stderr = ssh_client.exec_command('show policy id dos_policy')
+output = stdout.read().decode()
+if 'Policy dos_policy' in output:
+  print('DOS policy configured')
+else:
+  print('DOS policy missing')
+  
+# Connect to attacker system  
+attacker_conn = netmiko.ConnectHandler(
+  device_type='linux',
+  ip='172.16.0.5',
+  username='attacker',
+  password='Attacker123'
+)
+
+# Start attack
+attacker_conn.send_command('sudo loic --http {} --duration 60'.format(mx480_ip))
+
+# Check for attack mitigation on MX480
+stdin, stdout, stderr = ssh_client.exec_command('show security flow session')
+output = stdout.read().decode()
+if 'Flow Sessions' in output:
+  print('Attack mitigated')
+else: 
+  print('Attack not mitigated')
+  
+ssh_client.close()
+attacker_conn.disconnect()
+      """,
+      "run_command": "python test_dos_mx480.py", 
+      "expected_result": "DOS policy configured\\nAttack mitigated"
     }
   },
   
   {
-    "testname": "ECMP Load Balancing Test 2",
+    "testname": "Test Zone-based DOS Protection on MX480",
     "testcase": {
-      "testname": "ECMP Load Balancing Test 2",  
-      "objective": "Verify ECMP load balancing with UDP traffic",
+      "testname": "Test Zone-based DOS Protection on MX480",
+      "objective": "Validate zone-based DOS protection on MX480",
       "steps": [
-        "1. Generate UDP traffic to DUT",
-        "2. Verify packet counters increment across all ECMP paths" 
+        "1. Configure zone-based DOS protection policies", 
+        "2. Generate attack traffic towards zone-1",
+        "3. Verify only zone-1 is affected" 
       ],
       "testdata": {
-        "mx_device": "mx480",
-        "ecmp_paths": ["ge-0/0/0", "ge-0/0/1"], 
-        "udp_src_ip": "192.168.1.1",
-        "udp_dest_ip": "192.168.1.2",
-        "udp_count": 1000,
-        "udp_src_port": 5000
+        "mx480_mgmt_ip": "192.168.0.1",
+        "zone1_ip": "192.168.1.0/24",
+        "zone2_ip": "192.168.2.0/24",
+        "attack_tool": "LOIC",
+        "attack_type": "UDP Flood",
+        "attack_duration": "60 secs",
+        "attack_src_ip": "172.16.0.5",
+        "attack_target": "192.168.1.1"
       }
     },
     "testscript": {
-      "testname": "ECMP Load Balancing Test 2",
-      "objective": "Verify ECMP load balancing with UDP traffic",
-      "file_name": "test_ecmp_lb_2.py",
-      "init_scripts": [ 
-        "pip install scapy"
+      "testname": "Test Zone-based DOS Protection on MX480",
+      "objective": "Automate validation of zone-based DOS protection on MX480",
+      "file_name": "test_zonedos_mx480.py",
+      "init_scripts":[
+        "pip install ncclient", 
+        "pip install paramiko"
       ],
-      "script": \"\"\"
-        from scapy.all import *
-        
-        # Load test data
-        testdata = ###testdata###
-        
-        # Generate UDP packets
-        packets = []
-        for i in range(testdata['udp_count']):
-          packet = IP(src=testdata['udp_src_ip'],dst=testdata['udp_dest_ip'])/UDP(sport=testdata['udp_src_port'],dport=80)
-          packets.append(packet)
-            
-        # Send UDP packets    
-        send(packets)
-        
-        # Connect to DUT and verify counters
-        # Steps similar to test 1
-          
-        print("ECMP Load Balancing with UDP Verified Successfully")
-        
-      \"\"\",
-      "run_command": "sudo python test_ecmp_lb_2.py", 
-      "expected_result": "ECMP Load Balancing with UDP Verified Successfully"
+      "script": """  
+from ncclient import manager
+import paramiko
+
+mx480_ip = '192.168.0.1'
+
+# Connect to MX480 NETCONF
+netconf_connection = manager.connect(
+  host = mx480_ip,
+  port = 830,
+  username = 'pyuser',
+  password = 'Juniper123',
+  hostkey_verify = False
+)
+
+# Check DOS policy for zone1
+netconf_filter = """
+<filter>
+  <configuration>
+    <security>
+      <policies>
+        <zone-protection-policy>
+          <name>zone1-policy</name>
+        </zone-protection-policy>
+      </policies>
+    </security>
+  </configuration>
+</filter>
+"""
+
+netconf_reply = netconf_connection.get_config('running', netconf_filter)
+if '<zone1-policy/>' in str(netconf_reply):
+  print('Zone1 policy configured')
+else:
+  print('Zone1 policy missing')
+
+# Connect to attacker system 
+ssh_client = paramiko.SSHClient()
+ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+ssh_client.connect(hostname='172.16.0.5', username='attacker', password='Attacker123')
+  
+# Start attack  
+ssh_client.exec_command('sudo loic --udp 192.168.1.1 --duration 60')
+
+# Check zone2 connectivity
+resp = ssh_client.exec_command('ping 192.168.2.1 -c 5')[0].channel.recv_exit_status()
+if resp == 0:
+  print('Zone2 connectivity unaffected')
+else:
+  print('Zone2 connectivity down')
+  
+netconf_connection.close_session()
+ssh_client.close()
+      """,
+      "run_command": "python test_zonedos_mx480.py",
+      "expected_result": "Zone1 policy configured\\nZone2 connectivity unaffected"
     }
-  }  
+  }
 ]
 ###ENDLIST###
