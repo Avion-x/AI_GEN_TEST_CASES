@@ -1,243 +1,292 @@
  ###STARTLIST###
 [
+{"testname": "Test Bootup", 
+"testcase": {
+  "testname": "Test Bootup",
+  "objective": "Validate device boots up successfully", 
+  "steps": [
+    "Power on device",
+    "Check console prints 'booting complete'", 
+    "Check device is pingable"
+  ],
+  "test_data": {
+    "device_ip": "192.168.0.1",
+    "console_ip": "192.168.0.2"
+  }
+},
+"testscript": {
+  "testname": "Test Bootup",
+  "objective": "Validate device boots up successfully",
+  "file_name": "test_bootup.py",
+  "init_scripts": [
+    "pip install paramiko",
+    "pip install ping3"
+  ],
+  "script": \"\"\"
+import paramiko
+import ping3
+
+DEVICE_IP = '192.168.0.1'
+CONSOLE_IP = '192.168.0.2'
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(CONSOLE_IP, username='admin', password='admin')
+
+stdin, stdout, stderr = client.exec_command('reboot')
+
+while True:
+  line = stdout.readline()
+  if 'booting complete' in line:
+    break
+
+print('Booting complete message received')
+
+response = ping3.ping(DEVICE_IP)
+if response == False:
+  print('Failed to ping device')
+  exit(1)
+
+print('Ping successfull')
+\"\"\",
+"run_command": "python test_bootup.py",
+"expected_result": "Ping successfull"  
+}
+},
+{"testname": "Test Interface Status",
+"testcase": {
+  "testname": "Test Interface Status",  
+  "objective": "Validate interface status after reboot",
+  "steps": [
+    "Reboot device",
+    "Check interface xe-0/0/0 is up",
+    "Check interface xe-0/0/1 is down" 
+  ],
+  "test_data": {
+    "device_ip": "192.168.0.1",
+    "console_ip": "192.168.0.2",
+    "interfaces": [
+      {"name": "xe-0/0/0", "status": "up"},
+      {"name": "xe-0/0/1", "status": "down"}
+    ]
+  }
+},  
+"testscript": {
+  "testname": "Test Interface Status",
+  "objective": "Validate interface status after reboot",  
+  "file_name": "test_interface_status.py",
+  "init_scripts": [
+    "pip install jnpr.junos",
+    "pip install ping3"
+  ],
+  "script": \"\"\"  
+from jnpr.junos import Device
+from pprint import pprint
+import ping3
+
+DEVICE_IP = '192.168.0.1'
+CONSOLE_IP = '192.168.0.2'
+INTERFACES = [
+  {'name': 'xe-0/0/0', 'status': 'up'},
+  {'name': 'xe-0/0/1', 'status': 'down'}
+]
+
+dev = Device(host=DEVICE_IP, user='lab', password='lab123')
+dev.open()
+
+pprint(dev.facts)
+
+for intf in INTERFACES:
+  status = dev.cli(command='show interfaces ' + intf['name'] + ' | match "Link is "').strip()
+  if intf['status'] in status:
+    print(f"{intf['name']} interface has expected status: {status}")
+  else:
+    print(f"{intf['name']} interface has unexpected status: {status}")
+    exit(1)
+
+print("All interfaces have expected status")
+\"\"\",
+"run_command": "python test_interface_status.py", 
+"expected_result": "All interfaces have expected status"
+}
+}]
+###ENDLIST### ###STARTLIST###
+[
   {
-    "testname": "Bootup Test Case 1",
+    "testname": "Bootup Port Mapping", 
     "testcase": {
-      "testname": "Bootup Test Case 1", 
-      "objective": "Verify basic bootup process completes successfully",
+      "testname": "Bootup Port Mapping",
+      "objective": "Verify all ports are mapped and configured correctly during bootup.",
       "steps": [
-        "Device powers on",
-        "POST completes successfully", 
-        "Boot loader starts and loads image",
-        "Image boots up and basic configuration is loaded",
-        "Device transitions to operational state"
+        "1. Record port mappings from configuration file.", 
+        "2. Check operational state of each port after bootup.",
+        "3. Verify port mappings match configuration."
       ],
       "test_data": {
-        "device_under_test": "MX480"
+        "port_mappings": {
+          "ge-0/0/0": "ISP1",
+          "ge-0/0/1": "ISP2",
+          "ge-0/0/2": "ServerNetwork" 
+        }
       }
     },
     "testscript": {
-      "testname": "Bootup Test Case 1",
-      "objective": "Automated script to validate bootup test case 1",
-      "file_name": "bootup_test_1.py",
-      "init_scripts": "```python\nimport unittest\n```",
-      "script": "```python\nclass TestBootup(unittest.TestCase):\n\n    def test_bootup(self):\n        # Steps to validate bootup process\n        print(\"Validated bootup process successfully\") \n        self.assertTrue(True)\n\nif __name__ == '__main__':\n    unittest.main()\n```",
-      "run_command": "python bootup_test_1.py",
-      "expected_result": "Bootup process validation passed"
+      "testname": "Bootup Port Mapping",
+      "objective": "Verify all ports are mapped and configured correctly during bootup using Python", 
+      "file_name": "test_bootup_portmapping.py",
+      "init_scripts": [
+        "import json",
+        "import napalm"
+      ],
+      "script": """
+        import json
+        from napalm import get_network_driver
+        
+        test_data = json.loads('''{test_data}''')
+        
+        driver = get_network_driver('junos')
+        device = driver(hostname='mx480', username='testuser', password='test123')
+        device.open()
+        
+        port_mappings = device.get_interfaces()
+        for interface,target in test_data['port_mappings'].items():
+          assert port_mappings[interface]['description'] == target
+          
+        device.close()
+      """,
+      "run_command": "python test_bootup_portmapping.py", 
+      "expected_result": "All assertions pass. Port mappings match configuration."
     }
   },
+
+  {
+    "testname": "Bootup IP Address",
+    "testcase": {
+      "testname": "Bootup IP Address",
+      "objective": "Verify device IP address is correctly configured during bootup",
+      "steps": [
+        "1. Record configured IP address.",
+        "2. Check IP address after device bootup.", 
+        "3. Verify IP address matches configuration."
+      ],
+      "test_data": {
+        "configured_ip": "192.168.1.1"  
+      }
+    },
+    "testscript": {
+      "testname": "Bootup IP Address",
+      "objective": "Verify device IP is correctly configured during bootup using Python",
+      "file_name": "test_bootup_ipaddr.py",
+      "init_scripts": [ 
+        "import json",
+        "from napalm import get_network_driver"
+      ],
+      "script": """
+        import json
+        from napalm import get_network_driver
+        
+        test_data = json.loads('''{test_data}''')
+        
+        driver = get_network_driver('junos')
+        device = driver(hostname='mx480', username='testuser', password='test123')
+        device.open()
+        
+        assert device.get_facts()['fqdn'] == test_data['configured_ip']
+        
+        device.close()
+      """,
+      "run_command": "python test_bootup_ipaddr.py",
+      "expected_result": "Assertion passes. IP address matches configuration."
+    }
+  }
+]
+###ENDLIST### ###STARTLIST###
+[
+  {
+    "testname": "Bootup Test Case 1", 
+    "testcase": {
+      "testname": "Bootup Test Case 1",
+      "objective": "Verify all ports boot up successfully", 
+      "steps": [
+        "Connect all ports to test devices", 
+        "Power on the device", 
+        "Verify link status LED for all ports light up within 60 seconds"
+      ],
+      "test_data": {
+        "device_under_test": "Juniper MX480",
+        "number_of_ports": "48",
+        "port_speed": "10GbE"  
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Test Script 1",
+      "objective": "Automated script to validate all ports are up after boot",
+      "file_name": "bootup_test_1.py",
+      "init_scripts": [
+        "pip install junos-eznc",
+        "pip install pytest",  
+        """
+        import junos
+        import pytest
+        
+        @pytest.fixture(scope="module")
+        def test_device():
+          device = Device(host='192.168.0.1', user='testuser', password='test123')
+          yield device  
+          device.close()
+          
+        def test_port_status(test_device):
+          for port in range(1,49):
+            assert test_device.port[port].is_up() == True
+        """
+      ],
+      "run_command": "pytest bootup_test_1.py",
+      "expected_result": "All 48 ports up status validated successfully" 
+    }
+  },
+  
   {
     "testname": "Bootup Test Case 2",
     "testcase": {
       "testname": "Bootup Test Case 2",
-      "objective": "Verify bootup with invalid image fails safely",
+      "objective": "Verify specific ports boot up successfully",
       "steps": [
-        "Device powers on", 
-        "POST completes successfully",
-        "Boot loader starts but fails to load invalid image",
-        "Device remains in safe mode for recovery"
+        "Connect ports 1, 5, 10, 15, 20, 25, 30, 35, 40, 45 to test devices",
+        "Power on the device",
+        "Verify link status LED for above ports light up within 60 seconds"  
       ],
       "test_data": {
-        "device_under_test": "MX480",
-        "invalid_image": "corrupt_image.img" 
+        "device_under_test": "Juniper MX480",
+        "ports_to_test": [1, 5, 10, 15, 20, 25, 30, 35, 40, 45],
+        "port_speed": "10GbE"
       }
     },
     "testscript": {
-      "testname": "Bootup Test Case 2",
-      "objective": "Automated script to validate bootup test case 2",
-      "file_name": "bootup_test_2.py", 
-      "init_scripts": "```python\nimport unittest\n```",
-      "script": "```python \nclass TestBootup(unittest.TestCase):\n\n    def test_bootup_invalid_image(self):\n        # Steps to validate bootup failure with invalid image\n        print(\"Bootup failed safely with invalid image\")\n        self.assertTrue(True)\n\nif __name__ == '__main__':\n    unittest.main()\n```",
-      "run_command": "python bootup_test_2.py",
-      "expected_result": "Bootup failure validation passed"
-    }
-  }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "Port Mapping Test",
-    "testcase": {
-      "testname": "Port Mapping Test", 
-      "objective": "Verify all ports on the device are mapped and configured correctly",
-      "steps": [
-        "Check port mapping table against expected config",
-        "Verify all ports are enabled and operational", 
-        "Validate port addresses match assigned IPs"
+      "testname": "Bootup Test Script 2",
+      "objective": "Automated script to validate selected ports are up after boot",
+      "file_name": "bootup_test_2.py",
+      "init_scripts": [  
+        "pip install junos-eznc",
+        "pip install pytest",
+        """
+        import junos
+        import pytest
+        
+        ports_to_test = [1,5,10,15,20,25,30,35,40,45]
+        
+        @pytest.fixture(scope="module")
+        def test_device():
+          device = Device(host='192.168.0.1', user='testuser', password='test123')
+          yield device
+          device.close()
+          
+        def test_port_status(test_device):
+          for port in ports_to_test:
+            assert test_device.port[port].is_up() == True
+        """
       ],
-      "test_data": {
-        "port_map": {
-          "ge-0/0/0": "192.168.0.1",
-          "ge-0/0/1": "192.168.0.2" 
-        },
-        "expected_ports": ["ge-0/0/0", "ge-0/0/1"]  
-      }
-    },
-    "testscript": {
-      "testname": "Port Mapping Test",
-      "objective": "Verify port mappings and IPs match expected config",
-      "file_name": "test_port_mapping.py",
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install junos-eznc"
-      ],
-      "script": \"\"\"
-import netmiko
-from junos import Device
-
-port_map = {
-  "ge-0/0/0": "192.168.0.1", 
-  "ge-0/0/1": "192.168.0.2"
-}
-
-expected_ports = ["ge-0/0/0", "ge-0/0/1"]
-
-dev = Device(host='mx480.test.net', user='testuser', password='test123')
-dev.open()
-
-configured_ports = dev.cli('show interfaces terse')
-configured_ips = dev.cli('show interface terse | match 192.168')
-
-assert configured_ports == expected_ports, "Configured ports do not match expected" 
-assert configured_ips == port_map.values(), "Port IPs do not match mapping"
-      \"\"\",
-      "run_command": "python test_port_mapping.py",
-      "expected_result": "All assertions pass, port mappings and IPs are configured correctly"
-    }
-  },
-
-  {
-    "testname": "Bootup Validation Test", 
-    "testcase": {
-      "testname": "Bootup Validation Test",
-      "objective": "Verify device bootup process completes successfully",
-      "steps": [
-        "Power on device",
-        "Verify bootup logs indicate all processes started successfully",
-        "Validate no errors or failure messages in logs" 
-      ],
-      "test_data": {
-        "expected_log_msg": "Device bootup completed successfully"  
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Validation Test",
-      "objective": "Confirm successful bootup by checking logs",
-      "file_name": "test_bootup.py", 
-      "init_scripts": [
-        "pip install paramiko"
-      ],
-      "script": \"\"\"  
-import paramiko
-import re
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(hostname='mx480.test.net', username='testuser', password='test123')
-
-bootup_log = ssh.exec_command('show log messages | match bootup')
-
-assert re.search('Device bootup completed successfully', bootup_log), "Unexpected bootup log message"
-      \"\"\",
-      "run_command": "python test_bootup.py",
-      "expected_result": "Bootup log message assert passes, bootup completed successfully"
-    }
-  }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "Port Bootup Test", 
-    "testcase": {
-      "testname": "Port Bootup Test",
-      "objective": "Verify all ports on the MX482 boot up correctly", 
-      "steps": [
-        "Connect all ports to traffic generators", 
-        "Power on device",
-        "Verify link lights come up on all ports within 60 seconds"
-      ]
-    },
-    "testscript": {
-      "testname": "Port Bootup Test",
-      "objective": "Verify all ports on the MX482 boot up correctly",
-      "file_name": "port_bootup_test.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
-      ],
-      "script": """
-import paramiko
-import time
-
-DEVICE_IP = '10.1.1.1'
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
-
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
-
-print("Waiting 60 seconds for ports to boot up...")
-time.sleep(60)
-
-for port in range(1, 49):
-  cmd = f"show interfaces ge-0/0/{port} | match Link-level"
-  stdin, stdout, stderr = client.exec_command(cmd)
-  link_status = stdout.read().decode().strip()
-  
-  if "Up" in link_status:
-    print(f"Port ge-0/0/{port} booted up successfully")
-  else:
-    print(f"FAILED: Port ge-0/0/{port} did not boot up")
-    
-client.close()
-      """,
-      "run_command": "python port_bootup_test.py",
-      "expected_result": "All ports print 'booted up successfully', no 'FAILED' messages"
-    }
-  },
-  {
-    "testname": "Management Port Bootup",
-    "testcase": {
-      "testname": "Management Port Bootup",
-      "objective": "Verify the management port boots up correctly",
-      "steps": [
-        "Connect management port to network",
-        "Power on device", 
-        "Ping device management IP within 60 seconds of bootup"
-      ]
-    },
-    "testscript": {
-      "testname": "Management Port Bootup",
-      "objective": "Verify the management port boots up correctly",
-      "file_name": "management_port_bootup.py", 
-      "init_scripts": [
-        "pip install paramiko"
-      ],
-      "script": """  
-import paramiko
-import time
-
-DEVICE_IP = '10.1.1.1'
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
-
-client = paramiko.SSHClient()
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-print("Waiting 60 seconds for management port to boot up...")
-time.sleep(60)
-
-try:
-  client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
-  print("Management port booted up successfully")
-except:
-  print("FAILED: Could not connect to management port")
-
-client.close()
-      """,
-      "run_command": "python management_port_bootup.py",
-      "expected_result": "Prints 'Management port booted up successfully'"  
+      "run_command": "pytest bootup_test_2.py",
+      "expected_result": "All 10 selected ports up status validated successfully"
     }
   }
 ]
