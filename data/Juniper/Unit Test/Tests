@@ -1,277 +1,306 @@
  ###STARTLIST###
 [
   {
-    "testname": "Bootup Validation Test", 
+    "testname": "Bootup Test 1 - Verify Bootup Completes", 
     "testcase": {
-      "testname": "Bootup Validation Test",
-      "objective": "Validate successful bootup of MX480 device",
+      "testname": "Bootup Test 1 - Verify Bootup Completes",
+      "objective": "Verify the device boots up successfully and reaches operational state",
       "steps": [
         "Power on the device",
-        "Verify device displays 'Juno Ready' message on console within 120 seconds", 
-        "Verify all fans spin up on power on",
-        "Verify all LEDs light up in expected sequence"        
+        "Verify the system POST completes successfully", 
+        "Verify the system boots up to operational state"
       ],
       "test_data": {
-        "device_under_test": "MX480"
+        "device_type": "MX480",
+        "os_version": "Junos 20.4R1"  
       }
     },
-    
     "testscript": {
-      "testname": "Bootup Validation Test",
-      "objective": "Automate validation of MX480 successful bootup",
-      "file_name": "test_mx480_bootup.py",
-      "init_scripts": [
-        "import unittest",
-        "from mocks import MockMX480"
-      ],
+      "testname": "Bootup Test 1 - Verify Bootup Completes",
+      "objective": "Automated script to verify bootup test passes",
+      "file_name": "test_bootup1.py",
+      "init_scripts": "pip install paramiko",
       "script": """
-        class TestMX480Bootup(unittest.TestCase):
-          def test_bootup(self):
-            device = MockMX480()
-            device.power_on()
-            self.assertEqual(device.get_console_output(), 'Juno Ready')
-            self.assertTrue(device.all_fans_spinning()) 
-            self.assertEqual(device.get_led_sequence(), ['PWR', 'STATUS', 'ALARMS'])
+        import paramiko
+        
+        ip = '10.1.1.1'
+        username = 'admin' 
+        password = '123456'
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(ip, username=username, password=password)
+        
+        channel = client.invoke_shell()
+        channel.send('cli\n')
+        channel.send('show system status\n')
+        output = channel.recv(10000)
+        
+        if 'Operational' in output.decode('utf-8'):
+          print('Test Passed. System is operational.')
+        else:
+          print('Test Failed. System is not operational.')
+          
+        client.close()
       """,
-      "run_command": "python test_mx480_bootup.py",
-      "expected_result": "OK"
+      "run_command": "python test_bootup1.py",
+      "expected_result": "Test Passed. System is operational."
     }
   },
   
   {
-    "testname": "Bootup Timing Test",
+    "testname": "Bootup Test 2 - Verify Interfaces Up",
     "testcase": {
-      "testname": "Bootup Timing Test",  
-      "objective": "Validate bootup timing is within expectations",
+      "testname": "Bootup Test 2 - Verify Interfaces Up",
+      "objective": "Verify all expected interfaces come up after bootup",
       "steps": [
-        "Power on the device", 
-        "Record time when power applied",
-        "Record time when 'Juno Ready' message appears",
-        "Verify bootup time is less than 120 seconds"
+        "Power on the device",
+        "Verify bootup completes successfully",
+        "Verify all expected interfaces are operationally up"   
       ],
       "test_data": {
-        "device_under_test": "MX480"
+        "device_type": "MX480",
+        "os_version": "Junos 20.4R1",
+        "interfaces": ["ge-0/0/0", "ge-0/0/1"] 
       }
     },
-    
     "testscript": {
-      "testname": "Bootup Timing Test",
-      "objective": "Automate validation of MX480 bootup timing",
-      "file_name": "test_mx480_bootup_timing.py", 
+      "testname": "Bootup Test 2 - Verify Interfaces Up",
+      "objective": "Automated script to verify interfaces up after boot",
+      "file_name": "test_bootup2.py",
+      "init_scripts": "pip install paramiko",
+      "script": """
+        import paramiko
+        
+        ip = '10.1.1.1'
+        username = 'admin'
+        password = '123456'
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(ip, username=username, password=password)
+        
+        channel = client.invoke_shell()
+        channel.send('cli\n')
+        channel.send('show interfaces terse\n')
+        output = channel.recv(10000)
+        
+        interfaces = ['ge-0/0/0', 'ge-0/0/1']
+        interface_status = {}
+        
+        for line in output.decode('utf-8').split('\\n'):
+          words = line.split()
+          if len(words) >= 1 and words[0] in interfaces:
+            interface_status[words[0]] = words[1]
+            
+        failed = []
+        
+        for interface in interfaces:
+          if interface_status[interface] != 'up':
+            failed.append(interface)
+            
+        if len(failed) > 0:
+          print('Test Failed. Interfaces down: ' + str(failed))
+        else:
+          print('Test Passed. All interfaces up.')
+          
+        client.close()
+      """,
+      "run_command": "python test_bootup2.py",  
+      "expected_result": "Test Passed. All interfaces up."
+    }
+  }
+]
+###ENDLIST### Here are 2 unit test cases with Python test scripts for bootup process focusing on ports and address verification for Juniper's MX481 router:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test Port mappings", 
+    "testcase": {
+      "testname": "Test Port mappings",
+      "objective": "Verify all ports are mapped correctly during bootup", 
+      "steps": [
+        "Validate port ge-0/0/0 is mapped to address 192.168.1.1",
+        "Validate port ge-0/0/1 is mapped to address 192.168.1.2", 
+        "Validate port ge-1/0/0 is mapped to address 192.168.2.1"
+      ],
+      "test_data": {
+        "ports": [
+          {"name": "ge-0/0/0", "ip": "192.168.1.1"}, 
+          {"name": "ge-0/0/1", "ip": "192.168.1.2"},
+          {"name": "ge-1/0/0", "ip": "192.168.2.1"}
+        ]  
+      }
+    },
+    "testscript": {
+      "testname": "Test Port mappings",
+      "objective": "Verify all ports are mapped correctly during bootup",
+      "file_name": "test_port_mappings.py",
       "init_scripts": [
-        "import unittest",
-        "from datetime import datetime",
-        "from mocks import MockMX480"
+        "pip install junos-eznc", 
+        "pip install pytest"
       ],
       "script": """
-        class TestMX480BootupTiming(unittest.TestCase):
-          def test_bootup_timing(self):
-            device = MockMX480()
-            start_time = datetime.now()
-            device.power_on() 
-            end_time = datetime.now()
-            bootup_time = (end_time - start_time).total_seconds()
-            self.assertLess(bootup_time, 120)
+        import json
+        from jnpr.junos import Device
+
+        test_data = json.load(open('test_data.json'))
+        
+        dev = Device(host='192.168.1.10', user='netconf', password='password')
+        dev.open()
+        
+        for port in test_data['ports']:
+          assert dev.cli(f'show interfaces {port["name"]}').find(port['ip']) != -1
+        dev.close()
       """,
-      "run_command": "python test_mx480_bootup_timing.py",
-      "expected_result": "OK"
+      "run_command": "python test_port_mappings.py",
+      "expected_result": "All tests should pass"  
+    }
+  },
+
+  {
+    "testname": "Test IP address verification",
+    "testcase": {
+      "testname": "Test IP address verification",
+      "objective": "Verify all interfaces have correct IP addresses after bootup",
+      "steps": [
+        "Validate interface ge-0/0/0 has IP 192.168.1.1", 
+        "Validate interface ge-0/0/1 has IP 192.168.1.2",
+        "Validate interface ge-1/0/0 has IP 192.168.2.1"
+      ],  
+      "test_data": {
+        "interfaces": [
+          {"name": "ge-0/0/0", "ip": "192.168.1.1"},
+          {"name": "ge-0/0/1", "ip": "192.168.1.2"},
+          {"name": "ge-1/0/0", "ip": "192.168.2.1"}
+        ]
+      }
+    },
+    "testscript": {
+      "testname": "Test IP address verification",
+      "objective": "Verify all interfaces have correct IP addresses after bootup",
+      "file_name": "test_ip_verification.py",
+      "init_scripts": [
+        "pip install junos-eznc",
+        "pip install pytest"  
+      ],
+      "script": """
+        import json
+        from jnpr.junos import Device
+        
+        test_data = json.load(open('test_data.json'))
+        
+        dev = Device(host='192.168.1.10', user='netconf', password='password')
+        dev.open()
+        
+        for intf in test_data['interfaces']:
+          assert dev.cli(f'show interfaces {intf["name"]}').find(intf['ip']) != -1
+        dev.close()
+      """,
+      "run_command": "python test_ip_verification.py",
+      "expected_result": "All tests should pass"
     }
   }
 ]
 ###ENDLIST### ###STARTLIST###
 [
-{
-  "testname": "Port Mapping Verification", 
-  "testcase": {
-    "testname": "Port Mapping Verification",
-    "objective": "Verify all configured ports are mapped correctly",
-    "steps": [
-      "Retrieve port mapping configuration", 
-      "Verify all expected ports are present",
-      "Ensure no incorrect or extra ports are mapped"
-    ],
-    "test_data": {
-      "expected_ports": [
-        "ge-0/0/0", 
-        "ge-0/0/1",
-        "ge-0/0/2" 
-      ]
-    }
-  },
-
-  "testscript": {
-    "testname": "Port Mapping Verification",
-    "objective": "Verify port mappings using Python",  
-    "file_name": "test_port_mapping.py",
-    "init_scripts": [
-      "pip install netmiko",
-      "pip install napalm"  
-    ],
-    "script": \"\"\"
-import netmiko
-import napalm
-
-driver = napalm.get_network_driver('junos')
-device = driver('192.168.0.1', 'myuser', 'mypassword')
-
-device.open()
-mappings = device.get_mac_address_table()
-device.close()
-
-expected_ports = ['ge-0/0/0', 'ge-0/0/1', 'ge-0/0/2']
-
-for port in expected_ports:
-  assert port in mappings
-\"\"\",
-    "run_command": "python test_port_mapping.py",
-    "expected_result": "All expected ports are mapped correctly"
-  }
-},
-
-{
-  "testname": "IP Address Validation",
-  "testcase": {
-    "testname": "IP Address Validation",
-    "objective": "Confirm device IP addresses match configuration",
-    "steps": [
-      "Retrieve configured IP addresses",
-      "Retrieve operational IP addresses", 
-      "Compare configuration and operation IP addresses"
-    ],
-    "test_data": {
-      "configured_ips": ["192.168.0.1", "10.0.0.1"],
-      "interface_names": ["ge-0/0/0", "ge-0/0/1"]  
-    }
-  },
-
-  "testscript": {
-    "testname": "IP Address Validation",
-    "objective": "Validate IP address configuration using Python",
-    "file_name": "test_ip_addresses.py", 
-    "init_scripts": [
-      "pip install napalm"
-    ],
-    "script": \"\"\"  
-import napalm
-
-driver = napalm.get_network_driver('junos')
-device = driver('192.168.0.1', 'myuser', 'mypassword')
-
-device.open()
-configured_ips = ['192.168.0.1', '10.0.0.1']
-interface_names = ['ge-0/0/0', 'ge-0/0/1']
-
-ip_addresses = device.get_facts()['interface_list']
-
-for ip, interface in zip(configured_ips, interface_names):
-  assert ip_addresses[interface]['ipv4'] == ip
-  
-device.close()
-\"\"\",
-    "run_command": "python test_ip_addresses.py",
-    "expected_result": "IP addresses match configuration"
-  }
-}
-]
-###ENDLIST### ###STARTLIST###
-[
   {
-    "testname": "Port Bootup Check", 
+    "testname": "Test Port Status During Bootup", 
     "testcase": {
-      "testname": "Port Bootup Check",
-      "objective": "Verify all ports on the MX481 device boot up successfully",
+      "testname": "Test Port Status During Bootup",
+      "objective": "Verify all ports on the MX481 are down during bootup process", 
       "steps": [
-        "Connect each port to a traffic generator", 
-        "Power on the device",
-        "Verify link light is solid green on all ports"
+        "1. Power on the MX481",
+        "2. Check status of all ports and verify they are down"
       ],
       "test_data": {
         "device_under_test": "Juniper MX481",
         "number_of_ports": "48",
-        "traffic_generator": "Spirent TestCenter"
+        "expected_port_status": "down"  
       }
     },
     "testscript": {
-      "testname": "Port Bootup Check",
-      "objective": "Automated test script to validate all ports are up on MX481 device",
-      "file_name": "test_mx481_ports.py",
+      "testname": "Test Port Status During Bootup",
+      "objective": "Verify all ports on the MX481 are down during bootup process",
+      "file_name": "test_port_status.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
+        "pip install netmiko",
+        "pip install jinja2"
       ],
-      "script": """
-      import paramiko
-      import time
-
-      IP = '192.168.0.1'
-      USERNAME = 'admin'
-      PASSWORD = 'password123'
-
-      client = paramiko.SSHClient()
-      client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-      client.connect(IP, username=USERNAME, password=PASSWORD)
-
-      for i in range(1, 49):
-          cmd = f'show interfaces ge-0/0/{i} | display xml'
-          stdin, stdout, stderr = client.exec_command(cmd)
-          output = stdout.read()
-          if 'link-state'>down<' in output:
-              print(f'Port ge-0/0/{i} is DOWN')
-          else:
-              print(f'Port ge-0/0/{i} is UP')
-
-      client.close()
-      """,
-      "run_command": "python test_mx481_ports.py",
-      "expected_result": "All 48 ports print as UP"
+      "script": \"\"\"
+        import netmiko
+        from jinja2 import Template
+        
+        device = {
+          'device_type': 'juniper_junos',
+          'host': 'mx481_mgmt_ip',
+          'username': 'testuser',
+          'password': 'test123'
+        }
+        
+        connection = netmiko.ConnectHandler(**device)
+        
+        port_status = connection.send_command('show interfaces terse')
+        
+        down_ports = 0
+        for line in port_status.splitlines():
+          if 'down' in line:
+            down_ports += 1
+            
+        assert down_ports == 48, "Not all ports are down during bootup"
+      \"\"\",
+      "run_command": "python test_port_status.py",
+      "expected_result": "All 48 ports are down during bootup"
     }
   },
-
+  
   {
-    "testname": "Bootup Time Check",
+    "testname": "Test Port Operational Status",
     "testcase": {
-      "testname": "Bootup Time Check",  
-      "objective": "Verify bootup time of MX481 is within 60 seconds",
+      "testname": "Test Port Operational Status",
+      "objective": "Verify all ports on MX481 are operationally up after bootup completes",
       "steps": [
-        "Power off the device",
-        "Start a timer",
-        "Power on the device", 
-        "Stop timer when login prompt appears",
-        "Verify timer is less than 60 seconds"
+        "1. Allow MX481 to complete bootup process",
+        "2. Check operational status of all ports and verify they are up" 
       ],
       "test_data": {
-        "device": "Juniper MX481",
-        "max_bootup_time": "60 seconds"  
+        "device_under_test": "Juniper MX481",
+        "number_of_ports": "48",
+        "expected_port_status": "up"
       }
     },
     "testscript": {
-      "testname": "Bootup Time Check",
-      "objective": "Automated script to validate MX481 bootup time",
-      "file_name": "test_mx481_bootup.py",
-      "init_scripts": [ 
-        "pip install datetime"
+      "testname": "Test Port Operational Status",
+      "objective": "Verify all ports on MX481 are operationally up after bootup completes", 
+      "file_name": "test_port_op_status.py",
+      "init_scripts": [
+        "pip install netmiko",
+        "pip install jinja2"
       ],
-      "script": """
-      from datetime import datetime
-
-      print('Powering on device...')
-      power_on_time = datetime.now()
-
-      print('Waiting for device to boot...')
-
-      print('Device booted! Logging in...')
-      login_time = datetime.now()
-
-      bootup_time = login_time - power_on_time
-      print(f'Bootup time: {bootup_time.seconds} seconds')
-
-      if bootup_time.seconds > 60:
-          print('ERROR: Bootup time exceeded 60 seconds')
-      else:
-          print('SUCCESS: Bootup time within 60 seconds')
-      """,
-      "run_command": "python test_mx481_bootup.py",
-      "expected_result": "SUCCESS: Bootup time within 60 seconds"
+      "script": \"\"\"
+        import netmiko
+        
+        device = {
+          'device_type': 'juniper_junos',
+          'host': 'mx481_mgmt_ip',
+          'username': 'testuser',
+          'password': 'test123'
+        }
+        
+        connection = netmiko.ConnectHandler(**device)
+        
+        port_status = connection.send_command('show interfaces terse')
+        
+        up_ports = 0
+        for line in port_status.splitlines():
+          if 'up' in line:
+            up_ports += 1
+            
+        assert up_ports == 48, "Not all ports are operationally up after bootup"
+      \"\"\",
+      "run_command": "python test_port_op_status.py",
+      "expected_result": "All 48 ports are operationally up after bootup"
     }
   }
 ]
