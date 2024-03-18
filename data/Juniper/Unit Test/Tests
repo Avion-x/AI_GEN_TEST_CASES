@@ -1,307 +1,369 @@
  ###STARTLIST###
 [
   {
-    "testname": "Test Bootup Process", 
+    "testname": "VPN Configuration Test Case 1", 
     "testcase": {
-      "testname": "Test Bootup Process",
-      "objective": "Verify the device completes the bootup process successfully",
+      "testname": "VPN Configuration Test Case 1",
+      "objective": "Verify VPN tunnel establishment between MX devices",
       "steps": [
-        "Device powers on",
-        "POST completes successfully", 
-        "Device loads JUNOS firmware",
-        "JUNOS processes initialize successfully",
-        "Device is reachable via network"
+        "Configure IKE proposal on MX devices", 
+        "Configure IKE policy on MX devices",
+        "Configure IPsec proposal on MX devices",
+        "Configure IPsec policy on MX devices",
+        "Verify VPN tunnel is operationally up"
       ],
       "test_data": {
-        "device_type": "MX484",
-        "ip_address": "192.168.0.1"  
+        "ike_proposal_name": "IKE_PROP_1",
+        "ike_proposal_encryption": "aes-256", 
+        "ike_proposal_hash": "sha-256",
+        "ike_policy_name": "IKE_POL_1", 
+        "ipsec_proposal_name": "IPSEC_PROP_1",
+        "ipsec_proposal_encryption": "aes-256",
+        "ipsec_proposal_hash": "sha1",
+        "ipsec_policy_name": "IPSEC_POL_1"  
       }
     },
     "testscript": {
-      "testname": "Test Bootup Process",
-      "objective": "Automated script to validate bootup process for MX484",
-      "file_name": "test_bootup.py",
-      "init_scripts": "\"\"\"pip install paramiko\"\"\",
-      \"\"\"pip install netmiko\"\"\"",
-      "script": \"\"\"
-                import paramiko
-                import time
-                
-                ip = '192.168.0.1'
-                username = 'admin'
-                password = 'Juniper123'
-                
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(ip, username=username, password=password)
-                
-                channel = ssh.invoke_shell()
-                output = channel.recv(1000)
-                
-                if 'JUNOS' in str(output):
-                    print('JUNOS bootup successful')
-                else:
-                    print('Bootup failed')
-                    
-                channel.close()
-                ssh.close()
-            \"\"\"",
-      "run_command": "python test_bootup.py",
-      "expected_result": "JUNOS bootup successful"
-    }
-  },
-  
-  {
-    "testname": "Test Interface Status",
-    "testcase": {
-      "testname": "Test Interface Status",
-      "objective": "Verify all expected interfaces are up after bootup",
-      "steps": [
-        "Establish SSH connection to device",
-        "Execute 'show interfaces terse' command",
-        "Validate all expected interfaces are up (ge-0/0/0 to ge-0/0/47)"
-      ],
-      "test_data": {
-        "device_ip": "192.168.0.1",
-        "interface_range": "ge-0/0/0 to ge-0/0/47"
-      }
-    },
-    "testscript": {
-      "testname": "Test Interface Status",
-      "objective": "Automated script to test interface status after bootup",
-      "file_name": "test_interfaces.py", 
-      "init_scripts": "\"\"\"pip install netmiko\"\"\",",
-      "script": "\"\"\"
-                from netmiko import ConnectHandler
-                
-                ip = '192.168.0.1'
-                username = 'admin'
-                password = 'Juniper123'
-                
-                device = ConnectHandler(ip=ip, username=username, password=password, device_type='juniper')
-                
-                output = device.send_command('show interfaces terse')
-                
-                interfaces = output.split('\\n')
-                up_interfaces = [i for i in interfaces if 'up' in i]
-                
-                for i in range(48):
-                    int_name = 'ge-0/0/' + str(i)
-                    if int_name not in up_interfaces:
-                        print(int_name + ' is down')
-                        
-                device.disconnect()
-            \"\"\"",
-      "run_command": "python test_interfaces.py",  
-      "expected_result": "All interfaces up message or no output"
-    }
-  }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "Port Mapping Verification Test",
-    "testcase": {
-      "testname": "Port Mapping Verification Test", 
-      "objective": "Verify all ports on the MX480 router are mapped correctly",
-      "steps": [
-        "Connect to the console port of the MX480 router",
-        "Execute the 'show interfaces terse' command", 
-        "Verify all ports are listed and in up/up state"
-      ],
-      "test_data": {
-        "router_ip": "192.168.0.1",
-        "console_port": "COM1",
-        "expected_ports": ["ge-0/0/0", "ge-0/0/1", "ge-0/1/0"] 
-      }
-    },
-    
-    "testscript": {
-      "testname": "Port Mapping Verification Test",
-      "objective": "Verify all ports on the MX480 router are mapped correctly", 
-      "file_name": "test_portmapping.py",
-      "init_scripts": ["pip install junos-eznc", "pip install paramiko"],
-      "script": """
-import json
-from jnpr.junos import Device
-from paramiko.client import SSHClient
-
-test_data = {}
-
-with open('test_data.json') as f:
-    test_data = json.load(f)
-
-dev = Device(host=test_data['router_ip'], user='testuser', password='password123')
-dev.open()
-
-output = dev.cli('show interfaces terse')
-ports = [line.split()[0] for line in output.splitlines()]
-
-result = set(ports) == set(test_data['expected_ports'])
-print(result)
-
-dev.close()
-      """,
-      "run_command": "python test_portmapping.py", 
-      "expected_result": "True"
-    }
-  },
-  
-  {
-    "testname": "IP Address Validation Test",
-    "testcase": {
-      "testname": "IP Address Validation Test",
-      "objective": "Validate IP address configuration on all interfaces",
-      "steps": [
-        "Connect to the CLI of the MX480 router over SSH",
-        "Execute 'show interfaces terse' and store interface names",
-        "For each interface, execute 'show interfaces <interface>'",  
-        "Verify IP address in output matches expected value"   
-      ],
-      "test_data": {
-        "router_ip": "192.168.0.1",
-        "ssh_port": 22, 
-        "ssh_user": "testuser",
-        "ssh_password": "password123",
-        "interfaces": ["ge-0/0/0", "ge-0/0/1"],
-        "expected_ips": {"ge-0/0/0": "10.0.0.1/24", "ge-0/0/1": "10.0.1.1/24"}
-      }
-    },
-
-    "testscript": {
-      "testname": "IP Address Validation Test",
-      "objective": "Validate IP address configuration on all interfaces",
-      "file_name": "test_ipaddress.py", 
-      "init_scripts": ["pip install junos-eznc", "pip install paramiko"],
-      "script": """  
-import json
-from jnpr.junos import Device
-import paramiko
-
-test_data = {}
-
-with open('test_data.json') as f:
-    test_data = json.load(f)
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(hostname=test_data['router_ip'], port=test_data['ssh_port'], username=test_data['ssh_user'], password=test_data['ssh_password'])
-
-dev = Device(host=test_data['router_ip'], user=test_data['ssh_user'], password=test_data['ssh_password'], port=test_data['ssh_port'], ssh_private_key_file=None, ssh_config=ssh.get_transport().get_remote_server_keys())
-dev.open()
-
-for intf in test_data['interfaces']:
-  output = dev.cli('show interfaces ' + intf)
-  ip = output.splitlines()[3].split()[1]
-  
-  if ip != test_data['expected_ips'][intf]:
-    print("FAILED: Expected IP {}, but got {} on interface {}".format(test_data['expected_ips'][intf], ip, intf))
-    result = False
-  else:
-    print("PASSED: Correct IP {} configured on interface {}".format(ip, intf))
-    result = True
-  
-dev.close()
-ssh.close()
-
-print(result)
-    """,  
-      "run_command": "python test_ipaddress.py",
-      "expected_result": "True"       
-    }
-  }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "Bootup Basic Connectivity Test", 
-    "testcase": {
-      "testname": "Bootup Basic Connectivity Test",
-      "objective": "Validate basic Layer 1/2 connectivity during bootup process by checking interface statuses",
-      "steps": [
-        "Bring up the device and check interface status changes from down -> up indicating ports initialized and achieved L1/2 connectivity", 
-        "Verify all interfaces initialized properly by checking their operational status"
-      ],
-      "test_data": {
-        "device_under_test": "Juniper MX480",
-        "interfaces_to_test": ["ge-0/0/0", "ge-0/0/1"] 
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Basic Connectivity Test",
-      "objective": "Script to validate interface status during bootup",
-      "file_name": "bootup_connectivity_test.py",
-      "init_scripts":[
-        "pip install junos-eznc",
-        "pip install jnpr.junos",
-        "pip install jnpr.junos.exception"
+      "testname": "VPN Configuration Test Script 1",
+      "objective": "Automate VPN configuration test case 1",
+      "file_name": "vpn_test_1.py",
+      "init_scripts": [
+        "pip install netmiko",
+        "pip install paramiko"
       ],
       "script": """
-        import jnpr.junos
-        from jnpr.junos.utils.config import Config
-        from jnpr.junos.exception import ConnectError
-        interfaces = {{test_data.interfaces_to_test}}
-        dev = Device(host='{{test_data.device_under_test}}', user='lab', password='lab123')
-        try:
-          dev.open()
-        except Exception as err:
-          print('Cannot connect to device: {0}'.format(err))
-          sys.exit(1)
-    
-        print('Checking interface status during boot...')
-        for intf in interfaces:
-          intf_status = dev.cli('show interfaces '+intf+' | match "Link is [a-z]+"')  
-          if intf_status.find('Link is up') >= 0:
-            print(intf + ' is up')
-          else:
-            print(intf + ' is down')
+        import netmiko
+        import paramiko
         
-        dev.close()
+        def test_vpn_config(test_data):
+          devices = {
+            "mx1": {
+              "device_type": "juniper",
+              "ip": "192.168.1.1",
+              "username": "admin",
+              "password": "pwd123" 
+            },
+            "mx2": {
+              "device_type": "juniper",
+              "ip": "192.168.1.2",
+              "username": "admin",
+              "password": "pwd123" 
+            }  
+          }
+        
+          ike_prop_name = test_data["ike_proposal_name"]
+          ike_enc = test_data["ike_proposal_encryption"]
+          ike_hash = test_data["ike_proposal_hash"]
+        
+          ipsec_prop_name = test_data["ipsec_proposal_name"]
+          ipsec_enc = test_data["ipsec_proposal_encryption"]
+          ipsec_hash = test_data["ipsec_proposal_hash"]
+        
+          ike_policy_name = test_data["ike_policy_name"]
+          ipsec_policy_name = test_data["ipsec_policy_name"]
+        
+          for device in devices:
+            net_connect = netmiko.ConnectHandler(**devices[device])
+            config_commands = [
+              "set security ike proposal "+ike_prop_name+" authentication-method pre-shared-keys",
+              "set security ike proposal "+ike_prop_name+" dh-group group2", 
+              "set security ike proposal "+ike_prop_name+" authentication-algorithm "+ike_hash,
+              "set security ike proposal "+ike_prop_name+" encryption-algorithm "+ike_enc,
+              "set security ike policy "+ike_policy_name+" mode main",
+              "set security ike policy "+ike_policy_name+" proposals "+ike_prop_name,
+              "set security ike policy "+ike_policy_name+" pre-shared-key ascii-text pwd123",
+              "set security ipsec proposal "+ipsec_prop_name+" protocol esp", 
+              "set security ipsec proposal "+ipsec_prop_name+" authentication-algorithm "+ipsec_hash,
+              "set security ipsec proposal "+ipsec_prop_name+" encryption-algorithm "+ipsec_enc,
+              "set security ipsec policy "+ipsec_policy_name+" proposals "+ipsec_prop_name,
+              "commit"  
+            ]
+            output = net_connect.send_config_set(config_commands)
+            print(output)
+        
+          print("VPN Configured Successfully")
+        
+        if __name__ == "__main__":
+          test_data = {
+            "ike_proposal_name": "IKE_PROP_1",
+            "ike_proposal_encryption": "aes-256",
+            "ike_proposal_hash": "sha-256", 
+            "ike_policy_name": "IKE_POL_1",
+            "ipsec_proposal_name": "IPSEC_PROP_1", 
+            "ipsec_proposal_encryption": "aes-256",
+            "ipsec_proposal_hash": "sha1",
+            "ipsec_policy_name": "IPSEC_POL_1"
+          }
+        
+          test_vpn_config(test_data)
       """,
-      "run_command": "python bootup_connectivity_test.py", 
-      "expected_result": "All interfaces initialized and came up properly"  
+      "run_command": "python vpn_test_1.py", 
+      "expected_result": "VPN Configured Successfully"
+    }
+  },
+  
+  {
+    "testname": "VPN Configuration Test Case 2",
+    "testcase": {
+      "testname": "VPN Configuration Test Case 2",
+      "objective": "Verify dynamic VPN between MX devices using certificates",
+      "steps": [
+        "Generate and install certificates on MX devices ",
+        "Configure IKE proposal on MX devices",
+        "Configure IKE policy on MX devices", 
+        "Configure IPsec proposal on MX devices",
+        "Configure IPsec policy on MX devices",
+        "Verify VPN tunnel is operationally up"   
+      ],
+      "test_data": {
+        "ike_proposal_name": "IKE_PROP_2",
+        "ike_proposal_encryption": "aes-128",
+        "ike_proposal_hash": "sha-128",
+        "ike_policy_name": "IKE_POL_2",
+        "ipsec_proposal_name": "IPSEC_PROP_2",  
+        "ipsec_proposal_encryption": "aes-128",
+        "ipsec_proposal_hash": "sha1",
+        "ipsec_policy_name": "IPSEC_POL_2"
+      }
+    },
+    "testscript": {
+      "testname": "VPN Configuration Test Script 2",
+      "objective": "Automate VPN configuration test case 2",
+      "file_name": "vpn_test_2.py",
+      "init_scripts": [  
+        "pip install cryptography",
+        "pip install netmiko",
+        "pip install paramiko"
+      ],
+      "script": """
+        import netmiko
+        import paramiko
+        from cryptography import x509
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+        
+        def generate_certs():
+          #cert generation code  
+        
+        def test_vpn_config(test_data):
+          
+          devices = {
+            "mx1": {
+              "device_type": "juniper",
+              "ip": "192.168.1.1",
+              "username": "admin",
+              "password": "pwd123"  
+            },
+            "mx2": {
+              "device_type": "juniper",
+              "ip": "192.168.1.2", 
+              "username": "admin",
+              "password": "pwd123"  
+            }
+          }
+        
+          ike_prop_name = test_data["ike_proposal_name"]
+          ike_enc = test_data["ike_proposal_encryption"] 
+          ike_hash = test_data["ike_proposal_hash"]
+        
+          ipsec_prop_name = test_data["ipsec_proposal_name"]
+          ipsec_enc = test_data["ipsec_proposal_encryption"]
+          ipsec_hash = test_data["ipsec_proposal_hash"]
+        
+          ike_policy_name = test_data["ike_policy_name"]
+          ipsec_policy_name = test_data["ipsec_policy_name"]
+          
+          #cert config  
+          
+          for device in devices:
+            net_connect = netmiko.ConnectHandler(**devices[device])
+            config_commands = [
+              "set security ike proposal "+ike_prop_name+" authentication-method rsa-signatures",
+              "set security ike proposal "+ike_prop_name+" dh-group group2",
+              "set security ike proposal "+ike_prop_name+" authentication-algorithm "+ike_hash, 
+              "set security ike proposal "+ike_prop_name+" encryption-algorithm "+ike_enc,
+              "set security ike policy "+ike_policy_name+" mode main",
+              "set security ike policy "+ike_policy_name+" proposals "+ike_prop_name,
+              "set security ike policy "+ike_policy_name+" certificate local-certificate cert_name",
+              "set security ipsec proposal "+ipsec_prop_name+" protocol esp",
+              "set security ipsec proposal "+ipsec_prop_name+" authentication-algorithm "+ipsec_hash,
+              "set security ipsec proposal "+ipsec_prop_name+" encryption-algorithm "+ipsec_enc,  
+              "set security ipsec policy "+ipsec_policy_name+" proposals "+ipsec_prop_name,
+              "commit"
+            ]
+            output = net_connect.send_config_set(config_commands)
+            print(output)
+        
+          print("VPN Configured Successfully")
+          
+        if __name__ == "__main__":
+          test_data = {
+            "ike_proposal_name": "IKE_PROP_2",
+            "ike_proposal_encryption": "aes-128",
+            "ike_proposal_hash": "sha1",
+            "ike_ Here are 2 Unit Test cases for VPN configuration for Juniper MX484 with Python test scripts:
+
+```python
+###STARTLIST###
+[
+  {
+    "testname": "Port Mapping Test", 
+    "testcase": {
+      "testname": "Port Mapping Test",
+      "objective": "Verify VPN port mappings are configured correctly",
+      "steps": [
+        "Validate map interfaces ge-0/0/1.0 to xe-1/2/0.0", 
+        "Validate map interfaces ge-0/0/2.0 to xe-1/4/0.0",
+        "Verify interface mappings in configuration"
+      ],
+      "test_data": {
+        "port_mappings": [
+          ["ge-0/0/1.0", "xe-1/2/0.0"],
+          ["ge-0/0/2.0", "xe-1/4/0.0"]
+        ]
+      }
+    },
+    "testscript": {
+      "testname": "Port Mapping Test",
+      "objective": "Verify VPN port mappings are configured correctly", 
+      "file_name": "test_port_mapping.py",
+      "init_scripts": "import unittest\\nimport json",
+      "script": \"\"\"
+      class TestPortMappings(unittest.TestCase):
+        def test_port_mappings(self):
+          with open('test_data.json') as f:
+            data = json.load(f)
+          
+          for map_from, map_to in data['port_mappings']:
+            self.assertIn(map_from, config)
+            self.assertIn(map_to, config)
+      
+      if __name__ == '__main__':
+        unittest.main()
+      \"\"\",
+      "run_command": "python test_port_mapping.py", 
+      "expected_result": "OK"
     }
   },
 
   {
-    "testname": "Bootup Services Test",
+    "testname": "Address Verification Test",
     "testcase": {
-      "testname": "Bootup Services Test",
-      "objective": "Validate critical services come up properly during bootup",
+      "testname": "Address Verification Test",
+      "objective": "Validate VPN endpoint addresses",
       "steps": [
-        "Bring up the device",
-        "Verify critical processes are up and running by checking process status" 
+        "Verify local VPN endpoint address is 192.168.1.1",
+        "Verify remote VPN endpoint address is 10.10.10.1"  
       ],
       "test_data": {
-        "device_under_test": "Juniper MX480",
-        "critical_processes": ["rpd", "dfwd", "mib2d"]  
+        "local_vpn_addr": "192.168.1.1",
+        "remote_vpn_addr": "10.10.10.1"  
       }
     },
     "testscript": {
-      "testname": "Bootup Services Test",
-      "objective": "Script to validate critical processes during bootup", 
-      "file_name": "bootup_services_test.py",
-      "init_scripts":[
-        "pip install junos-eznc"
+      "testname": "Address Verification Test",
+      "objective": "Validate VPN endpoint addresses",
+      "file_name": "test_address.py",
+      "init_scripts": "import unittest",
+      "script": \"\"\"
+      class TestAddresses(unittest.TestCase):
+        def test_addresses(self):
+          self.assertEqual(config['local_vpn_addr'], '192.168.1.1')
+          self.assertEqual(config['remote_vpn_addr'], '10.10.10.1')
+        
+      if __name__ == '__main__':
+        unittest.main()
+      \"\"\",
+      "run_command": "python test_address.py",
+      "expected_result": "OK"
+    }
+  }
+]
+###ENDLIST###
+``` ###STARTLIST###
+[
+  {
+    "testname": "Test VPN Configuration", 
+    "testcase": {
+      "testname": "Test VPN Configuration",
+      "objective": "Validate VPN configuration on each port of MX484 device",
+      "steps": [
+        "Configure VPN on port 1 and verify connectivity", 
+        "Configure VPN on port 2 and verify connectivity",
+        "Configure VPN on port 3 and verify connectivity",
+        "Configure VPN on port 4 and verify connectivity"
+      ],
+      "test_data": {
+        "device_ports": [1, 2, 3, 4],
+        "vpn_config": {
+          "authentication": "PSK",
+          "encryption": "AES-256", 
+          "peer_ip": "10.10.10.1",
+          "preshared_key": "securesupersecretkey"  
+        }
+      }
+    },
+    "testscript": {
+      "testname": "Test VPN Configuration",
+      "objective": "Automate VPN configuration test on MX484 ports",
+      "file_name": "test_vpn_config.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install json"
       ],
       "script": """
-        from jnpr.junos import Device
-        processes = {{test_data.critical_processes}}
-        dev = Device(host='{{test_data.device_under_test}}', user='lab', password='lab123')
-        dev.open()
-      
-        print('Checking critical processes status...')
-        for proc in processes:
-          proc_status = dev.cli('show system processes | match '+proc)
-          if proc_status.find(proc) >= 0: 
-            print(proc + ' is running')
-          else:
-            print(proc + ' is NOT running')
-            
-        dev.close()
+        import paramiko
+        import json
+
+        def test_vpn_config(port, vpn_config):
+          ssh = paramiko.SSHClient()
+          ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+          ssh.connect('10.10.10.254', username='admin', password='admin123')
+
+          commands = [\"""
+            set interfaces {0} unit 0 family inet address 10.10.10.{0}/24
+            set security ipsec vpn my-vpn-profile-port-{0} bind-interface {0}
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw external-interface {0}
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw address {1} 
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw ike-policy ike-phase1-policy
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw ike-policy ike-phase1-policy proposal-set standard 
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw ike-policy ike-phase1-policy proposal-set standard authentication-method pre-shared-keys 
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw ike-policy ike-phase1-policy pre-shared-key ascii-text {2}
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw ipsec-policy ipsec-phase2-policy 
+            set security ipsec vpn my-vpn-profile-port-{0} ike gateway my-vpn-gw ipsec-policy ipsec-phase2-policy proposal-set standard
+            set security ipsec vpn my-vpn-profile-port-{0} tunnel pair-policy ipsec-pair-policy
+            set security ipsec vpn my-vpn-profile-port-{0} tunnel pair-policy ipsec-pair-policy proposals standard
+            \"""
+          ]
+          
+          for command in commands:
+            command = command.format(port, vpn_config['peer_ip'], vpn_config['preshared_key'])
+            stdin, stdout, stderr = ssh.exec_command(command)
+            print(stdout.read().decode())
+            print(stderr.read().decode())
+
+          ssh.close()
+
+        test_data = {
+          "device_ports": [1, 2, 3, 4],
+          "vpn_config": {
+            "authentication": "PSK",
+            "encryption": "AES-256", 
+            "peer_ip": "10.10.10.1",
+            "preshared_key": "securesupersecretkey"  
+          }
+        }
+
+        for port in test_data['device_ports']:
+          print(f'Testing VPN configuration on port {port}')
+          test_vpn_config(port, test_data['vpn_config'])
+
       """,
-      "run_command": "python bootup_services_test.py",
-      "expected_result": "All critical processes came up successfully"
+      "run_command": "python test_vpn_config.py",
+      "expected_result": "VPN configured successfully on ports 1, 2, 3 and 4 with given configuration"  
     }
   }
 ]
