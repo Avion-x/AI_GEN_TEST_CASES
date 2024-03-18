@@ -1,0 +1,386 @@
+ ###STARTLIST###
+[
+  {
+    "testname": "EVPN Type-2 Route Advertisement", 
+    "testcase": {
+      "testname": "EVPN Type-2 Route Advertisement",
+      "objective": "Verify that Type-2 routes are advertised by MX routers when EVPN service is enabled.",
+      "steps": [
+        "Enable EVPN service on MX routers", 
+        "Verify BGP neighbors are established",
+        "Verify Type-2 routes for VLANs/VNI are received"
+      ],
+      "testdata": {
+        "vni": [1000, 2000, 3000], 
+        "vlan": [10, 20, 30]
+      }
+    },
+    "testscript": {
+      "testname": "EVPN Type-2 Route Advertisement",
+      "objective": "Automate test steps to validate Type-2 route advertisement",
+      "file_name": "test_evpn_type2.py",
+      "init_scripts":[
+        "pip install pyats",
+        "pip install genie",
+        "pip install unicon"
+      ],
+      "script": """
+        #!/usr/bin/env python
+        from genie.testbed import load
+        from genie.libs.ops.bgp.evpn.bgp_evpn import BgpEvpn
+
+        testbed = load('testbed.yaml')
+
+        device = testbed.devices['dut']
+
+        bgp = BgpEvpn(device=device)
+
+        bgp.learn_evpn()
+
+        for vni in [1000, 2000, 3000]:
+          assert bgp.info['vrf']['default']['address_family']['l2vpn evpn']['advertise_routes']['vni'][vni]
+      
+      """,
+      "run_command": "python test_evpn_type2.py",
+      "expected_result": "No AssertionError, Type-2 routes validated for all VNIs"
+    }
+  },
+
+  {
+    "testname": "EVPN Type-5 Route Advertisement",
+    "testcase": {
+      "testname": "EVPN Type-5 Route Advertisement",
+      "objective": "Verify that Type-5 routes are advertised by MX routers when EVPN service is enabled.",
+      "steps": [
+        "Enable EVPN service on MX routers ",
+        "Verify BGP neighbors are established", 
+        "Verify Type-5 routes for ESIs are received"
+      ],
+      "testdata": {
+        "esi": ["00:11:22:33:44:55:66:77:88", 
+                "aa:bb:cc:dd:ee:ff:00:11:22"]
+      }
+    },
+    "testscript": {
+      "testname": "EVPN Type-5 Route Advertisement",
+      "objective": "Automate test steps to validate Type-5 route advertisement",
+      "file_name": "test_evpn_type5.py", 
+      "init_scripts":[
+        "pip install pyats",
+        "pip install genie",
+        "pip install unicon"
+      ],
+      "script": """
+        #!/usr/bin/env python
+        from genie.testbed import load
+        from genie.libs.ops.bgp.evpn.bgp_evpn import BgpEvpn
+
+        testbed = load('testbed.yaml')
+
+        device = testbed.devices['dut']
+
+        bgp = BgpEvpn(device=device)
+
+        bgp.learn_evpn()
+
+        for esi in ["00:11:22:33:44:55:66:77:88", 
+                    "aa:bb:cc:dd:ee:ff:00:11:22"]:
+          assert bgp.info['esi'][esi]
+      
+      """,
+      "run_command": "python test_evpn_type5.py",
+      "expected_result": "No AssertionError, Type-5 routes validated for all ESIs"
+    }
+  }
+]
+###ENDLIST### Here are 2 EVPN protocol conformance tests and python test scripts for Cisco to Juniper MX482 interoperability focusing on ports:
+
+###STARTLIST###
+[
+  {
+    "testname": "Port Mapping Test", 
+    "testcase": {
+      "testname": "Port Mapping Test",
+      "objective": "Verify that Cisco EVPN learns MAC addresses and maps them correctly to Juniper MX ports",
+      "steps": [
+        "Configure EVPN between Cisco and Juniper devices", 
+        "Send traffic from Juniper device with known source MAC",
+        "Verify Cisco EVPN MAC table has correct port mapping"  
+      ],
+      "testdata": {
+        "juniper_mx_mac": "00:00:00:00:00:01",
+        "juniper_mx_port": "ge-0/0/1",
+        "cisco_evpn_port": "Ethernet1/1"  
+      }
+    },
+    "testscript": {
+      "testname": "Port Mapping Test",
+      "objective": "Verify Cisco EVPN port mapping",
+      "file_name": "port_mapping_test.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install netmiko"
+      ],
+      "script": \"\"\"
+import paramiko
+import netmiko
+
+JUNIPER_IP = '192.168.0.1'
+JUNIPER_PORT = 22
+JUNIPER_USER = 'juniper'
+JUNIPER_PASSWORD = 'juniper123'
+
+CISCO_IP = '192.168.0.2'  
+CISCO_PORT = 22
+CISCO_USER = 'cisco'
+CISCO_PASSWORD = 'cisco123'
+
+# Send traffic from Juniper with known MAC
+juniper_ssh = paramiko.SSHClient()
+juniper_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+juniper_ssh.connect(JUNIPER_IP, JUNIPER_PORT, JUNIPER_USER, JUNIPER_PASSWORD)
+
+juniper_ssh.exec_command('ping 192.168.0.10 -s 1500 -c 10 source 00:00:00:00:00:01 routing-instance evpn')
+
+# Check Cisco MAC table   
+cisco_ssh = paramiko.SSHClient()
+cisco_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+cisco_ssh.connect(CISCO_IP, CISCO_PORT, CISCO_USER, CISCO_PASSWORD)  
+
+output = cisco_ssh.exec_command('show mac address-table')
+
+if '00:00:00:00:00:01 Ethernet1/1' in output:
+  print('Test Passed')
+else:
+  print('Test Failed')
+
+cisco_ssh.close()  
+juniper_ssh.close()
+\"\"\"",
+      "run_command": "python port_mapping_test.py",
+      "expected_result": "Test Passed"
+    }
+  },
+
+  {
+    "testname": "MAC Flushing Test",
+    "testcase": {
+      "testname": "MAC Flushing Test",  
+      "objective": "Verify that Cisco EVPN ages out MAC addresses learned from Juniper MX",
+      "steps": [
+        "Configure EVPN between Cisco and Juniper devices",
+        "Send traffic from Juniper device to create MAC entry in Cisco EVPN", 
+        "Wait for MAC aging timer + 5 minutes",
+        "Verify MAC address is removed from Cisco EVPN table"
+      ],
+      "testdata": {
+        "juniper_mx_mac": "00:00:00:00:00:02", 
+        "cisco_evpn_aging_timer": 300 
+      }
+    },
+    "testscript": {
+      "testname": "MAC Flushing Test",
+      "objective": "Verify Cisco EVPN MAC aging",
+      "file_name": "mac_flushing_test.py",
+      "init_scripts": [ 
+        "pip install paramiko",
+        "pip install time"
+      ],
+      "script": \"\"\"  
+import paramiko
+import time
+
+JUNIPER_IP = '192.168.0.1'
+JUNIPER_PORT = 22
+JUNIPER_USER = 'juniper'
+JUNIPER_PASSWORD = 'juniper123'
+
+CISCO_IP = '192.168.0.2'
+CISCO_PORT = 22  
+CISCO_USER = 'cisco'
+CISCO_PASSWORD = 'cisco123'
+
+juniper_ssh = paramiko.SSHClient()
+juniper_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+juniper_ssh.connect(JUNIPER_IP, JUNIPER_PORT, JUNIPER_USER, JUNIPER_PASSWORD)
+
+# Send traffic to create MAC entry  
+juniper_ssh.exec_command('ping 192.168.0.20 -s 1500 -c 10 source 00:00:00:00:00:02 routing-instance evpn') 
+
+# Wait for aging timer + 5 minutes
+time.sleep(305)  
+
+# Verify MAC is aged out
+cisco_ssh = paramiko.SSHClient() 
+cisco_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+cisco_ssh.connect(CISCO_IP, CISCO_PORT, CISCO_USER, CISCO_PASSWORD)
+
+output = cisco_ssh.exec_command('show mac address-table')
+
+if '00:00:00:00:00:02' not in output:
+  print('Test Passed')  
+else:
+  print('Test Failed')
+  
+cisco_ssh.close()
+juniper_ssh.close()  
+\"\"\"",
+      "run_command": "python mac_flushing_test.py",
+      "expected_result": "Test Passed" 
+    }
+  }
+]
+###ENDLIST### ###STARTLIST###
+[
+  {
+    "testname": "EVPN Type-1 Route Import", 
+    "testcase": {
+      "testname": "EVPN Type-1 Route Import",
+      "objective": "Verify that EVPN Type-1 routes are properly imported on MX routers.",
+      "steps": [
+        "Configure EVPN on Cisco and MX devices", 
+        "Advertise EVPN Type-1 routes from Cisco",
+        "Verify MX devices learn EVPN Type-1 routes via BGP",
+        "Verify MAC addresses learned in EVPN control plane match data plane"
+      ],
+      "testdata": {
+        "cisco_evpn_config": "router bgp 65535", 
+        "mx_evpn_config": "protocols evpn",
+        "mx_int_config": "gigether-options 802.3ad ae0" 
+      }
+    },
+
+    "testscript": {
+      "testname": "EVPN Type-1 Route Import",
+      "objective": "Verify that EVPN Type-1 routes are properly imported on MX routers.",
+      "filename": "test_evpn_type1.py",
+      "init_scripts": [
+        "pip install netmiko",
+        "pip install jnpr.junos", 
+        "pip install pytest"
+      ],
+      "script": """
+        \"\"\"
+        test_evpn_type1.py
+        Verify EVPN Type-1 route import
+        \"\"\"
+        
+        import netmiko
+        from jnpr.junos import Device
+        
+        def test_evpn_type1():
+          cisco_device = {
+            'device_type': 'cisco_ios',
+            'ip': '10.1.1.1',
+            'username': 'cisco',
+            'password': 'cisco'  
+          }
+        
+          mx_device = {
+            'host': '10.1.1.2',
+            'user': 'mxuser',
+            'password': 'mxpass'
+          }
+        
+          # Configure EVPN on Cisco
+          net_connect = netmiko.ConnectHandler(**cisco_device)
+          net_connect.send_config_from_file(config_file='cisco_evpn.txt')
+          
+          # Configure EVPN on MX
+          mx_conn = Device(**mx_device)
+          mx_conn.open()
+          mx_conn.load_config(path='mx_evpn.txt')
+          
+          # Verify EVPN Type-1 routes on MX
+          mx_routetable = mx_conn.rpc.get_route_information()
+          assert 'evpn-type1' in mx_routetable
+        
+          # Verify MAC addresses          
+          mx_macs = mx_conn.rpc.get_ethernet_switching_table_information()
+          cisco_macs = ??? # Get MAC table from Cisco  
+          assert mx_macs == cisco_macs
+
+        test_evpn_type1()
+      """,
+      
+      "run_command": "pytest test_evpn_type1.py",
+      "expected_result": "Test Passed"
+    }
+  },
+
+  {
+    "testname": "EVPN Type-5 Route Advertisement",
+    "testcase": {
+      "testname": "EVPN Type-5 Route Advertisement",
+      "objective": "Verify EVPN Type-5 routes originated from MX are received on Cisco.",
+      "steps": [
+        "Configure EVPN on Cisco and MX devices",
+        "Originate EVPN Type-5 routes from MX",  
+        "Verify Cisco receives EVPN Type-5 routes via BGP",
+        "Verify ARP/ND cache on Cisco matches MX"  
+      ],
+      "testdata": {
+        "cisco_evpn_config": "router bgp 65535",
+        "mx_evpn_config": "protocols evpn", 
+        "mx_int_config": "gigether-options 802.3ad ae0"
+      }
+    },
+    
+    "testscript": {
+      "testname": "EVPN Type-5 Route Advertisement",
+      "objective": "Verify EVPN Type-5 routes originated from MX are received on Cisco.",
+      "filename": "test_evpn_type5.py",
+      "init_scripts": [
+        "pip install netmiko",
+        "pip install jnpr.junos",
+        "pip install pytest"  
+      ],
+      "script": """
+        \"\"\"
+        test_evpn_type5.py        
+        Verify EVPN Type-5 route advertisement
+        \"\"\"
+        
+        import netmiko
+        from jnpr.junos import Device
+        
+        def test_evpn_type5():
+          cisco_device = {
+            'device_type': 'cisco_ios',
+            'ip': '10.1.1.1',
+            'username': 'cisco',
+            'password': 'cisco'
+          }
+        
+          mx_device = {
+            'host': '10.1.1.2',
+            'user': 'mxuser',
+            'password': 'mxpass'
+          }
+        
+          # Configure EVPN on devices  
+          net_connect = netmiko.ConnectHandler(**cisco_device)
+          net_connect.send_config_from_file(config_file='cisco_evpn.txt')
+        
+          mx_conn = Device(**mx_device)
+          mx_conn.open()
+          mx_conn.load_config(path='mx_evpn.txt')
+          
+          # Verify Type-5 routes on Cisco
+          cisco_routetable = ??? # Get BGP table from Cisco  
+          assert 'evpn-type5' in cisco_routetable
+        
+          # Verify ARP/ND cache matches  
+          cisco_cache = ??? # Get ARP/ND cache from Cisco
+          mx_cache = mx_conn.rpc.get_ethernet_switching_table_information()
+          assert cisco_cache == mx_cache
+
+        test_evpn_type5()
+      """,
+    
+      "run_command": "pytest test_evpn_type5.py",
+      "expected_result": "Test Passed"
+    }
+  }
+]
+###ENDLIST###
