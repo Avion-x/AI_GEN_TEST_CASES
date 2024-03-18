@@ -1,163 +1,95 @@
  ###STARTLIST###
 [
-  {
-    "testname": "Test DOS protection for MX480",
-    "testcase": {
-      "testname": "Test DOS protection for MX480",      
-      "objective": "Validate that MX480 can detect and mitigate denial of service attacks",
-      "steps": [
-        "1. Configure DoS protection policy on MX480",
-        "2. Generate DoS attack traffic towards MX480",  
-        "3. Verify MX480 detects and mitigates attack"
-      ],
-      "testdata": {
-        "mx480_mgmt_ip": "192.168.0.1",
-        "attack_tool": "LOIC",
-        "attack_type": "SYN Flood",
-        "attack_duration": "60 secs",
-        "attack_src_ip": "172.16.0.5"  
-      }
+    {
+        "testname": "ECMP Verify Upstream Usage", 
+        "testcase": {
+            "testname": "ECMP Verify Upstream Usage",
+            "objective": "Verify ECMP load balances traffic across upstream interfaces",
+            "steps": [
+                "Configure ECMP with 2 upstream interfaces", 
+                "Send traffic to router under test",
+                "Verify traffic is load balanced across both upstream interfaces"
+            ],
+            "test_data": {
+                "upstream_interfaces": ["ge-0/0/1", "ge-0/0/2"],
+                "expected_distribution": 50
+            }
+        },
+        "testscript": {
+            "testname": "ECMP Verify Upstream Usage",
+            "objective": "Automated test to verify ECMP upstream interface usage",
+            "file_name": "test_ecmp_upstream.py",
+            "init_scripts": [
+                "pip install pynet",
+                "pip install statistics"
+            ],
+            "script": \"\"\"
+                import pynet
+                import statistics
+                
+                upstream_ifs = test_data['upstream_interfaces']
+                router = pynet.Device(host='192.168.1.1', username='pynet', password='pynet')
+                router.open()
+                
+                for intf in upstream_ifs:
+                    intf.send_traffic()
+                    
+                traffic_counters = []
+                for intf in upstream_ifs:
+                    counters = intf.get_counters()
+                    traffic_counters.append(counters['tx_packets'])
+                    
+                actual_distribution = statistics.stdev(traffic_counters)
+                expected_distribution = test_data['expected_distribution']
+                
+                assert actual_distribution == expected_distribution, "Traffic not evenly distributed"
+            \"\"\",
+            "run_command": "python test_ecmp_upstream.py",
+            "expected_result": "Traffic evenly distributed across upstream interfaces"            
+        }
     },
-    "testscript": {
-      "testname": "Test DOS protection for MX480",
-      "objective": "Automate validation of DOS protection on MX480",
-      "file_name": "test_dos_mx480.py",
-      "init_scripts":[
-        "pip install paramiko",
-        "pip install netmiko"
-      ],
-      "script": """
-import paramiko
-import netmiko
-
-mx480_ip = '192.168.0.1'
-
-# Connect to MX480 via SSH 
-ssh_client = paramiko.SSHClient()
-ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh_client.connect(hostname=mx480_ip, username='pyuser', password='Juniper123')
-
-# Check DOS policy
-stdin, stdout, stderr = ssh_client.exec_command('show policy id dos_policy')
-output = stdout.read().decode()
-if 'Policy dos_policy' in output:
-  print('DOS policy configured')
-else:
-  print('DOS policy missing')
-  
-# Connect to attacker system  
-attacker_conn = netmiko.ConnectHandler(
-  device_type='linux',
-  ip='172.16.0.5',
-  username='attacker',
-  password='Attacker123'
-)
-
-# Start attack
-attacker_conn.send_command('sudo loic --http {} --duration 60'.format(mx480_ip))
-
-# Check for attack mitigation on MX480
-stdin, stdout, stderr = ssh_client.exec_command('show security flow session')
-output = stdout.read().decode()
-if 'Flow Sessions' in output:
-  print('Attack mitigated')
-else: 
-  print('Attack not mitigated')
-  
-ssh_client.close()
-attacker_conn.disconnect()
-      """,
-      "run_command": "python test_dos_mx480.py", 
-      "expected_result": "DOS policy configured\\nAttack mitigated"
+    {
+        "testname": "ECMP Upstream Failure",
+        "testcase": {
+            "testname": "ECMP Upstream Failure",
+            "objective": "Verify ECMP fails over to available upstream interface on failure",
+            "steps": [
+                "Configure ECMP with 2 upstream interfaces",
+                "Send traffic to router under test",
+                "Verify traffic on both upstream interfaces", 
+                "Shutdown one upstream interface",
+                "Verify traffic only on remaining upstream interface"
+            ],
+            "test_data": {
+                "upstream_interfaces": ["ge-0/0/1", "ge-0/0/2"]
+            }
+        },
+        "testscript": {
+            "testname": "ECMP Upstream Failure", 
+            "objective": "Automated test for ECMP upstream failure scenario",
+            "file_name": "test_ecmp_failure.py",
+            "init_scripts": [
+                "pip install pynet"
+            ],
+            "script": \"\"\"
+                import pynet
+                
+                upstream_ifs = test_data['upstream_interfaces']
+                router = pynet.Device(host='192.168.1.1', username='pynet', password='pynet')
+                router.open()
+                
+                for intf in upstream_ifs:
+                    intf.send_traffic()
+                    assert intf.get_counters()['tx_packets'] > 0
+                
+                router.interface(upstream_ifs[0]).shutdown()
+                
+                assert upstream_ifs[1].get_counters()['tx_packets'] > 0
+                assert upstream_ifs[0].get_counters()['tx_packets'] == 0
+            \"\"\",
+            "run_command": "python test_ecmp_failure.py",
+            "expected_result": "Traffic fails over to available upstream interface on failure"
+        }
     }
-  },
-  
-  {
-    "testname": "Test Zone-based DOS Protection on MX480",
-    "testcase": {
-      "testname": "Test Zone-based DOS Protection on MX480",
-      "objective": "Validate zone-based DOS protection on MX480",
-      "steps": [
-        "1. Configure zone-based DOS protection policies", 
-        "2. Generate attack traffic towards zone-1",
-        "3. Verify only zone-1 is affected" 
-      ],
-      "testdata": {
-        "mx480_mgmt_ip": "192.168.0.1",
-        "zone1_ip": "192.168.1.0/24",
-        "zone2_ip": "192.168.2.0/24",
-        "attack_tool": "LOIC",
-        "attack_type": "UDP Flood",
-        "attack_duration": "60 secs",
-        "attack_src_ip": "172.16.0.5",
-        "attack_target": "192.168.1.1"
-      }
-    },
-    "testscript": {
-      "testname": "Test Zone-based DOS Protection on MX480",
-      "objective": "Automate validation of zone-based DOS protection on MX480",
-      "file_name": "test_zonedos_mx480.py",
-      "init_scripts":[
-        "pip install ncclient", 
-        "pip install paramiko"
-      ],
-      "script": """  
-from ncclient import manager
-import paramiko
-
-mx480_ip = '192.168.0.1'
-
-# Connect to MX480 NETCONF
-netconf_connection = manager.connect(
-  host = mx480_ip,
-  port = 830,
-  username = 'pyuser',
-  password = 'Juniper123',
-  hostkey_verify = False
-)
-
-# Check DOS policy for zone1
-netconf_filter = """
-<filter>
-  <configuration>
-    <security>
-      <policies>
-        <zone-protection-policy>
-          <name>zone1-policy</name>
-        </zone-protection-policy>
-      </policies>
-    </security>
-  </configuration>
-</filter>
-"""
-
-netconf_reply = netconf_connection.get_config('running', netconf_filter)
-if '<zone1-policy/>' in str(netconf_reply):
-  print('Zone1 policy configured')
-else:
-  print('Zone1 policy missing')
-
-# Connect to attacker system 
-ssh_client = paramiko.SSHClient()
-ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
-ssh_client.connect(hostname='172.16.0.5', username='attacker', password='Attacker123')
-  
-# Start attack  
-ssh_client.exec_command('sudo loic --udp 192.168.1.1 --duration 60')
-
-# Check zone2 connectivity
-resp = ssh_client.exec_command('ping 192.168.2.1 -c 5')[0].channel.recv_exit_status()
-if resp == 0:
-  print('Zone2 connectivity unaffected')
-else:
-  print('Zone2 connectivity down')
-  
-netconf_connection.close_session()
-ssh_client.close()
-      """,
-      "run_command": "python test_zonedos_mx480.py",
-      "expected_result": "Zone1 policy configured\\nZone2 connectivity unaffected"
-    }
-  }
 ]
 ###ENDLIST###
