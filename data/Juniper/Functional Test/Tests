@@ -1,419 +1,276 @@
  ###STARTLIST###
 [
   {
-    "testname": "Inline Tap Interface Connectivity - MX483", 
+    "testname": "Test Inline Tap Interface Connectivity", 
     "testcase": {
-      "testname": "Inline Tap Interface Connectivity - MX483",
-      "objective": "Verify inline tap interface connectivity between MX483 devices",
+      "testname": "Test Inline Tap Interface Connectivity",
+      "objective": "Verify that the inline tap interfaces are connected and forwarding traffic as expected",
       "steps": [
-        "Configure inline tap interfaces on MX483 devices", 
-        "Ping inline tap interfaces between MX483 devices",
-        "Verify connectivity between inline tap interfaces"
+        "Configure inline tap interfaces on MX483", 
+        "Connect a traffic generator to inline tap source interface",
+        "Connect inline tap destination interface to a packet capture device or monitoring tool",
+        "Generate test traffic that matches inline tap filter criteria",
+        "Verify tap traffic is received on monitoring device" 
       ],
       "test_data": {
-        "mx483_device_ips": ["192.168.1.1", "192.168.1.2"],
-        "inline_tap_interfaces": ["ge-0/0/1", "ge-0/0/2"]
+        "mx483_management_ip": "10.1.1.1",
+        "inline_tap_interfaces": ["ge-0/0/1", "ge-0/0/2"], 
+        "test_traffic": {
+          "src_ip": "10.10.10.1", 
+          "dst_ip": "10.10.10.2",
+          "l4_proto": "TCP",
+          "src_port": 1234,
+          "dst_port": 80
+        }
       }
     },
+
     "testscript": {
-      "testname": "Inline Tap Interface Connectivity Test",
-      "objective": "Test inline tap interface connectivity between MX483 devices",
-      "file_name": "inline_tap_test.py",
+      "testname": "Test Inline Tap Interface Connectivity",
+      "objective": "Verify that the inline tap interfaces are connected and forwarding traffic as expected", 
+      "file_name": "test_inline_tap.py",
       "init_scripts": [
-        "pip install juniper-netconify",
+        "pip install scapy",
         "pip install paramiko"
       ],
-      "script": """
-import juniper_netconify
-import paramiko
-
-DEVICE_IPS = test_data['mx483_device_ips'] 
-INLINE_INTFS = test_data['inline_tap_interfaces']
-
-# Initialize netconify connections
-connections = []
-for ip in DEVICE_IPS:
-  conn = juniper_netconify.Netconify(ip)
-  connections.append(conn)
-
-# Configure inline tap interfaces  
-for conn in connections:
-  config = []
-  for intf in INLINE_INTFS:
-    config.append(f'set interfaces {intf} unit 0 family ethernet-switching interface-mode access')
-
-  conn.config(config)
-
-# Test connectivity between inline tap interfaces
-for conn1,conn2 in zip(connections, connections[1:] + [connections[0]]):
-  conn1.cli(f'ping {conn2.facts["hostname"]} interface {INLINE_INTFS[0]} count 5')
-
-print("Success: Inline tap interface connectivity verified")
-      """,
-      "run_command": "python inline_tap_test.py",
-      "expected_result": "Success: Inline tap interface connectivity verified"
-    }
-  },
-
-  {
-    "testname": "Inline Tap Interface Monitoring - MX483",
-    "testcase": {
-      "testname": "Inline Tap Interface Monitoring - MX483",
-      "objective": "Verify monitoring of inline tap interfaces between MX483 devices",
-      "steps": [ 
-        "Configure inline tap interfaces on MX483 devices",
-        "Configure port mirroring for inline tap interfaces",
-        "Verify monitored traffic being captured on inline tap interfaces" 
-      ],
-      "test_data": {
-        "mx483_device_ips": ["192.168.1.1", "192.168.1.2"], 
-        "inline_tap_interfaces": ["ge-0/0/1", "ge-0/0/2"],
-        "source_interfaces": ["ge-0/0/10", "ge-0/0/11"]  
-      }
-    },
-    "testscript": {
-      "testname": "Inline Tap Interface Monitoring Test",
-      "objective": "Test monitoring of inline tap interfaces between MX483 devices",
-      "file_name": "inline_tap_monitor_test.py",
-      "init_scripts": [
-        "pip install juniper-netconify",
-        "pip install paramiko",
-        "pip install scapy"
-      ],
-      "script": """  
-import juniper_netconify 
+      "script": \"\"\"
 import paramiko
 from scapy.all import *
 
-DEVICE_IPS = test_data['mx483_device_ips']
-INLINE_INTFS = test_data['inline_tap_interfaces']
-SRC_INTFS = test_data['source_interfaces']
+# Load test data
+mx483_ip = ###test_data['mx483_management_ip']###
+tap_ints = ###test_data['inline_tap_interfaces']###
+test_traffic = ###test_data['test_traffic']###
 
-# Initialize netconify connections
-connections = []
-for ip in DEVICE_IPS:
-  conn = juniper_netconify.Netconify(ip)
-  connections.append(conn)  
+# Connect to MX483 CLI 
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(mx483_ip, username='admin', password='admin123')
 
 # Configure inline tap interfaces
-for conn in connections:
-  config = []
-  for intf in INLINE_INTFS:
-    config.append(f'set interfaces {intf} unit 0 family ethernet-switching interface-mode access')
+for int in tap_ints:
+  ssh.exec_command(f'set interfaces {int} unit 0 family inet filter input-tap-filter')
 
-  conn.config(config)
+# Generate test traffic
+pkt = IP(src=test_traffic['src_ip'], dst=test_traffic['dst_ip'])/TCP(sport=test_traffic['src_port'], dport=test_traffic['dst_port'])
+send(pkt, count=10)
 
-# Configure port mirroring  
-for conn,src_intf in zip(connections,SRC_INTFS):
-  conn.cli(f'set forwarding-options port-mirroring input {src_intf}')
+# Verify traffic received on monitoring device
+# ...
 
-# Verify monitored traffic on inline tap interfaces
-pkt = Ether()/IP()/TCP()/"TestPacket"
-sendp(pkt, iface=SRC_INTFS[0])
+ssh.close()
+\"\"\",
 
-rcvd_pkt = sniff(iface=INLINE_INTFS[0], count=1, timeout=5)
-
-if pkt == rcvd_pkt[0]:
-  print("Success: Traffic mirrored to inline tap interface") 
-else:
-  print("Failed: Traffic not mirrored to inline tap interface")
-      """,
-      "run_command": "python inline_tap_monitor_test.py", 
-      "expected_result": "Success: Traffic mirrored to inline tap interface"
+      "run_command": "python test_inline_tap.py",
+      "expected_result": "Test traffic successfully captured on monitoring device"
     }
   }
 ]
 ###ENDLIST### ###STARTLIST###
 [
   {
-    "testname": "Inline Tap Port Connectivity Test", 
+    "testname": "Inline Tap Interface Connectivity Test 1", 
     "testcase": {
-      "testname": "Inline Tap Port Connectivity Test",
-      "objective": "Verify connectivity between Juniper MX inline tap ports",
+      "testname": "Inline Tap Interface Connectivity Test 1",
+      "objective": "Verify connectivity between inline tap interfaces on MX483",
       "steps": [
-        "Configure inline tap ports on MX", 
-        "Verify mappings between tap and physical ports",
-        "Send traffic between physical interfaces",
-        "Verify tap interface receives copied traffic"
+        "Configure inline tap interfaces on MX483", 
+        "Ping between inline tap interfaces to verify connectivity",
+        "Check interface counters to validate traffic flow"
       ],
       "test_data": {
-        "tap_ports": ["ge-0/0/1", "ge-0/0/2"], 
-        "physical_ports": ["ge-0/0/5", "ge-0/0/6"],
-        "addresses": ["192.168.1.1", "192.168.1.2"]  
+        "mx483_mgmt_ip": "192.168.0.1",
+        "tap_ints": ["ge-0/0/1", "ge-0/0/2"]  
       }
     },
-
     "testscript": {
-      "testname": "Inline Tap Port Connectivity Test",
-      "objective": "Verify connectivity between Juniper MX inline tap ports", 
-      "file_name": "tap_port_test.py",
+      "testname": "Inline Tap Connectivity Test 1",
+      "objective": "Verify connectivity between inline tap interfaces on MX483",
+      "file_name": "inline_tap_test_1.py",
       "init_scripts": [
-        "pip install netmiko",
-        "pip install paramiko"
-      ],
-      "script": \"\"\"
-        import netmiko
-        
-        device = {
-          'device_type': 'juniper',
-          'ip': '192.168.1.10',
-          'username': 'admin',
-          'password': 'Juniper!123' 
-        }
-        
-        net_connect = netmiko.ConnectHandler(**device)
-        
-        # Configure inline tap ports
-        config_commands = [
-          'set interfaces ge-0/0/1 unit 0 family ethernet-switching interface-mode trunk',
-          'set interfaces ge-0/0/2 unit 0 family ethernet-switching interface-mode trunk',
-          'set interfaces ge-0/0/1 tap',
-          'set interfaces ge-0/0/2 tap' 
-        ]
-        
-        output = net_connect.send_config_set(config_commands)
-        
-        # Verify port mappings
-        show_command = 'show interfaces terse'
-        output = net_connect.send_command(show_command)
-        
-        assert 'ge-0/0/1.0' in output
-        assert 'ge-0/0/2.0' in output
-        
-        # Send pings between physical ports
-        src_ip = '192.168.1.1' 
-        dest_ip = '192.168.1.2'
-        
-        ping_command = f'ping {dest_ip} source {src_ip}'
-        output = net_connect.send_command(ping_command)
-        
-        # Verify tap interface receives traffic
-        show_command = 'monitor traffic interface ge-0/0/1.0' 
-        output = net_connect.send_command(show_command)
-        
-        assert src_ip in output
-        assert dest_ip in output
-        
-        print('Inline tap port connectivity test passed!')
-        \"\"\",
-
-      "run_command": "python tap_port_test.py",
-      "expected_result": "Inline tap port connectivity test passed!"
-    }
-  },
-
-  {
-    "testname": "Inline Tap Address Reachability Test",
-    "testcase": {
-      "testname": "Inline Tap Address Reachability Test",
-      "objective": "Verify reachability between devices connected to inline tap ports",
-      "steps": [
-        "Configure inline tap ports on MX",
-        "Configure logical interfaces with IPs on tap ports",
-        "Verify connectivity between logical interfaces" 
-      ],
-      "test_data": {
-        "tap_ports": ["ge-0/0/1", "ge-0/0/2"],
-        "addresses": ["192.168.1.1/24", "192.168.1.2/24"]
-      }
-    },
-    
-    "testscript": {
-      "testname": "Inline Tap Address Reachability Test",
-      "objective": "Verify reachability between devices connected to inline tap ports",
-      "file_name": "tap_address_test.py",
-      "init_scripts": [ 
-        "pip install netmiko",
-        "pip install paramiko"
-      ],
-      "script": \"\"\"
-        import netmiko
-        
-        device = {
-          'device_type': 'juniper',
-          'ip': '192.168.1.10',
-          'username': 'admin',
-          'password': 'Juniper!123'
-        }
-        
-        net_connect = netmiko.ConnectHandler(**device)
-        
-        # Configure inline tap ports        
-        config_commands = [
-          'set interfaces ge-0/0/1 unit 0 family ethernet-switching interface-mode trunk',
-          'set interfaces ge-0/0/2 unit 0 family ethernet-switching interface-mode trunk',
-          'set interfaces ge-0/0/1 tap',
-          'set interfaces ge-0/0/2 tap'
-        ]
-        
-        net_connect.send_config_set(config_commands)
-        
-        # Configure logical interfaces
-        config_commands = [
-          'set interfaces ge-0/0/1 unit 0 family inet address 192.168.1.1/24',
-          'set interfaces ge-0/0/2 unit 0 family inet address 192.168.1.2/24' 
-        ]
-        
-        net_connect.send_config_set(config_commands)
-        
-        # Verify connectivity between logical interfaces
-        ping_command = 'ping 192.168.1.2 source 192.168.1.1'
-        output = net_connect.send_command(ping_command)
-        
-        assert '!!!!!' in output
-        
-        print('Inline tap address reachability test passed!')
-        \"\"\",
-        
-      "run_command": "python tap_address_test.py",
-      "expected_result": "Inline tap address reachability test passed!"
-    }
-
-  }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "Inline Tap Connectivity Test", 
-    "testcase": {
-      "testname": "Inline Tap Connectivity Test",
-      "objective": "Verify connectivity between inline tap ports on MX483 device",
-      "steps": [
-        "Connect traffic generator to inline tap port 1", 
-        "Connect traffic analyzer to inline tap port 2",
-        "Send traffic from generator",
-        "Verify traffic received on analyzer"
-      ],
-      "test_data": {
-        "generator_ip": "10.1.1.1",
-        "analyzer_ip": "10.2.1.1",
-        "inline_tap_ports": [
-          {"name": "ge-0/0/1", "vlan": 100},
-          {"name": "ge-0/0/2", "vlan": 100}
-        ]  
-      }
-    },
-    "testscript": {
-      "testname": "Inline Tap Connectivity Test",
-      "objective": "Verify connectivity between inline tap ports on MX483 device using Python script", 
-      "file_name": "inline_tap_test.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
+        "pip install jnpr.junos",
+        "pip install jnpr.junos.utils.config"
       ],
       "script": """
-        import paramiko
-        import netmiko
+        from jnpr.junos import Device
+        from jnpr.junos.utils.config import Config
+
+        dev = Device(host='192.168.0.1', user='python', password='py123')
+        dev.open()
         
-        generator_ip = '10.1.1.1'
-        analyzer_ip = '10.2.1.1'
+        cfg = Config(dev)
+        cfg.load('set interfaces ge-0/0/1 unit 0 family inet address 10.1.1.1/24', format='set')
+        cfg.load('set interfaces ge-0/0/2 unit 0 family inet address 10.2.1.1/24', format='set')
+        cfg.commit()
         
-        inline_tap_ports = [
-          {'name': 'ge-0/0/1', 'vlan': 100},
-          {'name': 'ge-0/0/2', 'vlan': 100}  
-        ]
+        print('Pinging between interfaces...')
+        dev.cli('ping 10.2.1.1 source 10.1.1.1 rapid count 10')
         
-        def connect_generator(ip):
-          # Code to connect and configure generator
-          
-          print('Generator configured')
-          
-        def connect_analyzer(ip):
-          # Code to connect and configure analyzer
-          
-          print('Analyzer configured')
-          
-        def send_traffic():
-          # Code to send traffic from generator
-          
-          print('Traffic sent from generator')
+        print('Checking interface counters...')
+        int1_stats = dev.rpc.get_interface_information(interface_name='ge-0/0/1')
+        int2_stats = dev.rpc.get_interface_information(interface_name='ge-0/0/2')
         
-        def verify_traffic():
-          # Code to verify traffic received on analyzer
-          
-          print('Traffic received on analyzer')
-          
-        connect_generator(generator_ip)
-        connect_analyzer(analyzer_ip)
-        
-        send_traffic()
-        
-        verify_traffic()
+        if int1_stats.findtext('interface-information/physical-interface/traffic-statistics/input-packets') > 0:
+            print('Traffic flowing on ge-0/0/1')
+        if int2_stats.findtext('interface-information/physical-interface/traffic-statistics/output-packets') > 0: 
+            print('Traffic flowing on ge-0/0/2')
+              
+        dev.close()
       """,
-      "run_command": "python inline_tap_test.py",
-      "expected_result": "Traffic sent from generator. Traffic received on analyzer."
+      "run_command": "python inline_tap_test_1.py",
+      "expected_result": "Connectivity between inline tap interfaces validated."
     }
   },
   
   {
-    "testname": "Inline Tap Port Isolation Test",
+    "testname": "Inline Tap Interface Connectivity Test 2",
     "testcase": {
-      "testname": "Inline Tap Port Isolation Test",
-      "objective": "Verify traffic isolation between inline tap ports on MX483 device",
+      "testname": "Inline Tap Interface Connectivity Test 2",
+      "objective": "Verify connectivity and mappings between inline tap interfaces configured on different units",
       "steps": [
-        "Connect traffic generator to inline tap port 1",
-        "Connect traffic analyzer to inline tap port 2",
-        "Send traffic from generator on vlan 100",  
-        "Verify no traffic received on analyzer on vlan 200"
+        "Configure inline tap interfaces on different units of a port on MX483",
+        "Ping between inline tap interfaces to verify connectivity", 
+        "Confirm interfaces mapped to expected units" 
       ],
       "test_data": {
-        "generator_ip": "10.1.1.1",  
-        "analyzer_ip": "10.2.1.1",
-        "inline_tap_ports": [
-          {"name": "ge-0/0/1", "vlan": 100},
-          {"name": "ge-0/0/2", "vlan": 200}
-        ]
+        "mx483_mgmt_ip": "192.168.0.1",
+        "tap_ints": ["ge-0/0/10", "ge-0/0/10"]
       }
     },
     "testscript": {
-      "testname": "Inline Tap Port Isolation Test",
-      "objective": "Verify traffic isolation between inline tap ports using Python script",
-      "file_name": "inline_tap_isolation_test.py",
+      "testname": "Inline Tap Connectivity Test 2",
+      "objective": "Verify connectivity between inline tap interfaces on different units", 
+      "file_name": "inline_tap_test_2.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"  
+        "pip install jnpr.junos",
+        "pip install jnpr.junos.utils.config"
       ],
       "script": """
-        import paramiko
-        import netmiko
+        from jnpr.junos import Device
+        from jnpr.junos.utils.config import Config
+
+        dev = Device(host='192.168.0.1', user='python', password='py123')
+        dev.open()
         
-        generator_ip = '10.1.1.1'
-        analyzer_ip = '10.2.1.1'
+        cfg = Config(dev)
+        cfg.load('set interfaces ge-0/0/10 unit 0 family inet address 10.1.1.1/24', format='set')
+        cfg.load('set interfaces ge-0/0/10 unit 1 family inet address 10.2.1.1/24', format='set')
+        cfg.commit()
         
-        inline_tap_ports = [
-          {'name': 'ge-0/0/1', 'vlan': 100},
-          {'name': 'ge-0/0/2', 'vlan': 200}
-        ]
+        print('Pinging between interfaces...')
+        dev.cli('ping 10.2.1.1 source 10.1.1.1 rapid count 10')
         
-        def connect_generator(ip):
-          # Code to connect and configure generator
-          
-          print('Generator configured')
-          
-        def connect_analyzer(ip):
-          # Code to connect and configure analyzer
-          
-          print('Analyzer configured')
-          
-        def send_traffic(vlan):
-          # Code to send traffic from generator on specified vlan
-          
-          print(f'Traffic sent from generator on vlan {vlan}')
-          
-        def verify_traffic(vlan):
-          # Code to verify traffic received on analyzer on specified vlan
-          
-          print(f'No traffic received on analyzer on vlan {vlan}')
+        print('Checking interface mappings...')
+        int1_info = dev.rpc.get_interface_information(interface_name='ge-0/0/10')
+        int1_unit = int1_info.findtext('physical-interface/logical-interface/name')
         
-        connect_generator(generator_ip)
-        connect_analyzer(analyzer_ip)
+        if int1_unit == 'ge-0/0/10.0':
+            print('ge-0/0/10 unit 0 mapped correctly')
+            
+        int2_info = dev.rpc.get_interface_information(interface_name='ge-0/0/10') 
+        int2_unit = int2_info.findtext('physical-interface/logical-interface/name')
         
-        send_traffic(100)
-          
-        verify_traffic(200)
+        if int2_unit == 'ge-0/0/10.1':
+            print('ge-0/0/10 unit 1 mapped correctly')
+
+        dev.close()
       """,
-      "run_command": "python inline_tap_isolation_test.py",
-      "expected_result": "Generator configured. Analyzer configured. Traffic sent from generator on vlan 100. No traffic received on analyzer on vlan 200."
+      "run_command": "python inline_tap_test_2.py",
+      "expected_result": "Connectivity and mappings of inline tap interfaces validated."
+    }
+  }
+]
+###ENDLIST### ###STARTLIST###
+[
+  {
+    "testname": "Connectivity Test Port 1", 
+    "testcase": {
+      "testname": "Connectivity Test Port 1",
+      "objective": "Verify connectivity on port 1 of the Juniper MX483", 
+      "steps": [
+        "Connect a traffic generator to port 1", 
+        "Send traffic at 1Gbps",
+        "Verify port 1 receives traffic at line rate without drops"
+      ],
+      "test_data": {
+        "port_num": 1,
+        "traffic_rate": "1Gbps"
+      }
+    },
+    "testscript": {
+      "testname": "Connectivity Test Port 1",
+      "objective": "Script to test connectivity on port 1",
+      "file_name": "port1_connectivity.py",
+      "init_scripts": [
+        "pip install trafficgen",
+        "pip install junos-eznc"
+      ],
+      "script": """
+import trafficgen
+import jnpr.junos
+
+dev = jnpr.junos.Device(host='1.1.1.1', user='netconf', password='pwd')
+dev.open()
+
+tg = trafficgen.TrafficGen()
+tg.connect('1.1.1.1')
+tg.reset() 
+tg.set_rate(1Gbps)
+tg.start_traffic(port='1/1/1')
+
+stats = dev.rpc.get_interface_optics_diagnostics_optics_time_interval(interface_name='ge-1/1/1')
+print(stats)
+
+tg.stop_traffic()
+      """,
+      "run_command": "python port1_connectivity.py", 
+      "expected_result": "No drops detected on port 1"
+    }
+  },
+
+  {
+    "testname": "Connectivity Test Port 16",
+    "testcase": {
+      "testname": "Connectivity Test Port 16", 
+      "objective": "Verify connectivity on port 16 of the Juniper MX483",
+      "steps": [
+        "Connect a traffic generator to port 16",
+        "Send traffic at 10Gbps", 
+        "Verify port 16 receives traffic at line rate without drops"
+      ],
+      "test_data": {
+        "port_num": 16,
+        "traffic_rate": "10Gbps"  
+      }
+    },
+    "testscript": {
+      "testname": "Connectivity Test Port 16",
+      "objective": "Script to test connectivity on port 16",
+      "file_name": "port16_connectivity.py",
+      "init_scripts": [
+        "pip install trafficgen",
+        "pip install junos-eznc"
+      ],
+      "script": """
+import trafficgen 
+import jnpr.junos
+
+dev = jnpr.junos.Device(host='1.1.1.1', user='netconf', password='pwd')
+dev.open()
+
+tg = trafficgen.TrafficGen()
+tg.connect('1.1.1.1')
+tg.reset()
+tg.set_rate(10Gbps)
+tg.start_traffic(port='1/1/16')
+
+stats = dev.rpc.get_interface_optics_diagnostics_optics_time_interval(interface_name='ge-1/1/16')
+print(stats)
+
+tg.stop_traffic()
+    """,
+    "run_command": "python port16_connectivity.py",
+    "expected_result": "No drops detected on port 16"
     }
   }
 ]
