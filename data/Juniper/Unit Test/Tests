@@ -1,345 +1,325 @@
- ###STARTLIST###
+ Here are 2 unit test cases with Python test scripts for Juniper MX480 bootup process:
+
+###STARTLIST###
+
 [
   {
-    "testname": "Test VLAN creation", 
+    "testname": "Test Bootup with Default Configuration",
     "testcase": {
-      "testname": "Test VLAN creation",
-      "objective": "Verify that a new VLAN can be created on an MX device",
+      "testname": "Test Bootup with Default Configuration", 
+      "objective": "Verify the router boots up successfully with factory default configuration",
       "steps": [
-        "Configure a new VLAN with ID 100 on interface ge-0/0/0", 
-        "Verify that the VLAN was configured properly by checking 'show vlans'"
+        "Power on the router",
+        "Verify console shows normal bootup messages",
+        "Verify Junos OS boots up successfully", 
+        "Verify default login prompt is displayed"
       ],
-      "test_data": {
-        "vlan_id": 100, 
-        "interface": "ge-0/0/0"  
+      "testdata": {
+        "hostname": "mx480",
+        "login": "root",
+        "password": "abc123"  
       }
     },
     "testscript": {
-      "testname": "Test VLAN creation",
-      "objective": "Automate VLAN creation test case with Python",
-      "file_name": "test_vlan_creation.py",
-      "init_scripts": ["pip install jnpr.junos","pip install yaml","pip install paramiko"],
-      "script": """
-import jnpr.junos
-import yaml
-from jnpr.junos import Device
-
-dev = Device(host='mx480', user='lab', password='lab123') 
-dev.open()
-
-yaml_data = \"\"\"
-- name: Create VLAN
-  junos_vlan:
-    name: TestVLAN
-    vlan_id: {{ vlan_id }}
-    interfaces:
-      - {{ interface }} 
-\"\"\"
-
-dev.cu.load(yaml_data, format="text", action="set")
-
-print(dev.cli("show vlans"))
-""",
-      "run_command": "python test_vlan_creation.py",
-      "expected_result": "VLAN interface ge-0/0/0.100 created successfully"
+      "testname": "Test Bootup with Default Configuration",
+      "objective": "Verify the router boots up successfully with factory default configuration using SSH",
+      "file_name": "test_default_bootup.py",
+      "init_scripts": [
+        "pip install paramiko"
+      ],
+      "script": \"\"\"
+        import paramiko
+        
+        IP = '192.168.1.1'
+        USERNAME = 'root' 
+        PASSWORD = 'abc123'
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(IP, username=USERNAME, password=PASSWORD)
+        
+        stdin, stdout, stderr = ssh.exec_command('cli')
+        output = stdout.read().decode()
+        
+        if '#' in output:
+            print('Login successful')
+        else:
+            print('Login failed')
+            
+        ssh.close()
+      \"\"\",
+      "run_command": "python test_default_bootup.py",
+      "expected_result": "Login successful"
     }
   },
   
   {
-    "testname": "Test VLAN deletion",
+    "testname": "Test Bootup with Custom Configuration", 
     "testcase": {
-      "testname": "Test VLAN deletion",
-      "objective": "Verify that an existing VLAN can be deleted from an MX device", 
+      "testname": "Test Bootup with Custom Configuration",
+      "objective": "Verify the router boots up successfully with custom configuration",
       "steps": [
-        "Delete the VLAN with ID 100 from interface ge-0/0/0",
-        "Verify that the VLAN was deleted properly by checking 'show vlans'"   
+        "Configure custom settings like hostname, interfaces etc", 
+        "Save configuration and reboot router",
+        "Verify console output using custom hostname",
+        "Verify configured interfaces are up"   
       ],
-      "test_data": {
-        "vlan_id": 100,
-        "interface": "ge-0/0/0"
+      "testdata": {  
+        "hostname": "core-rtr01",
+        "interfaces": [
+          "ge-0/0/0",
+          "ge-0/0/1" 
+        ]
       }
     },
     "testscript": {
-      "testname": "Test VLAN deletion",
-      "objective": "Automate VLAN deletion test case with Python", 
-      "file_name": "test_vlan_deletion.py",
-      "init_scripts": ["pip install jnpr.junos","pip install yaml","pip install paramiko"],
-      "script": """  
-import jnpr.junos
-from jnpr.junos import Device
-
-dev = Device(host='mx480', user='lab', password='lab123')
-dev.open()
-
-dev.cu.load("delete vlans TestVLAN", format="text")
-
-print(dev.cli("show vlans"))
-""",
-      "run_command": "python test_vlan_deletion.py", 
-      "expected_result": "VLAN with ID 100 successfully deleted"
+      "testname": "Test Bootup with Custom Configuration",
+      "objective": "Verify the router boots up successfully with custom hostname and interface configuration",
+      "file_name": "test_custom_bootup.py",
+      "init_scripts": [ 
+        "pip install paramiko"
+      ],
+      "script": \"\"\"
+        import re
+        import paramiko
+        
+        IP = '192.168.1.1'
+        USERNAME = 'root'
+        PASSWORD = 'abc123'
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(IP, username=USERNAME, password=PASSWORD)
+        
+        stdin, stdout, stderr = ssh.exec_command('show interfaces terse')
+        output = stdout.read().decode()
+        
+        interfaces = ['ge-0/0/0', 'ge-0/0/1']
+        for interface in interfaces:
+          match = re.search(rf'{interface}\s+up', output)
+          assert match != None, f'Interface {interface} status missing in output'
+          
+        print('Interfaces status validated successfully')
+        
+        ssh.close()
+        
+      \"\"\",
+      "run_command": "python test_custom_bootup.py", 
+      "expected_result": "Interfaces status validated successfully"
     }
   }
+  
 ]
+
 ###ENDLIST### ###STARTLIST###
 [
     {
-        "testname": "VLAN Port Mapping", 
+        "testname": "Port Mappings Test",
         "testcase": {
-            "testname": "VLAN Port Mapping",
-            "objective": "Verify VLAN port mappings are configured correctly",
+            "testname": "Port Mappings Test", 
+            "objective": "Verify that all physical ports on the MX481 are mapped to the correct logical interfaces after bootup.",
             "steps": [
-                "Configure VLANs on ports", 
-                "Verify VLAN memberships match configured ports"
+                "1. Check that ge-0/0/0 is mapped to xe-0/0/0.",
+                "2. Check that ge-0/0/1 is mapped to xe-0/0/1.",
+                "3. Check that ge-0/0/2 is mapped to xe-0/0/2.",
+                "4. etc..."
             ],
             "test_data": {
-                "vlans": [100, 200],
-                "ports": {
-                    "ge-0/0/0": 100,
-                    "ge-0/0/1": 200
+                "port_mappings": {
+                    "ge-0/0/0": "xe-0/0/0",
+                    "ge-0/0/1": "xe-0/0/1",
+                    "ge-0/0/2": "xe-0/0/2"
                 }
             }
         },
         "testscript": {
-            "testname": "VLAN Port Mapping",
-            "objective": "Verify VLAN port mappings are configured correctly", 
-            "file_name": "test_vlan_port_mapping.py",
+            "testname": "Port Mappings Test",
+            "objective": "Verify that all physical ports on the MX481 are mapped to the correct logical interfaces after bootup.", 
+            "file_name": "test_port_mappings.py",
             "init_scripts": [
-                "pip install ncclient",
-                "pip install json"
+                "pip install junos-eznc",
+                "pip install pytest"
             ],
-            "script": """
-                import ncclient
-                import json
-                
-                vlans = {{test_data.vlans}}
-                ports = {{test_data.ports}}
-                
-                with ncclient.Manager(host='1.1.1.1', port=22, username='netconf', password='password', hostkey_verify=False) as m:
-                
-                    for vlan_id in vlans:
-                        vlan_config = {'configuration': {
-                            'vlans': {
-                                'vlan': {
-                                    'name': f'VLAN {vlan_id}'
-                                }
-                            }
-                        }}
-                        m.edit_config(target='candidate', config=vlan_config)
-                
-                    for port, vlan_id in ports.items():
-                        membership_config = {
-                            'vlans': {
-                                'vlan': [
-                                    {
-                                        'name': f'VLAN {vlan_id}',
-                                        'interface': [
-                                            {
-                                                'name': port
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                        m.edit_config(target='candidate', config=membership_config)
-                
-                    result = m.get_config(source='candidate', filter={'configuration': 'vlans'}).data_xml
-                    vlan_configs = json.loads(result)
-                
-                    for vlan_id, ports in ports.items():
-                        assert vlan_configs['configuration']['vlans']['vlan'][0]['name'] == f'VLAN {vlan_id}' 
-                        assert vlan_configs['configuration']['vlans']['vlan'][0]['interface'][0]['name'] == ports
-                        
-            """,
-            "run_command": "python test_vlan_port_mapping.py", 
-            "expected_result": "PASS. VLAN port mappings verified."
+            "script": \"\"\"
+import json
+from jnpr.junos import Device
+from jnpr.junos.exception import ConnectError
+
+def test_port_mappings(port_mappings):
+    dev = Device(host='192.168.1.1', user='netconf', password='password')
+    try:
+        dev.open()
+    except ConnectError as err:
+        print('Cannot connect to device: {0}'.format(err))
+        return
+
+    print('Connected to device')
+    
+    for phys_port, log_port in port_mappings.items():
+        print('Checking mapping between {0} and {1}'.format(phys_port, log_port))
+        assert dev.cli('show interfaces {0}'.format(log_port))['interface-name'] == phys_port
+    
+    dev.close()
+    
+if __name__ == '__main__':
+    with open('test_data.json') as f:
+        test_data = json.load(f)
+
+    port_mappings = test_data['port_mappings']   
+    test_port_mappings(port_mappings)
+\"\"\"",
+            "run_command": "python test_port_mappings.py",
+            "expected_result": "All port mappings validated successfully"  
         }
     },
     {
-        "testname": "VLAN Address Verification",
+        "testname": "Address Verification Test",
         "testcase": {
-            "testname": "VLAN Address Verification",
-            "objective": "Verify VLAN interface IP addresses",
+            "testname": "Address Verification Test",
+            "objective": "Verify that all interface addresses are configured correctly after bootup.",
             "steps": [
-                "Configure VLAN interfaces",
-                "Verify configured IP addresses match" 
+                "1. Check that xe-0/0/0 IP address is 192.168.0.1/24.",
+                "2. Check that xe-0/0/1 IP address is 192.168.1.1/24.", 
+                "3. etc..."
             ],
             "test_data": {
-                "vlans": [100, 200],
-                "addresses": {
-                    "ge-0/0/10.100": "10.0.0.1/24",
-                    "ge-0/0/20.200": "10.0.1.1/24"
-                }
+                "interface_addresses": {
+                    "xe-0/0/0": "192.168.0.1/24",
+                    "xe-0/0/1": "192.168.1.1/24"
+                }  
             }
         },
         "testscript": {
-            "testname": "VLAN Address Verification",
-            "objective": "Verify VLAN interface IP addresses",
-            "file_name": "test_vlan_addresses.py",
+            "testname": "Address Verification Test",
+            "objective": "Verify that all interface addresses are configured correctly after bootup.",
+            "file_name": "test_address_verification.py",
             "init_scripts": [
-                "pip install ncclient",
-                "pip install json"  
+                "pip install junos-eznc",
+                "pip install pytest"  
             ],
-            "script": """
-                import ncclient
-                import json
-                
-                vlans = {{test_data.vlans}}
-                addresses = {{test_data.addresses}}
-                
-                with ncclient.Manager(host='1.1.1.1', port=22, username='netconf', password='password', hostkey_verify=False) as m:
-                
-                    for vlan_id in vlans:
-                        vlan_config = {'configuration': {
-                            'vlans': {
-                                'vlan': {
-                                    'name': f'VLAN {vlan_id}'
-                                }
-                            }
-                        }}
-                        m.edit_config(target='candidate', config=vlan_config)
-                        
-                    for interface, address in addresses.items():
-                        ip_config = {
-                            'configuration': {
-                                'interfaces': {
-                                    'interface': {
-                                        'name': interface,
-                                        'unit': {
-                                            'name': 0,
-                                            'family': {
-                                                'inet': {
-                                                    'address': [
-                                                        {
-                                                            'name': address
-                                                        }
-                                                    ]
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        m.edit_config(target='candidate', config=ip_config)
-                
-                    result = m.get_config(source='candidate', filter={'configuration': 'interfaces'}).data_xml
-                    interface_configs = json.loads(result)
-                
-                    for interface, address in addresses.items():
-                        assert interface_configs['configuration']['interfaces']['interface'][0]['name'] == interface
-                        assert interface_configs['configuration']['interfaces']['interface'][0]['unit'][0]['family']['inet']['address'][0]['name'] == address
-                        
-            """,
-            "run_command": "python test_vlan_addresses.py",
-            "expected_result": "PASS. VLAN interface addresses verified."
-        }     
+            "script": \"\"\"  
+import json
+from jnpr.junos import Device
+from jnpr.junos.exception import ConnectError
+
+def test_interface_addresses(interface_addresses):
+    dev = Device(host='192.168.1.1', user='netconf', password='password')
+    try:
+        dev.open()
+    except ConnectError as err:
+        print('Cannot connect to device: {0}'.format(err))
+        return
+
+    print('Connected to device')
+
+    for interface, address in interface_addresses.items():
+        print('Checking IP address of interface {0}'.format(interface))
+        assert dev.cli('show interfaces {0}'.format(interface))['address'] == address
+
+    dev.close()
+    
+if __name__ == '__main__':
+    with open('test_data.json') as f:
+        test_data = json.load(f)
+
+    interface_addresses = test_data['interface_addresses']
+    test_interface_addresses(interface_addresses)  
+\"\"\"",
+            "run_command": "python test_address_verification.py",
+            "expected_result": "All interface addresses validated successfully"
+        }
     }
 ]
-###ENDLIST### ###STARTLIST###
+###ENDLIST### Here are 2 unit test cases with Python test scripts for Bootup process for Junipers MX481 considering each port of the device:
+
+###STARTLIST###
 [
   {
-    "testname": "VLAN Configuration Test 1", 
+    "testname": "Test Port Status After Bootup", 
     "testcase": {
-      "testname": "VLAN Configuration Test 1",
-      "objective": "Verify VLAN configuration on port ge-0/0/1",
+      "objective": "Verify all ports are up after device bootup",
       "steps": [
-        "Configure VLAN 100 on ge-0/0/1", 
-        "Verify ge-0/0/1 is in VLAN 100"
+        "Check operational status of all ports", 
+        "Verify all ports are up"
       ],
-      "testdata": {
-        "vlan_id": 100,
-        "interface": "ge-0/0/1"  
+      "test_data": {
+        "number_of_ports": 48
       }
     },
     "testscript": {
-      "testname": "VLAN Configuration Test 1",
-      "objective": "Verify VLAN configuration on port ge-0/0/1", 
-      "file_name": "vlan_test_1.py",
-      "init_scripts": "pip install netmiko",
+      "testname": "Test Port Status After Bootup",
+      "objective": "Verify all ports are up after device bootup", 
+      "file_name": "test_port_status.py",
+      "init_scripts": [
+        "pip install junos-eznc"
+      ],
       "script": """
-import netmiko
+import junos
+from jnpr.junos import Device
 
-vlan_id = 100
-interface = 'ge-0/0/1'
+dev = Device(host='1.1.1.1', user='test', password='password123') 
+dev.open()
 
-device = {
-  'device_type': 'juniper',
-  'ip': '192.168.0.1',
-  'username': 'testuser',
-  'password': 'testpass'
-}
+ports = dev.cli('show interfaces terse')
+up_ports = [p for p in ports.split() if p.startswith('xe') and 'up' in p] 
 
-net_connect = netmiko.ConnectHandler(**device)
-
-net_connect.enable()
-
-config_commands = [
-  'set vlans ' + str(vlan_id) + ' vlan-id ' + str(vlan_id),
-  'set interfaces ' + interface + ' unit 0 family ethernet-switching vlan members ' + str(vlan_id)  
-]
-
-net_connect.send_config_set(config_commands)
-
-print(net_connect.send_command('show vlans ' + str(vlan_id)))
-print(net_connect.send_command('show interfaces ' + interface + ' extensive'))
-
-net_connect.disconnect()
+print(f'{len(up_ports)} / {test_data["number_of_ports"]} ports are up')
+if len(up_ports) == test_data["number_of_ports"]:
+  print('TEST PASSED')
+else:
+  print('TEST FAILED')
       """,
-      "run_command": "python vlan_test_1.py",
-      "expected_result": "VLAN 100 is configured on interface ge-0/0/1"
+      "run_command": "python test_port_status.py",
+      "expected_result": "48 / 48 ports are up\nTEST PASSED"
     }
   },
+
   {
-    "testname": "VLAN Configuration Test 2",
+    "testname": "Test Control Plane Processes After Bootup",
     "testcase": {
-      "testname": "VLAN Configuration Test 2",
-      "objective": "Verify VLAN configuration on port ge-0/0/5",
+      "objective": "Verify control plane processes are running after reboot",
       "steps": [
-        "Configure VLAN 200 on ge-0/0/5",
-        "Verify ge-0/0/5 is in VLAN 200"  
+        "Check status of control plane processes",
+        "Verify processes are running"  
       ],
-      "testdata": {
-        "vlan_id": 200,
-        "interface": "ge-0/0/5"
+      "test_data": {
+        "required_processes": ["rpd", "dcd", "smid"]
       }
     },
     "testscript": {
-      "testname": "VLAN Configuration Test 2",
-      "objective": "Verify VLAN configuration on port ge-0/0/5",
-      "file_name": "vlan_test_2.py",
-      "init_scripts": "pip install netmiko", 
-      "script": """  
-import netmiko
+      "testname": "Test Control Plane Processes After Bootup",
+      "objective": "Verify control plane processes are running after reboot",
+      "file_name": "test_processes.py", 
+      "init_scripts": [
+        "pip install junos-eznc"
+      ],
+      "script": """
+import re
+from jnpr.junos import Device
 
-vlan_id = 200
-interface = 'ge-0/0/5'  
+dev = Device(host='1.1.1.1', user='test', password='password123')
+dev.open()
 
-device = {
-  'device_type': 'juniper',
-  'ip': '192.168.0.1',
-  'username': 'testuser',
-  'password': 'testpass' 
-}
+output = dev.cli('show system processes')
 
-net_connect = netmiko.ConnectHandler(**device)
+processes = re.findall(r'(\\w+)\\s+\\w+\\s+(\\w+)', output)
+process_dict = {p[0]: p[1] for p in processes}
 
-net_connect.enable()  
+failed = []
+for proc in test_data['required_processes']:
+  status = process_dict.get(proc)
+  if status != 'Running':
+    failed.append(proc)
 
-config_commands = [
-  'set vlans ' + str(vlan_id) + ' vlan-id ' + str(vlan_id),
-  'set interfaces ' + interface + ' unit 0 family ethernet-switching vlan members ' + str(vlan_id)
-]
-
-net_connect.send_config_set(config_commands)
-
-print(net_connect.send_command('show vlans ' + str(vlan_id)))
-print(net_connect.send_command('show interfaces ' + interface + ' extensive'))
-  
-net_connect.disconnect()
+if failed:
+  print(f'Processes not running: {failed}')
+  print('TEST FAILED')  
+else:
+  print('Required processes are running') 
+  print('TEST PASSED')
       """,
-      "run_command": "python vlan_test_2.py",
-      "expected_result": "VLAN 200 is configured on interface ge-0/0/5"
+      "run_command": "python test_processes.py", 
+      "expected_result": "Required processes are running\nTEST PASSED"
     }
   }
 ]
