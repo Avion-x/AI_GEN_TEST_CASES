@@ -1,344 +1,334 @@
- ###STARTLIST###
+ Here are 2 unit test cases with Python test scripts for Bootup process for MX481 router having Junos OS in JSON format:
+
+```python
+###STARTLIST###
 [
   {
-    "testname": "Test Bootup Process", 
+    "testname": "Test Junos OS Bootup", 
     "testcase": {
-      "testname": "Test Bootup Process",
-      "objective": "Verify Junos OS bootup process completes successfully", 
-      "steps": [
-        "Power on the router",
-        "Verify POST completes successfully", 
-        "Verify Junos OS boots up successfully",
-        "Verify routing protocols establish adjacencies",
-        "Verify redundancy protocols establish sessions"
-      ],
-      "testdata": {
-        "router_model": "MX480",
-        "junos_version": "17.3R1.10"  
-      }
+      "testname": "Test Junos OS Bootup",
+      "objective": "Verify Junos OS bootup process completes successfully",
+      "steps": ["Power on the router", "Verify POST completes", "Verify Junos kernel boots up", "Verify routing protocol daemons start"],
+      "test_data": {"hostname": "mx481", "os": "Junos"}
     },
     "testscript": {
-      "testname": "Test Junos Bootup",
-      "objective": "Automate verification of Junos bootup process",
+      "testname": "Test Junos OS Bootup",
+      "objective": "Verify Junos OS bootup process completes successfully", 
       "file_name": "test_junos_bootup.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc"
+        "import time",
+        "import pexpect",
+        """
+        def test_junos_bootup(hostname, username, password):
+          ssh_conn = pexpect.spawn('ssh {}@{}'.format(username, hostname))
+          ssh_conn.expect('password:')
+          ssh_conn.sendline(password)
+          ssh_conn.expect('#')
+          ssh_conn.sendline('show version | match Junos')
+          ssh_conn.expect('#')
+          print(ssh_conn.before)
+          ssh_conn.sendline('exit')
+        """,
+        "test_junos_bootup('mx481', 'admin', 'juniper123')"  
       ],
-      "script": """
-import time
-import paramiko
-from jnpr.junos import Device
-
-ip = '192.168.0.1' 
-username = 'admin'
-password = 'admin123'
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip, username=username, password=password)
-
-device = Device(host=ip, user=username, password=password)
-device.open()
-device.cli('show version')
-
-# Verify successful boot by checking routing protocols  
-device.cli('show ospf neighbor') 
-device.cli('show bgp summary')
-
-# Verify redundancy by checking RE status
-device.cli('show chassis redundancy')
-
-device.close()
-ssh.close()
-      """,
       "run_command": "python test_junos_bootup.py",
-      "expected_result": "No errors during bootup. Routing and redundancy protocols established."
+      "expected_result": "Junos OS bootup successful"
     }
   },
   
   {
-    "testname": "Test Resiliency Mechanisms",
+    "testname": "Test System Redundancy",
     "testcase": {
-      "testname": "Test Resiliency Mechanisms",
-      "objective": "Verify redundancy and resiliency mechanisms function properly after failure",
-      "steps": [
-        "Simulate failure of master Routing Engine",
-        "Verify backup Routing Engine takes over", 
-        "Verify protocols reconverge on backup",
-        "Verify traffic failover"   
-      ],
-      "testdata": {
-        "router_model": "MX480",
-        "junos_version": "17.3R1.10"
-      }
+      "testname": "Test System Redundancy",
+      "objective": "Verify redundancy protocols establish between REs",
+      "steps": ["Power on router with dual REs", "Verify mastership established", "Verify protocols synchronized"],
+      "test_data": {"hostname": "mx481", "re0": "re0", "re1": "re1"}
     },
     "testscript": {
-      "testname": "Test Resiliency",
-      "objective": "Automate testing of resiliency mechanisms",
-      "file_name": "test_resiliency.py", 
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc"
+      "testname": "Test System Redundancy",
+      "objective": "Verify redundancy protocols establish between REs",
+      "file_name": "test_redundancy.py",
+      "init_scripts": [ 
+        "import re",
+        "import pexpect",
+        """
+        def test_redundancy(hostname, username, password):
+          ssh_conn = pexpect.spawn('ssh {}@{}'.format(username, hostname))
+          ssh_conn.expect('password:')
+          ssh_conn.sendline(password)
+          ssh_conn.expect('#')
+          ssh_conn.sendline('show chassis redundancy')
+          redundancy_status = ssh_conn.expect(['#', pexpect.EOF, pexpect.TIMEOUT])
+          if redundancy_status == 0:
+            print("Redundancy protocols established successfully")
+          else:
+            print("Error checking redundancy status")
+          
+          ssh_conn.sendline('exit')  
+        """,
+        "test_redundancy('mx481', 'admin', 'juniper123')"
       ],
-      "script": """  
-import time
-import paramiko
-from jnpr.junos import Device
-
-ip = '192.168.0.1'
-username = 'admin'
-password = 'admin123'
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip, username=username, password=password)
-
-device = Device(host=ip, user=username, password=password)
-device.open()
-
-# Simulate RE failure
-device.cli('request chassis routing-engine master fail') 
-
-# Check backup RE status  
-device.cli('show chassis redundancy')
-
-# Verify protocols reconverged  
-device.cli('show ospf neighbor')
-device.cli('show bgp summary') 
-
-# Verify traffic failover
-device.cli('show chassis traffic-statistics') 
-
-device.close()
-ssh.close()
-    """,
-    "run_command": "python test_resiliency.py", 
-    "expected_result": "Backup RE took over successfully. Protocols reconverged and traffic failed over."
+      "run_command": "python test_redundancy.py", 
+      "expected_result": "Redundancy protocols established successfully"
     }
   }
 ]
-###ENDLIST### Here are 2 unit test cases and scripts for the bootup process of Juniper's MX481 router focusing on port mappings and address verification:
+###ENDLIST###
+```
 
-###STARTLIST###
-
+The above contains 2 test cases with Python test scripts for Junos OS bootup and system redundancy verification on MX481 router in a Python list of JSON objects. Each test case and script is encapsulated within its own JSON object containing required fields. The scripts utilize pexpect library for SSH connections to router and checking outputs. ###STARTLIST###
 [
   {
     "testname": "Test Port Mappings", 
     "testcase": {
       "testname": "Test Port Mappings",
-      "objective": "Validate that physical ports are mapped to the correct logical interfaces after bootup",
+      "objective": "Verify all ports are mapped correctly after bootup",
       "steps": [
-        "Verify that physical port ge-0/0/0 is mapped to logical interface ge-0/0/0", 
-        "Verify that physical port ge-0/0/1 is mapped to logical interface ge-0/0/1",
-        "Verify no unexpected port to interface mappings exist"
+        "Verify physical ports are mapped to logical interfaces", 
+        "Verify logical interfaces have expected IP addresses"
       ],
       "test_data": {
-        "expected_port_mappings": {
-          "ge-0/0/0": "ge-0/0/0",
-          "ge-0/0/1": "ge-0/0/1"
+        "port_mappings": [
+          {"physical_port": "ge-0/0/0", "logical_interface": "ge-0/0/0.0"},
+          {"physical_port": "ge-0/0/1", "logical_interface": "ge-0/0/1.0"} 
+        ],
+        "expected_ips": {
+          "ge-0/0/0.0": "192.168.0.1/24",
+          "ge-0/0/1.0": "192.168.1.1/24"
         }
       }
     },
     "testscript": {
       "testname": "Test Port Mappings",
-      "objective": "Validate port mappings after router bootup",
+      "objective": "Verify all ports are mapped correctly after bootup", 
       "file_name": "test_port_mappings.py",
       "init_scripts": [
-        "pip install junos-eznc",
-        "pip install pytest"  
+        "pip install jnpr.junos",
+        "pip install pytest"
       ],
-      "script": \"\"\"
-        import pytest
-        from jnpr.junos import Device
+      "script": """
+import jnpr.junos as pyez
+
+def test_port_mappings(test_data):
+    dev = pyez.Device(host='192.168.0.1', user='netconf', password='juniper!')
+    dev.open()
+    
+    port_mappings = test_data['port_mappings']
+    expected_ips = test_data['expected_ips']
+    
+    for mapping in port_mappings:
+        phy_port = mapping['physical_port']
+        log_int = mapping['logical_interface']
         
-        def test_port_mappings(expected_port_mappings):
-          dev = Device(host='1.1.1.1', user='test', password='Password')
-          dev.open()
-          
-          for port, intf in expected_port_mappings.items():
-            assert dev.cli(f'show interfaces {intf}').find(port) != -1
-            
-          dev.close()
-          
-        if __name__ == '__main__':
-          expected_port_mappings = {
-            'ge-0/0/0': 'ge-0/0/0', 
-            'ge-0/0/1': 'ge-0/0/1'
-          }
-          
-          test_port_mappings(expected_port_mappings)
-      \"\"\",
-      "run_command": "pytest test_port_mappings.py",
+        assert dev.cli(command='show interfaces ' + log_int).find(phy_port) >= 0
+        
+        ip_addr = dev.cli(command='show interfaces ' + log_int + ' | match inet').split()[1]
+        assert ip_addr == expected_ips[log_int]
+        
+    dev.close()
+""",
+      "run_command": "pytest -s test_port_mappings.py",
       "expected_result": "2 passed"
     }
   },
-  
+
   {
-    "testname": "Test Interface Address",
+    "testname": "Test Address Assignment",
     "testcase": {
-      "testname": "Test Interface Address",
-      "objective": "Verify interface IP addresses match expected values after bootup",
+      "testname": "Test Address Assignment",
+      "objective": "Verify all interfaces have expected IP addresses after bootup",
       "steps": [
-        "Verify ge-0/0/0 interface has IP 10.0.0.1/24",
-        "Verify ge-0/0/1 interface has IP 10.0.1.1/24", 
-        "Verify no unexpected IP addresses exist on interfaces"
+        "Retrieve IP addresses assigned to all interfaces",
+        "Validate IP addresses match expected values" 
       ],
       "test_data": {
-        "expected_ip_addresses": {
-          "ge-0/0/0": "10.0.0.1/24",
-          "ge-0/0/1": "10.0.1.1/24"  
+        "expected_ips": {
+          "ge-0/0/0.0": "192.168.0.1/24",
+          "ge-0/0/1.0": "192.168.1.1/24",
+          "lo0.0": "127.0.0.1/32"
         }
       }
     },
     "testscript": {
-      "testname": "Test Interface Address",
-      "objective": "Validate interface IP addresses after router bootup",
-      "file_name": "test_interface_address.py",
-      "init_scripts": [ 
-        "pip install junos-eznc",
+      "testname": "Test Address Assignment",
+      "objective": "Verify all interfaces have expected IP addresses after bootup",
+      "file_name": "test_address_assignment.py",
+      "init_scripts": [
+        "pip install jnpr.junos", 
         "pip install pytest"
       ],
-      "script": \"\"\"
-        import pytest
-        from jnpr.junos import Device
+      "script": """  
+import jnpr.junos as pyez
+
+def test_address_assignment(test_data):
+    dev = pyez.Device(host='192.168.0.1', user='netconf', password='juniper!')  
+    dev.open()
+    
+    expected_ips = test_data['expected_ips']
         
-        def test_interface_addresses(expected_ip_addresses):
-          dev = Device(host='1.1.1.1', user='test', password='Password')
-          dev.open()
-        
-          for intf, ip in expected_ip_addresses.items():
-            assert ip in dev.cli(f'show ip interface {intf}')
-          
-          dev.close()
-          
-        if __name__ == '__main__':
-          expected_ip_addresses = {
-            'ge-0/0/0': '10.0.0.1/24',
-            'ge-0/0/1': '10.0.1.1/24'
-          }
-          
-          test_interface_addresses(expected_ip_addresses)
-      \"\"\",
-      "run_command": "pytest test_interface_address.py", 
-      "expected_result": "2 passed"
+    interfaces = dev.cli(command='show interfaces terse')
+    for interface in interfaces.split():
+        ip = dev.cli(command='show interfaces ' + interface + ' | match inet').split()[1]
+        assert ip == expected_ips[interface]
+    
+    dev.close()
+""",
+      "run_command": "pytest -s test_address_assignment.py",
+      "expected_result": "3 passed"
     }
   }
 ]
-
 ###ENDLIST### ###STARTLIST###
 [
   {
-    "testname": "Boot Up Test 1", 
+    "testname": "Bootup High Availability Test",
     "testcase": {
-      "testname": "Boot Up Test 1",
-      "objective": "Verify all ports boot up successfully", 
+      "testname": "Bootup High Availability Test",
+      "objective": "Verify that the MX481 router boots up properly and routing protocols establish adjacencies for high availability.",
       "steps": [
-        "Verify console output shows all ports initialized successfully",
-        "Verify no errors reported in logs for any ports"
+        "1. Power on the MX481 router.",
+        "2. Verify Junos OS boots up successfully within expected time frame.",
+        "3. Verify OSPF neighbors are established on all ports.",
+        "4. Verify ISIS neighbors are established on all ports.", 
+        "5. Initiate a switchover and verify proper failover to backup RE."
       ],
       "test_data": {
-        "device_under_test": "Juniper MX481",
-        "console_output_file": "boot_logs.txt", 
-        "error_log_file": "boot_errors.log"  
+        "mx481_ports": [
+          "ge-0/0/0",
+          "ge-0/0/1",
+          "ge-0/0/2" 
+        ],
+        "routing_protocols": [
+          "ospf",
+          "isis"
+        ],
+        "expected_boot_time": "120 seconds",
+        "backup_re": "re1"
       }
     },
     "testscript": {
-      "testname": "Boot Up Test 1",
-      "objective": "Verify all ports boot up successfully",
-      "file_name": "bootup_test1.py",
+      "testname": "Bootup High Availability Test",
+      "objective": "Automated test script to validate bootup process and high availability on MX481 router",
+      
+      "file_name": "test_mx481_bootup_ha.py",
+      
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
+        "pip install netmiko",
+        "pip install napalm"
       ],
-      "script": """
-        \"\"\"
-        This script uses Paramiko to connect to the console of the Juniper MX481
-        and collects the boot up console output. It then verifies no errors 
-        were reported for any ports during boot up.
-        \"\"\"
-        
-        import re
-        import paramiko
-        
-        IP = '192.168.0.1'
-        USERNAME = 'admin'
-        PASSWORD = 'admin123'
-        
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(IP, username=USERNAME, password=PASSWORD)
-        
-        stdin, stdout, stderr = client.exec_command('show bootup logs')
-        
-        console_output = stdout.read().decode()
-        
-        error_pattern = r'Error initializing port [0-9]+'
-        errors = re.findall(error_pattern, console_output)
-        
-        assert len(errors) == 0, "Errors found booting up ports"
-      """,
-      "run_command": "python bootup_test1.py",
-      "expected_result": "No assertion errors. All ports initialized successfully."
+      
+      "script": \"\"\"
+      import netmiko
+      import napalm
+      from datetime import datetime
+      
+      def test_mx481_bootup_ha():
+          # Connect to MX481
+          device = {
+              'host': 'mx481.test.net', 
+              'username': 'pyuser',
+              'password': 'pypassword',
+              'device_type': 'juniper'
+          }
+          conn = netmiko.ConnectHandler(**device)
+          
+          # Verify boot time  
+          bootup_time = datetime.now() - datetime.min 
+          assert bootup_time <= 120
+          
+          # Verify OSPF neighbors
+          ospf_nei = conn.send_command('show ospf neighbor')
+          for interface in interfaces:
+              assert interface in ospf_nei
+              
+          # Verify ISIS neighbors  
+          isis_nei = conn.send_command('show isis neighbor')
+          for interface in interfaces:
+              assert interface in isis_nei
+              
+          # Initiate swithover
+          conn.send_command('request chassis redundancy switchover')
+          
+          # Verify new RE
+          prompt = conn.find_prompt() 
+          assert 're1' in prompt
+          
+      interfaces = ['ge-0/0/0', 'ge-0/0/1', 'ge-0/0/2']    
+      test_mx481_bootup_ha()
+      \"\"\",
+      
+      "run_command": "python test_mx481_bootup_ha.py",
+      
+      "expected_result": "All test cases pass"
     }
   },
-  
+
   {
-    "testname": "Boot Up Test 2",
+    "testname": "Bootup Basic Functionality Test",
     "testcase": {
-      "testname": "Boot Up Test 2",
-      "objective": "Verify redundancy protocol initializes",
+      "testname": "Bootup Basic Functionality Test",
+      "objective": "Verify basic functionality of MX481 router after bootup",
       "steps": [
-        "Verify console output shows redundancy protocol initialized", 
-        "Verify no errors reported for redundancy protocol in logs"   
+        "1. Power on the MX481 router", 
+        "2. Verify Junos OS boots up successfully",
+        "3. Verify interfaces are operationally up",
+        "4. Verify ping to loopback interface address"
       ],
       "test_data": {
-        "device_under_test": "Juniper MX481",
-        "console_output_file": "boot_logs.txt",
-        "error_log_file": "boot_errors.log"
+        "interfaces": [
+          "ge-0/0/0",
+          "ge-0/0/1"
+        ],
+        "loopback_address": "10.255.255.1"  
       }
     },
     "testscript": {
-      "testname": "Boot Up Test 2",
-      "objective": "Verify redundancy protocol initializes", 
-      "file_name": "bootup_test2.py",
+      "testname": "Bootup Basic Functionality Test",
+      "objective": "Automated test script to validate basic functionality after MX481 bootup",
+      "file_name": "test_mx481_basic_bootup.py",
+      
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"  
+        "pip install napalm"
       ],
+      
       "script": \"\"\"
-        This script uses Paramiko to connect to the console of the Juniper MX481
-        and collects the boot up console output. It then verifies the redundancy  
-        protocol initialized successfully without any errors.
-        \"\"\"
-        
-        import re
-        import paramiko
-        
-        IP = '192.168.0.1'
-        USERNAME = 'admin'
-        PASSWORD = 'admin123'
-        
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(IP, username=USERNAME, password=PASSWORD)
-        
-        stdin, stdout, stderr = client.exec_command('show bootup logs')
-        
-        console_output = stdout.read().decode()
-        
-        success_pattern = r'Redundancy protocol initialized'
-        match = re.search(success_pattern, console_output)
-        
-        assert match, "Redundancy protocol initialization not found in logs"
-        
-        error_pattern = r'Error initializing redundancy protocol'
-        errors = re.findall(error_pattern, console_output)
-        
-        assert len(errors) == 0, "Errors found initializing redundancy protocol"
+      import napalm
+      
+      def test_mx481_basic_bootup():
+          
+          # Connect to MX481
+          device = {
+              'hostname': 'mx481.test.net',
+              'username': 'pyuser',
+              'password': 'pypassword',
+              'optional_args': {'port': 830}
+          }
+          driver = napalm.get_network_driver('junos')
+          napalm_conn = driver(**device)
+          napalm_conn.open()
+          
+          # Verify Junos OS bootup
+          assert napalm_conn.is_alive()
+          
+          # Verify interfaces up
+          interfaces = napalm_conn.get_interfaces()
+          for interface in interfaces:
+              if interface in test_interfaces:
+                  assert interfaces[interface]['is_up']
+                  
+          # Verify ping         
+          ping = napalm_conn.ping(loopback_address)
+          assert ping['success']['packet_loss'] == 0
+          
+          napalm_conn.close()
+          
+      test_interfaces = ['ge-0/0/0', 'ge-0/0/1']
+      loopback_address = '10.255.255.1'
+      test_mx481_basic_bootup()
       \"\"\",
-      "run_command": "python bootup_test2.py",
-      "expected_result": "No assertion errors. Redundancy protocol initialized successfully."
+      
+      "run_command": "python test_mx481_basic_bootup.py",
+      "expected_result": "All test cases pass"
     }
   }
 ]
