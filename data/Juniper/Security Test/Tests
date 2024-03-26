@@ -1,236 +1,275 @@
  ###STARTLIST###
 [
   {
-    "testname": "Test MX482 System and Subsystems Health Check ",
+    "testname": "Test ping reachability", 
     "testcase": {
-      "testname": "Test MX482 System and Subsystems Health Check",
-      "objective": "Verify that the MX482 system and all subsystems are healthy with no faults or errors",
+      "objective": "Verify ping reachability to a remote host",
       "steps": [
-        "1. Log into the MX482 CLI",
-        "2. Execute 'show chassis environment' and verify all readings are normal", 
-        "3. Execute 'show system storage' and verify disk usage is normal",
-        "4. Execute 'show system processes extensive' and verify CPU utilization is normal"
-      ]
+        "Configure ping on MX", 
+        "Ping remote host IP",
+        "Verify ping succeeds"
+      ],
+      "test_data": {
+        "remote_host_ip": "8.8.8.8"  
+      }
     },
     "testscript": {
-      "testname": "Test MX482 System Health",
-      "objective": "Verify MX482 system health using CLI commands",  
-      "file_name": "test_mx482_system_health.py",
+      "testname": "Test ping reachability",
+      "objective": "Verify ping reachability to a remote host", 
+      "file_name": "test_ping.py",
       "init_scripts": [
-        "import re",
-        "import json"
+        "pip install netmiko",
+        "pip install junos-eznc"
       ],
       "script": """
-        def test_mx482_system_health():
-          # Log into device and execute show commands
-          output1 = execute_command('show chassis environment') 
-          output2 = execute_command('show system storage')
-          output3 = execute_command('show system processes extensive')
-          
-          # Assert CPU usage, disk usage is within thresholds  
-          cpu_util = get_cpu_utilization(output3)
-          assert cpu_util < 80, f'CPU utilization {cpu_util}% exceeds threshold' 
-          
-          disk_usage = get_disk_usage(output2)  
-          assert disk_usage < 90, f'Disk usage {disk_usage}% exceeds threshold'
-          
-          # Verify no faults with environment  
-          assert 'OK' in output1, 'Environmental faults detected'
-          
-          print('MX482 System Health Test Passed')
-        
-        def get_cpu_utilization(output):
-          match = re.search(r'CPU utilization.*?(\\d+)%', output)
-          return int(match.group(1))
-        
-        def get_disk_usage(output):
-          match = re.search(r'Mounted on.*?(\\d+)% used', output)  
-          return int(match.group(1))
-        """,
-        "run_command": "python test_mx482_system_health.py",
-        "expected_result": "MX482 System Health Test Passed"  
-      }
+from netmiko import ConnectHandler
+from jnpr.junos import Device
+
+def test_ping(device, remote_ip):
+  device.cli('configure')
+  device.cli('set protocols ping')
+  ping_out = device.cli(f'ping {remote_ip}')
+  return '!!!!!' in ping_out
+
+dev = {
+  'device_type': 'juniper',
+  'host': '192.168.1.1',
+  'username': 'myuser',
+  'password': 'mypassword' 
+}
+
+net_connect = ConnectHandler(**dev)
+ping_result = test_ping(net_connect, '8.8.8.8')
+
+if ping_result:
+  print('Ping test passed')
+else:
+  print('Ping test failed')
+      """,
+      "run_command": "python test_ping.py",
+      "expected_result": "Ping test passed"
+    }
   },
   
   {
-    "testname": "Test MX482 OSPF Neighbor Adjacency", 
+    "testname": "Test SNMP connectivity",
     "testcase": {
-      "testname": "Test MX482 OSPF Neighbor Adjacency",
-      "objective": "Verify OSPF adjacency with directly connected neighbors",
+      "objective": "Verify SNMP connectivity to device",
       "steps": [
-        "1. Log into MX482 CLI",  
-        "2. Execute 'show ospf neighbor' ",
-        "3. Verify all expected neighbors are present with FULL adjacency"
-      ]
+        "Enable SNMP on device",
+        "Send SNMP get request", 
+        "Verify SNMP response is received"
+      ],
+      "test_data": {
+        "device_ip": "192.168.1.1",
+        "oid": "1.3.6.1.2.1.1.1.0"  
+      }
     },
     "testscript": {
-      "testname": "Test MX482 OSPF Adjacency",
-      "objective": "Verify OSPF neighbor adjacency using show commands",
-      "file_name": "test_mx482_ospf.py", 
+      "testname": "Test SNMP connectivity",
+      "objective": "Verify SNMP connectivity to device",
+      "file_name": "test_snmp.py", 
       "init_scripts": [
-        "import re"
+        "pip install easysnmp"
       ],
-      "script": """
-        def test_mx482_ospf_adjacency():
-        
-          expected_neighbors = ['192.168.1.1', '172.16.1.1', '10.1.1.1']
-          
-          output = execute_command('show ospf neighbor')
-          
-          for neighbor in expected_neighbors:
-            assert f'{neighbor}\\s+Full' in output, f'No Full adjacency with {neighbor}'
-            
-          print('MX482 OSPF Adjacency Test Passed')
-        """,
-      "run_command": "python test_mx482_ospf.py",
-      "expected_result": "MX482 OSPF Adjacency Test Passed"
+      "script": """  
+from easysnmp import Session
+
+def test_snmp(device_ip, oid_to_get):
+  session = Session(hostname=device_ip, community='public', version=2)
+  sys_desc = session.get(oid_to_get)
+  return sys_desc.value is not None
+
+snmp_result = test_snmp('192.168.1.1', '1.3.6.1.2.1.1.1.0')
+
+if snmp_result:
+  print('SNMP test passed')
+else:
+  print('SNMP test failed')
+      """,
+      "run_command": "python test_snmp.py", 
+      "expected_result": "SNMP test passed"
     }
   }
 ]
-###ENDLIST### ```python
+###ENDLIST### Here are two unit testcases with Python test scripts for Juniper MX482 port mapping and address verification:
+
 ###STARTLIST###
+
 [
   {
-    "testname": "Test Port Mappings", 
+    "testname": "Test Port Mapping", 
     "testcase": {
-      "testname": "Test Port Mappings",
-      "objective": "Verify that the port mappings on the MX480 router are correctly configured",
+      "testname": "Test Port Mapping",
+      "objective": "Verify all ports on the MX482 are mapped to the correct interfaces",
       "steps": [
-        "Retrieve port mapping configuration from device", 
-        "Verify that gigabitethernet, tengigabitethernet ports map to correct interfaces"
+        "Check configuration for port mappings", 
+        "Verify port ge-0/0/0 maps to interface xe-0/0/0",
+        "Verify port ge-0/0/1 maps to interface xe-0/0/1", 
+        "Verify remaining ports follow expected mapping"
       ],
       "test_data": {
         "port_mappings": {
-          "gigabitethernet0/0/0": "ge-0/0/0",
-          "tengigabitethernet0/0/0": "xe-0/0/0" 
+          "ge-0/0/0": "xe-0/0/0",
+          "ge-0/0/1": "xe-0/0/1"
         }
       }
     },
     "testscript": {
-      "testname": "Test Port Mappings",
-      "objective": "Verify port mappings",
-      "file_name": "test_portmappings.py",
-      "init_scripts": "\"\"\"pip install netmiko\"\"\"\n\"\"\"pip install napalm\"\"\"",
-      "script": \"\"\"\nimport netmiko\nimport napalm\n\ndef test_port_mappings(port_mappings):\n    router = {\"device_type\": \"juniper\", \n             \"ip\": \"192.168.0.1\",\n             \"username\": \"myuser\", \n             \"password\": \"mypass\"}\n    \n    net_connect = netmiko.ConnectHandler(**router)\n    output = net_connect.send_command(\"show interfaces terse\")\n    \n    for intf, mapped_intf in port_mappings.items():\n        assert mapped_intf in output\n        \nprint(\"All port mappings verified successfully\")\n\"\"\",
-      "run_command": "python test_portmappings.py",
-      "expected_result": "All port mappings verified successfully"
+      "testname": "Test Port Mapping",
+      "objective": "Verify port mappings on MX482", 
+      "file_name": "test_port_mappings.py",
+      "init_scripts": [
+        "pip install pyez",
+        "from jnpr.junos import Device"
+      ],
+      "script": """
+        dev = Device(host='mx482', user='testuser', password='testpass')
+        dev.open()
+        
+        port_mappings = {
+          'ge-0/0/0': 'xe-0/0/0',
+          'ge-0/0/1': 'xe-0/0/1' 
+        }
+        
+        for port, interface in port_mappings.items():
+          assert dev.cli(f'show interfaces {port}').find(interface) >= 0
+          
+        dev.close()
+      """,
+      "run_command": "python test_port_mappings.py",
+      "expected_result": "All tests pass"
     }
   },
-
+  
   {
-    "testname": "Test Address Configuration",
+    "testname": "Test IP Addresses",
     "testcase": {
-      "testname": "Test Address Configuration",  
-      "objective": "Verify that interface IP addresses are correctly configured",
+      "testname": "Test IP Addresses",
+      "objective": "Verify assigned IP addresses on interfaces",
       "steps": [
-        "Connect to device and retrieve interface configurations",
-        "Validate that interface addresses match expected values"
+        "Check interface configurations",
+        "Verify IP address 192.0.2.1 assigned to xe-0/0/0", 
+        "Verify IP address 192.0.2.2 assigned to xe-0/0/1",
+        "Verify remaining interfaces have expected IP addresses"  
       ],
       "test_data": {
-        "expected_addrs": {
-          "ge-0/0/0": "192.168.10.1/24",
-          "xe-0/0/0": "192.168.20.1/24" 
+        "ip_mappings": {
+          "xe-0/0/0": "192.0.2.1/24",
+          "xe-0/0/1": "192.0.2.2/24"  
         }
       }
     },
     "testscript": {
-      "testname": "Test Address Configuration",
-      "objective": "Verify interface addresses",
-      "file_name": "test_addrs.py", 
-      "init_scripts": "\"\"\"pip install napalm\"\"\"\n\"\"\"pip install netmiko\"\"\"",
-      "script": \"\"\"\nimport napalm\nimport netmiko\n\ndef test_interface_addrs(expected_addrs):\n    router = {\"hostname\": \"mx480\", \"device_type\": \"juniper\",\n             \"ip\": \"192.168.0.1\", \n             \"username\": \"myuser\",\n             \"password\": \"mypass\"}\n               \n    driver = napalm.get_network_driver(\"junos\")\n    napalm_connection = driver(**router)\n    napalm_connection.open()\n    \n    interfaces = napalm_connection.get_interfaces()\n    \n    for intf, expected_addr in expected_addrs.items():\n        assert interfaces[intf][\"ipv4\"][0][\"address\"] == expected_addr \n        \nprint(\"All interface addresses validated successfully\")\n\"\"\",
-      "run_command": "python test_addrs.py",
-      "expected_result": "All interface addresses validated successfully"
+      "testname": "Test IP Addresses",
+      "objective": "Verify assigned IP addresses",
+      "file_name": "test_ip_addresses.py",
+      "init_scripts": [
+        "pip install pyez",
+        "from jnpr.junos import Device"
+      ],
+      "script": """
+        dev = Device(host='mx482', user='testuser', password='testpass')
+        dev.open()
+        
+        ip_mappings = {
+          'xe-0/0/0': '192.0.2.1/24',
+          'xe-0/0/1': '192.0.2.2/24' 
+        }
+        
+        for interface, ip in ip_mappings.items():
+          assert dev.cli(f'show interfaces {interface}').find(ip) >= 0
+        
+        dev.close()
+      """,
+      "run_command": "python test_ip_addresses.py", 
+      "expected_result": "All tests pass"
     }
   }
 ]
-###ENDLIST###
-``` Here is the Python list with the JSON test objects as requested:
 
-###STARTLIST###
+###ENDLIST### ###STARTLIST###
 [
-    {
-        "testname": "Port Bandwidth Test", 
-        "testcase": {
-            "testname": "Port Bandwidth Test",
-            "objective": "Validate that each port can handle expected bandwidth",
-            "steps": [
-                "Configure traffic generator to send traffic at specified bandwidth to each port", 
-                "Verify port counters show traffic received as expected"
-            ],
-            "test_data": {
-                "port_bandwidths": {
-                    "port1": 100,
-                    "port2": 1000
-                } 
-            }
-        },
-        "testscript": {
-            "testname": "Port Bandwidth Test",
-            "objective": "Script to validate port bandwidth", 
-            "file_name": "port_bandwidth.py",
-            "init_scripts": [
-                "pip install scapy",
-                "pip install ixnetwork"
-            ],
-            "script": """
-import ixnetwork
-from scapy.all import *
+{
+  "testname": "Port Status Test",
+  "testcase": {
+    "testname": "Port Status Test",
+    "objective": "Verify all ports on the MX device are operationally up.",
+    "steps": [
+      "Connect to the MX device and retrieve the port status for all ports.",
+      "Verify the operational status of each port is 'up'."
+    ]
+  },
 
-# Configure ports
-# Omitted for brevity
+  "testscript": {
+    "testname": "Port Status Test",  
+    "objective": "Verify all ports on the MX device are operationally up.",
+    "file_name": "port_status_test.py",
+    "init_scripts": [
+      "pip install netmiko",
+      "pip install junos-eznc"
+    ],
+    "script": """
+import netmiko
+from jnpr.junos import Device
 
-for port, bw in config['port_bandwidths'].items():
-  sendp(Ether()/IP()/UDP()/DNS(), iface=port, mbps=bw) 
+dev = Device(host='192.168.0.1', user='netconf', password='password')
+dev.open()
 
-for port in config['ports']:
-  counters = get_port_counters(port)
-  if counters['bits_sec'] < config['port_bandwidths'][port] * 1000000:
-    print('Bandwidth not met on port ' + port)
-  else:
-    print('Bandwidth test passed on port ' + port)
-""",
-            "run_command": "python port_bandwidth.py",
-            "expected_result": "Bandwidth test passed on all ports"
-        }
-    },
-    {
-        "testname": "Port Error Counters",
-        "testcase": {
-            "testname": "Port Error Counters",
-            "objective": "Validate error counters increment correctly on each port",
-            "steps": [
-                "Send corrupted frames to each port",
-                "Verify error counters increment as expected" 
-            ],
-            "test_data": {
-                "ports": ["port1", "port2"]
-            }
-        },
-        "testscript": {
-            "testname": "Port Error Counters",
-            "objective": "Script to validate error counters",
-            "file_name": "port_errors.py", 
-            "init_scripts": [
-                "pip install scapy"
-            ],
-            "script": """  
-from scapy.all import *
+ports = dev.rpc.get_interface_information()
 
-# Send corrupted frames
-for port in config['ports']:
-  sendp(Ether()/IP()/UDP()/DNS(), iface=port, corrupt_bits=1)
-  
-for port in config['ports']:
-  counters = get_port_counters(port)
-  if counters['in_errors'] == 0:
-    print('Error counters not incrementing on port ' + port)
-  else:
-    print('Error counter test passed on port ' + port)
-""",
-            "run_command": "python port_errors.py",
-            "expected_result": "Error counter test passed on all ports"
-        }
-    }
+for port in ports:
+  if port.oper_status != 'up':
+    print(f'Port {port.name} is operationally {port.oper_status}')
+
+print('All ports are operationally up')
+    """,
+    "run_command": "python port_status_test.py", 
+    "expected_result": "All ports are operationally up"
+  }
+},
+
+{
+  "testname": "Port Speed Test",
+  "testcase": {
+    "testname": "Port Speed Test",
+    "objective": "Verify all ports on the MX device are running at the expected speed.",
+    "steps": [
+      "Connect to the MX device and retrieve the port speed for all ports.",
+      "Verify the speed of each port matches the expected configured speed." 
+    ]
+  },
+
+  "testscript": {
+    "testname": "Port Speed Test",
+    "objective": "Verify all ports on the MX device are running at the expected speed.",
+    "file_name": "port_speed_test.py",
+    "init_scripts": [
+      "pip install netmiko",
+      "pip install junos-eznc"
+    ],
+    "script": """  
+import netmiko
+from jnpr.junos import Device
+
+EXPECTED_SPEEDS = {'ge-0/0/0': '1Gbps', 
+                   'ge-0/0/1': '1Gbps',
+                   'ge-0/0/2': '10Gbps'}
+
+dev = Device(host='192.168.0.1', user='netconf', password='password') 
+dev.open()
+
+ports = dev.rpc.get_interface_information()
+
+for port in ports:
+  if port.speed != EXPECTED_SPEEDS[port.name]:
+    print(f'Port {port.name} expected speed is {EXPECTED_SPEEDS[port.name]} but actual speed is {port.speed}') 
+
+print('All ports are running at expected speed')
+    """,
+    "run_command": "python port_speed_test.py",
+    "expected_result": "All ports are running at expected speed"
+  }
+}
 ]
 ###ENDLIST###
