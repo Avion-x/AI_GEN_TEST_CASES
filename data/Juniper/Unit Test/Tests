@@ -1,217 +1,232 @@
- Here are 5 Python test scripts for Bootup Configuration Retrieval Test cases for MX240 router considering the given context:
-
-###STARTLIST###
+ ###STARTLIST###
 [
-{
-  "testname": "TestBootupConfigRetrieval", 
-  "testcase": {
-    "testname": "TestBootupConfigRetrieval",
-    "objective": "Validate that the bootup configuration can be retrieved from the router",
-    "steps": [
-      "Connect to the router CLI",
-      "Run 'show configuration' command",
-      "Validate that the command output contains the bootup configuration"
-    ]
+  {
+    "testname": "Bootup Configuration Retrieval Test 1", 
+    "testcase": {
+      "testname": "Bootup Configuration Retrieval Test 1",
+      "objective": "Verify bootup configuration can be retrieved from device",
+      "steps": [
+        "Connect to device CLI", 
+        "Enter 'show configuration' command",
+        "Verify full bootup configuration is displayed"
+      ],
+      "testdata": {
+        "device": "mx240",
+        "username": "admin",
+        "password": "juniper123"
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Configuration Retrieval Test 1",
+      "objective": "Verify bootup configuration can be retrieved from device",
+      "file_name": "test_bootup_config_retrieve_1.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install junos-eznc"
+      ],
+      "script": """
+        import json
+        from junos import Device
+        
+        with Device(host='192.0.2.1', user='admin', password='juniper123') as dev:
+          config = dev.cli('show configuration')
+          
+        result = { 
+          'status': 'PASS' if 'system {' in config else 'FAIL',
+          'config': config
+        }
+        
+        print(json.dumps(result))
+      """,
+      "run_command": "python test_bootup_config_retrieve_1.py",
+      "expected_result": "{'status': 'PASS', 'config': '...full bootup configuration...'}"
+    }
   },
-  "testscript": {
-    "testname": "TestBootupConfigRetrieval",
-    "objective": "Validate that the bootup configuration can be retrieved from the router", 
-    "file_name": "test_bootup_config_retrieval.py",
-    "init_scripts": [
-      "pip install paramiko"
-    ],
-    "script": """
-import paramiko
-
-ip = '192.168.0.1'
-username = 'admin'
-password = 'Juniper123'
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip, username=username, password=password)
-
-stdin, stdout, stderr = ssh.exec_command('show configuration')
-config = stdout.read().decode('utf-8')
-
-print(config)
-
-ssh.close()
-""",
-    "run_command": "python test_bootup_config_retrieval.py",
-    "expected_result": "Bootup configuration is printed"
-  }
-},
-
-{
-  "testname": "TestBootupConfigMatchesRunningConfig",
-  "testcase": {
-    "testname": "TestBootupConfigMatchesRunningConfig",
-    "objective": "Validate that the bootup config matches the running config",
-    "steps": [
-      "Connect to the router CLI",
-      "Run 'show configuration' command",
-      "Run 'show configuration bootup' command",
-      "Compare the outputs of the two commands" 
-    ]
+  {
+    "testname": "Bootup Configuration Retrieval Test 2",
+    "testcase": {
+      "testname": "Bootup Configuration Retrieval Test 2",
+      "objective": "Verify error raised when invalid credentials used",
+      "steps": [
+        "Connect to device CLI using invalid credentials",
+        "Verify authentication error raised" 
+      ],
+      "testdata": {
+        "device": "mx240",
+        "username": "invaliduser",
+        "password": "invalidpass"
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Configuration Retrieval Test 2",
+      "objective": "Verify error raised when invalid credentials used",
+      "file_name": "test_bootup_config_retrieve_2.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install junos-eznc"
+      ],
+      "script": """
+        import json
+        from junos import Device
+        
+        try:
+          dev = Device(host='192.0.2.1', user='invaliduser', password='invalidpass')
+          dev.open()
+        except Exception as e:
+          result = {
+            'status': 'PASS' if 'Authentication failed' in str(e) else 'FAIL',
+            'error': str(e)  
+          }
+        else:
+          result = {
+            'status': 'FAIL',
+            'error': 'No authentication error raised'
+          }
+          
+        print(json.dumps(result))
+      """,
+      "run_command": "python test_bootup_config_retrieve_2.py", 
+      "expected_result": "{'status': 'PASS', 'error': 'Authentication failed'}"
+    }
   },
-  "testscript": {
-    "testname": "TestBootupConfigMatchesRunningConfig",
-    "objective": "Validate that the bootup config matches the running config",
-    "file_name": "test_bootup_config_matches_running_config.py",
-    "init_scripts": [
-      "pip install paramiko"
-    ],
-    "script": """  
-import paramiko
-
-ip = '192.168.0.1'
-username = 'admin'
-password = 'Juniper123' 
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip, username=username, password=password)
-
-stdin1, stdout1, stderr1 = ssh.exec_command('show configuration')
-running_config = stdout1.read().decode('utf-8')
-
-stdin2, stdout2, stderr2 = ssh.exec_command('show configuration bootup')
-bootup_config = stdout2.read().decode('utf-8')
-
-print('Running Config:')
-print(running_config)
-print('Bootup Config:') 
-print(bootup_config)
-
-if running_config == bootup_config:
-  print('Test Passed - Running and Bootup configs match')
-else:
-  print('Test Failed - Running and Bootup configs do not match')
-  
-ssh.close()
-""",
-    "run_command": "python test_bootup_config_matches_running_config.py", 
-    "expected_result": "Print statement saying configs match"
-  }
-},
-
-{
-  "testname": "TestBootupConfigTimestamp",
-  "testcase": {
-    "testname": "TestBootupConfigTimestamp",
-    "objective": "Validate bootup config timestamp is updated on config change",
-    "steps": [
-      "Connect to router CLI",
-      "Note timestamp of current bootup config - store as timestamp1",
-      "Make a change to the running config",
-      "Commit the change",
-      "Retrieve updated bootup config timestamp - store as timestamp2", 
-      "Validate timestamp1 != timestamp2"
-    ]
+  {
+    "testname": "Bootup Configuration Retrieval Test 3",
+    "testcase": {
+      "testname": "Bootup Configuration Retrieval Test 3",
+      "objective": "Verify error raised when connecting to invalid IP",
+      "steps": [
+        "Connect to invalid IP address",
+        "Verify connection error raised"
+      ],
+      "testdata": {
+        "device": "mx240",
+        "username": "admin",
+        "password": "juniper123",
+        "invalid_ip": "192.0.2.254"  
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Configuration Retrieval Test 3",
+      "objective": "Verify error raised when connecting to invalid IP",
+      "file_name": "test_bootup_config_retrieve_3.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install junos-eznc"
+      ],
+      "script": """
+        import json
+        from junos import Device
+        
+        try:
+          dev = Device(host='192.0.2.254', user='admin', password='juniper123') 
+          dev.open()
+        except Exception as e:
+          result = {
+            'status': 'PASS' if 'ConnectTimeoutError' in str(e) else 'FAIL',
+            'error': str(e)  
+          }
+        else:
+          result = {
+            'status': 'FAIL',
+            'error': 'No connection error raised'
+          }
+          
+        print(json.dumps(result))
+      """,
+      "run_command": "python test_bootup_config_retrieve_3.py",
+      "expected_result": "{'status': 'PASS', 'error': 'ConnectTimeoutError'}"
+    }
   },
-  "testscript": {
-    "testname": "TestBootupConfigTimestamp",
-    "objective": "Validate bootup config timestamp is updated on config change",
-    "file_name": "test_bootup_config_timestamp.py",
-    "init_scripts": [
-      "pip install paramiko"
-    ],
-    "script": """
-import paramiko
-import re
-
-ip = '192.168.0.1'
-username = 'admin'
-password = 'Juniper123'
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip, username=username, password=password)
-
-stdin1, stdout1, stderr1 = ssh.exec_command('show configuration bootup')
-bootup_config = stdout1.read().decode('utf-8')
-
-timestamp1 = re.search(r'\\[[0-9-:T]+\\]', bootup_config).group()
-print('Initial Timestamp:', timestamp1)
-
-stdin2, stdout2, stderr2 = ssh.exec_command('set system host-name test')
-stdin3, stdout3, stderr3 = ssh.exec_command('commit')
-
-stdin4, stdout4, stderr4 = ssh.exec_command('show configuration bootup')
-updated_config = stdout4.read().decode('utf-8')
-
-timestamp2 = re.search(r'\\[[0-9-:T]+\\]', updated_config).group()
-print('Updated Timestamp:', timestamp2)
-
-if timestamp1 != timestamp2:
-  print('Test Passed - Timestamp updated')
-else:
-  print('Test Failed - Timestamp not updated')
-  
-ssh.close()
-""",
-    "run_command": "python test_bootup_config_timestamp.py",
-    "expected_result": "Print statement indicating timestamp was updated"
-  }
-},
-
-{
-  "testname": "TestBootupConfigRollback",
-  "testcase": {
-    "testname": "TestBootupConfigRollback",
-    "objective": "Validate ability to roll back to previous bootup config",
-    "steps": [
-      "Connect to router CLI",
-      "Note current bootup config - store as config1",
-      "Make a change to the running config - e.g. hostname", 
-      "Commit change",
-      "Rollback to previous bootup config",
-      "Retrieve updated bootup config - store as config2",
-      "Validate config1 == config2"
-    ]
+  {
+    "testname": "Bootup Configuration Retrieval Test 4", 
+    "testcase": {
+      "testname": "Bootup Configuration Retrieval Test 4",
+      "objective": "Verify error when invalid command entered",
+      "steps": [
+        "Connect to device CLI",
+        "Enter invalid command",
+        "Verify error raised"
+      ],
+      "testdata": {
+        "device": "mx240",
+        "username": "admin", 
+        "password": "juniper123",
+        "invalid_command": "show configuration"  
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Configuration Retrieval Test 4",
+      "objective": "Verify error when invalid command entered", 
+      "file_name": "test_bootup_config_retrieve_4.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install junos-eznc"
+      ],
+      "script": """
+        import json
+        from junos import Device
+        
+        with Device(host='192.0.2.1', user='admin', password='juniper123') as dev:
+          try:
+            dev.cli('show configuration')
+          except Exception as e:
+            result = {
+              'status': 'PASS',
+              'error': str(e)
+            }
+          else:
+            result = {
+              'status': 'FAIL',
+              'error': 'No error raised for invalid command'
+            }
+            
+        print(json.dumps(result))
+      """,
+      "run_command": "python test_bootup_config_retrieve_4.py",
+      "expected_result": "{'status': 'PASS', 'error': 'invalid command: show configuration'}"
+    }
   },
-  "testscript": {
-    "testname": "TestBootupConfigRollback",
-    "objective": "Validate ability to roll back to previous bootup config",
-    "file_name": "test_bootup_config_rollback.py",
-    "init_scripts": [
-      "pip install paramiko"  
-    ],
-    "script": """
-import paramiko
-
-ip = '192.168.0.1'
-username = 'admin'
-password = 'Juniper123'
-
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip, username=username, password=password)
-
-stdin1, stdout1, stderr1 = ssh.exec_command('show configuration bootup')
-config1 = stdout1.read().decode('utf-8')
-print('Initial Config:\\n', config1)
-
-stdin2, stdout2, stderr2 = ssh.exec_command('set system host-name test')
-stdin3, stdout3, stderr3 = ssh.exec_command('commit')
-
-stdin4, stdout4, stderr4 = ssh.exec_command('rollback 1')
-
-stdin5, stdout5, stderr5 = ssh.exec_command('show configuration bootup')
-config2 = stdout5.read().decode('utf-8')
-print('Rolled Back Config:\\n', config2) 
-
-if config1 == config2:
-  print('Test Passed - Config rolled back successfully')
-else:
-  print('Test Failed - Config not rolled back properly')
-  
-ssh.close()
-""",
-    "run_command": "python test_bootup_config_rollback.py",
-    "expected_result": "Print statement indicating successful config rollback"
+  {
+    "testname": "Bootup Configuration Retrieval Test 5",
+    "testcase": {
+      "testname": "Bootup Configuration Retrieval Test 5",
+      "objective": "Verify bootup config retrieved in xml format",
+      "steps": [
+        "Connect to device CLI",
+        "Enter command to retrieve config in xml format",
+        "Verify xml config returned"  
+      ],
+      "testdata": {
+        "device": "mx240",
+        "username": "admin",
+        "password": "juniper123"
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Configuration Retrieval Test 5",
+      "objective": "Verify bootup config retrieved in xml format",
+      "file_name": "test_bootup_config_retrieve_5.py", 
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install junos-eznc"  
+      ],
+      "script": """
+        import json
+        from junos import Device
+        
+        with Device(host='192.0.2.1', user='admin', password='juniper123') as dev:
+          config = dev.cli('show configuration | display xml')
+        
+        result = {
+          'status': 'PASS' if '<configuration>' in config else 'FAIL',
+          'config': config  
+        }
+        
+        print(json.dumps(result))
+      """,
+      "run_command": "python test_bootup_config_retrieve_5.py",
+      "expected_result": "{'status': 'PASS', 'config': '...xml configuration...'}"
+    }
   }
-}
 ]
 ###ENDLIST###
