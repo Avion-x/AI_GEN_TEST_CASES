@@ -1,374 +1,217 @@
- ###STARTLIST###
-[
-  {
-    "testname": "Test Bootup Process", 
-    "testcase": {
-      "testname": "Test Bootup Process",
-      "objective": "Verify Junos OS startup, routing protocols initialization and redundancy mechanisms are functional during router bootup",
-      "steps": [
-        "Junos OS boots up successfully", 
-        "Routing protocols OSPF and BGP establish neighbor adjacencies",
-        "Redundancy protocols are initialized and redundant RE becomes standby"
-      ],
-      "testdata": {
-        "router_model": "MX480",
-        "junos_version": "Junos 21.1R1",
-        "redundancy_protocol": "GRES",
-        "routing_protocols": ["OSPF", "BGP"]  
-      }
-    },
-    "testscript": {
-      "testname": "Test Bootup Process",
-      "objective": "Verify Junos OS startup, routing protocols initialization and redundancy mechanisms are functional during router bootup", 
-      "file_name": "test_bootup.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install jnpr",
-        """
-        import unittest
-        from jnpr.junos import Device
-        
-        def test_bootup(router):
-            dev = Device(host=router, user='testuser', password='test123')
-            dev.open()
-            assert dev.facts['version'] == '21.1R1'
-            assert 'ospf' in dev.facts['routing_protocols']
-            assert 'bgp' in dev.facts['routing_protocols'] 
-            assert dev.facts['2RE'] is True
-            dev.close()
-            
-        if __name__ == '__main__':
-            router = '198.51.100.1'
-            test_bootup(router)
-            print('Test passed')
-        """
-      ],
-      "run_command": "python test_bootup.py",
-      "expected_result": "Test passed"
-    }
-  },
+ Here are 5 Python test scripts for Bootup Configuration Retrieval Test cases for MX240 router considering the given context:
 
-  {
-    "testname": "Test OSPF Adjacencies",
-    "testcase": {
-      "testname": "Test OSPF Adjacencies",
-      "objective": "Verify OSPF adjacencies are established with directly connected neighbors",
-      "steps": [
-        "Retrieve OSPF neighbor information using PyEZ facts",
-        "Verify all expected OSPF neighbors are present with FULL adjacency state"  
-      ],
-      "testdata": {
-        "router": "mx480",
-        "ospf_neighbors": ["198.51.100.2", "203.0.113.2"] 
-      }
-    },
-    "testscript": {
-      "testname": "Test OSPF Adjacencies",
-      "objective": "Verify OSPF adjacencies are established with directly connected neighbors",
-      "file_name": "test_ospf.py", 
-      "init_scripts": [ 
-        "pip install networkx==2.5",
-        "pip install jnpr",
-        """
-        import unittest
-        from jnpr.junos import Device
-        import networkx as nx
-        
-        def test_ospf(router, expected_nbrs):
-            dev = Device(host=router, user='testuser', password='test123')
-            dev.open()
-            ospf_nbrs = dev.rpc.get_ospf_neighbor_information()
-            nbr_list = []
-            for nbr in ospf_nbrs:
-                if nbr.find('ospf-neighbor-state').text == 'Full':
-                    nbr_list.append(nbr.find('ospf-neighbor-address').text)
-            
-            G = nx.Graph()
-            G.add_nodes_from(nbr_list)
-            G.add_nodes_from(expected_nbrs)
-            
-            assert nx.is_connected(G)
-            dev.close()
-            
-        if __name__ == '__main__':
-            router = '198.51.100.1'
-            expected_nbrs = ['198.51.100.2', '203.0.113.2']
-            test_ospf(router, expected_nbrs)
-            print('Test passed')
-        """
-      ],
-      "run_command": "python test_ospf.py",
-      "expected_result": "Test passed"
-    }
-  }
-]
-###ENDLIST### ###STARTLIST###
+###STARTLIST###
 [
-  {
-    "testname": "test_port_mapping", 
-    "testcase": {
-      "testname": "test_port_mapping",
-      "objective": "Verify all ports are mapped correctly after bootup", 
-      "steps": [
-        "Verify all expected physical ports exist",
-        "Verify all logical interfaces are mapped to expected physical ports"
-      ],
-      "test_data": {
-        "expected_ports": [
-          "ge-0/0/0", 
-          "ge-0/0/1" 
-        ],
-        "expected_logical_interfaces": {
-          "ge-0/0/0": "xe-0/0/0",
-          "ge-0/0/1": "xe-0/0/1"
-        }  
-      }
-    },
-    "testscript": {
-      "testname": "test_port_mapping",
-      "objective": "Verify all ports are mapped correctly after bootup",
-      "file_name": "test_port_mapping.py",
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install pytest"
-      ],
-      "script": \"\"\"
-        import netmiko
-        
-        ROUTER_IP = '192.168.0.1'
-        ROUTER_USERNAME = 'admin'
-        ROUTER_PASSWORD = 'password'
-        
-        def test_port_mapping():
-          try:
-            conn = netmiko.ConnectHandler(ip=ROUTER_IP, username=ROUTER_USERNAME, password=ROUTER_PASSWORD)
-            show_interfaces_output = conn.send_command('show interfaces')
-        
-            expected_ports = ['ge-0/0/0', 'ge-0/0/1']
-            expected_logical_interfaces = {'ge-0/0/0': 'xe-0/0/0', 'ge-0/0/1': 'xe-0/0/1'}
-        
-            for port in expected_ports:
-              assert port in show_interfaces_output
-            
-            for physical, logical in expected_logical_interfaces.items():
-              print('Verifying mapping between {} and {}'.format(physical, logical))
-              assert physical in show_interfaces_output
-              assert logical in show_interfaces_output
-              
-            print('All expected ports and mappings verified successfully')
-            
-          finally:
-            conn.disconnect()
-            
-      test_port_mapping()
-      \"\"\",
-      "run_command": "pytest test_port_mapping.py",
-      "expected_result": "All expected ports and mappings verified successfully"
-    }
+{
+  "testname": "TestBootupConfigRetrieval", 
+  "testcase": {
+    "testname": "TestBootupConfigRetrieval",
+    "objective": "Validate that the bootup configuration can be retrieved from the router",
+    "steps": [
+      "Connect to the router CLI",
+      "Run 'show configuration' command",
+      "Validate that the command output contains the bootup configuration"
+    ]
   },
+  "testscript": {
+    "testname": "TestBootupConfigRetrieval",
+    "objective": "Validate that the bootup configuration can be retrieved from the router", 
+    "file_name": "test_bootup_config_retrieval.py",
+    "init_scripts": [
+      "pip install paramiko"
+    ],
+    "script": """
+import paramiko
+
+ip = '192.168.0.1'
+username = 'admin'
+password = 'Juniper123'
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(ip, username=username, password=password)
+
+stdin, stdout, stderr = ssh.exec_command('show configuration')
+config = stdout.read().decode('utf-8')
+
+print(config)
+
+ssh.close()
+""",
+    "run_command": "python test_bootup_config_retrieval.py",
+    "expected_result": "Bootup configuration is printed"
+  }
+},
+
+{
+  "testname": "TestBootupConfigMatchesRunningConfig",
+  "testcase": {
+    "testname": "TestBootupConfigMatchesRunningConfig",
+    "objective": "Validate that the bootup config matches the running config",
+    "steps": [
+      "Connect to the router CLI",
+      "Run 'show configuration' command",
+      "Run 'show configuration bootup' command",
+      "Compare the outputs of the two commands" 
+    ]
+  },
+  "testscript": {
+    "testname": "TestBootupConfigMatchesRunningConfig",
+    "objective": "Validate that the bootup config matches the running config",
+    "file_name": "test_bootup_config_matches_running_config.py",
+    "init_scripts": [
+      "pip install paramiko"
+    ],
+    "script": """  
+import paramiko
+
+ip = '192.168.0.1'
+username = 'admin'
+password = 'Juniper123' 
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(ip, username=username, password=password)
+
+stdin1, stdout1, stderr1 = ssh.exec_command('show configuration')
+running_config = stdout1.read().decode('utf-8')
+
+stdin2, stdout2, stderr2 = ssh.exec_command('show configuration bootup')
+bootup_config = stdout2.read().decode('utf-8')
+
+print('Running Config:')
+print(running_config)
+print('Bootup Config:') 
+print(bootup_config)
+
+if running_config == bootup_config:
+  print('Test Passed - Running and Bootup configs match')
+else:
+  print('Test Failed - Running and Bootup configs do not match')
   
-  {
-    "testname": "test_address_verification",
-    "testcase": {
-      "testname": "test_address_verification",  
-      "objective": "Verify all interface addresses after bootup",
-      "steps": [
-        "Verify management interface address",
-        "Verify loopback interface address" 
-      ],
-      "test_data": {
-        "expected_addresses": {
-          "em0": "192.168.0.1/24",
-          "lo0": "10.0.0.1/32"  
-        }
-      }
-    },
-    "testscript": {
-      "testname": "test_address_verification",
-      "objective": "Verify all interface addresses after bootup",
-      "file_name": "test_address_verification.py", 
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install pytest"
-      ],
-      "script": \"\"\"
-        import netmiko
-        
-        ROUTER_IP = '192.168.0.1' 
-        ROUTER_USERNAME = 'admin'
-        ROUTER_PASSWORD = 'password'
-        
-        def test_address_verification():
-          try:
-            conn = netmiko.ConnectHandler(ip=ROUTER_IP, username=ROUTER_USERNAME, password=ROUTER_PASSWORD)
-            show_interfaces_output = conn.send_command('show interfaces')
-        
-            expected_addresses = {
-              'em0': '192.168.0.1/24',
-              'lo0': '10.0.0.1/32'
-            }
-        
-            for interface, expected_address in expected_addresses.items():
-              print('Verifying interface {} has address {}'.format(interface, expected_address)) 
-              assert expected_address in show_interfaces_output
-          
-            print('All expected interface addresses verified successfully')
-            
-          finally:
-            conn.disconnect()
-          
-        test_address_verification()
-      \"\"\",
-      "run_command": "pytest test_address_verification.py",
-      "expected_result": "All expected interface addresses verified successfully"
-    }
+ssh.close()
+""",
+    "run_command": "python test_bootup_config_matches_running_config.py", 
+    "expected_result": "Print statement saying configs match"
   }
-]
-###ENDLIST### ###STARTLIST###
-[
-  {
-    "testname": "Boot Up Test 1", 
-    "testcase": {
-      "testname": "Boot Up Test 1",
-      "objective": "Verify successful bootup and initialization of the routing engine, fan tray and power supply modules",
-      "steps": [
-        "Power on the device",
-        "Verify console displays normal boot messages", 
-        "Verify routing engine boots up successfully",
-        "Verify fan tray modules spin up",
-        "Verify power supply modules initialize"
-      ],
-      "testdata": {
-        "device_under_test": "Juniper MX480"
-      }
-    },
-    "testscript": {
-      "testname": "Boot Up Test 1",
-      "objective": "Verify successful bootup and initialization of the routing engine, fan tray and power supply modules", 
-      "file_name": "boot_up_test_1.py",
-      "init_scripts": ["pip install paramiko"],
-      "script": """\"\"\"
-This test script uses paramiko SSH library to log into the Juniper MX480 console 
-and verifies boot up messages and successful initialization of routing engine,
-fan tray and power supply modules.
-\"\"\"
+},
 
+{
+  "testname": "TestBootupConfigTimestamp",
+  "testcase": {
+    "testname": "TestBootupConfigTimestamp",
+    "objective": "Validate bootup config timestamp is updated on config change",
+    "steps": [
+      "Connect to router CLI",
+      "Note timestamp of current bootup config - store as timestamp1",
+      "Make a change to the running config",
+      "Commit the change",
+      "Retrieve updated bootup config timestamp - store as timestamp2", 
+      "Validate timestamp1 != timestamp2"
+    ]
+  },
+  "testscript": {
+    "testname": "TestBootupConfigTimestamp",
+    "objective": "Validate bootup config timestamp is updated on config change",
+    "file_name": "test_bootup_config_timestamp.py",
+    "init_scripts": [
+      "pip install paramiko"
+    ],
+    "script": """
+import paramiko
 import re
-import paramiko
-import time
 
-DEVICE_IP = '10.1.1.1'
-USERNAME = 'testuser'
-PASSWORD = 'password123'
+ip = '192.168.0.1'
+username = 'admin'
+password = 'Juniper123'
 
-ssh_client = paramiko.SSHClient()
-ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh_client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(ip, username=username, password=password)
 
-console = ssh_client.invoke_shell()
+stdin1, stdout1, stderr1 = ssh.exec_command('show configuration bootup')
+bootup_config = stdout1.read().decode('utf-8')
 
-# Wait for boot up messages
-time.sleep(60) 
+timestamp1 = re.search(r'\\[[0-9-:T]+\\]', bootup_config).group()
+print('Initial Timestamp:', timestamp1)
 
-# Look for routing engine initialization 
-console.send("show chassis routing-engine\n")
-time.sleep(1)
-output = console.recv(1000)
-if re.search(r'Current state\\s*:\\s*Master', output.decode('utf-8')):
-  print("Routing engine check passed")
+stdin2, stdout2, stderr2 = ssh.exec_command('set system host-name test')
+stdin3, stdout3, stderr3 = ssh.exec_command('commit')
+
+stdin4, stdout4, stderr4 = ssh.exec_command('show configuration bootup')
+updated_config = stdout4.read().decode('utf-8')
+
+timestamp2 = re.search(r'\\[[0-9-:T]+\\]', updated_config).group()
+print('Updated Timestamp:', timestamp2)
+
+if timestamp1 != timestamp2:
+  print('Test Passed - Timestamp updated')
 else:
-  print("Routing engine check failed")
+  print('Test Failed - Timestamp not updated')
   
-# Look for fan tray initialization  
-console.send("show chassis fan\n")
-time.sleep(1) 
-output = console.recv(1000)
-if re.search(r'Spinning at normal speed', output.decode('utf-8')):
-  print("Fan tray check passed") 
-else:
-  print("Fan tray check failed")
-  
-# Look for power supply initialization
-console.send("show chassis power\n") 
-time.sleep(1)
-output = console.recv(1000)
-if re.search(r'State:\\s*OK', output.decode('utf-8')):
-  print("Power supply check passed")
-else:
-  print("Power supply check failed")
-
-ssh_client.close()
+ssh.close()
 """,
-      "run_command": "python boot_up_test_1.py",
-      "expected_result": "Routing engine check passed\nFan tray check passed\nPower supply check passed"
-    }
-  },
-  
-  {
-    "testname": "Boot Up Test 2",
-    "testcase": {
-      "testname": "Boot Up Test 2",
-      "objective": "Verify all ports on the MX480 line card initialize successfully",
-      "steps": [
-        "Power on the device",
-        "Verify console displays normal boot messages",
-        "Verify all ports on MPC show 'Online' status"   
-      ],
-      "testdata": {
-        "device_under_test": "Juniper MX480",
-        "num_ports": 320
-      }
-    },
-    "testscript": {
-      "testname": "Boot Up Test 2",
-      "objective": "Verify all ports on the MX480 line card initialize successfully",
-      "file_name": "boot_up_test_2.py",
-      "init_scripts": ["pip install paramiko"],
-      "script": """\"\"\"
-This test script uses paramiko SSH library to log into the Juniper MX480 console
-and verifies all 320 ports on the MPC line card show 'Online' status after boot up.
-\"\"\"
-
-import re 
-import paramiko
-import time
-
-DEVICE_IP = '10.1.1.1'
-USERNAME = 'testuser'
-PASSWORD = 'password123'
-NUM_PORTS = 320
-
-ssh_client = paramiko.SSHClient()
-ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh_client.connect(DEVICE_IP, username=USERNAME, password=PASSWORD)
-
-console = ssh_client.invoke_shell()
-
-# Wait for boot up messages  
-time.sleep(60)
-
-# Check port status
-failed_ports = []
-for port in range(1, NUM_PORTS+1):
-  console.send(f"show interfaces ge-0/0/{port} extensive\n")
-  time.sleep(0.5)
-  output = console.recv(2000)
-  if re.search(r'Link-level type:\\s*Ethernet', output.decode('utf-8')) and re.search(r'Administrative state:\\s*Enabled', output.decode('utf-8')) and re.search(r'Logical interface ge-0/0/{port}\\.0\\s*.*, Enabled, Online', output.decode('utf-8').format(port=port)):
-    print(f"Port ge-0/0/{port} check passed")
-  else:
-    print(f"Port ge-0/0/{port} check failed") 
-    failed_ports.append(port)
-
-if failed_ports:
-  print(f"FAILED ports: {failed_ports}")
-else:
-  print("All ports initialized successfully")
-  
-ssh_client.close()  
-""",
-      "run_command": "python boot_up_test_2.py", 
-      "expected_result": "All ports initialized successfully"
-    }
+    "run_command": "python test_bootup_config_timestamp.py",
+    "expected_result": "Print statement indicating timestamp was updated"
   }
+},
+
+{
+  "testname": "TestBootupConfigRollback",
+  "testcase": {
+    "testname": "TestBootupConfigRollback",
+    "objective": "Validate ability to roll back to previous bootup config",
+    "steps": [
+      "Connect to router CLI",
+      "Note current bootup config - store as config1",
+      "Make a change to the running config - e.g. hostname", 
+      "Commit change",
+      "Rollback to previous bootup config",
+      "Retrieve updated bootup config - store as config2",
+      "Validate config1 == config2"
+    ]
+  },
+  "testscript": {
+    "testname": "TestBootupConfigRollback",
+    "objective": "Validate ability to roll back to previous bootup config",
+    "file_name": "test_bootup_config_rollback.py",
+    "init_scripts": [
+      "pip install paramiko"  
+    ],
+    "script": """
+import paramiko
+
+ip = '192.168.0.1'
+username = 'admin'
+password = 'Juniper123'
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(ip, username=username, password=password)
+
+stdin1, stdout1, stderr1 = ssh.exec_command('show configuration bootup')
+config1 = stdout1.read().decode('utf-8')
+print('Initial Config:\\n', config1)
+
+stdin2, stdout2, stderr2 = ssh.exec_command('set system host-name test')
+stdin3, stdout3, stderr3 = ssh.exec_command('commit')
+
+stdin4, stdout4, stderr4 = ssh.exec_command('rollback 1')
+
+stdin5, stdout5, stderr5 = ssh.exec_command('show configuration bootup')
+config2 = stdout5.read().decode('utf-8')
+print('Rolled Back Config:\\n', config2) 
+
+if config1 == config2:
+  print('Test Passed - Config rolled back successfully')
+else:
+  print('Test Failed - Config not rolled back properly')
+  
+ssh.close()
+""",
+    "run_command": "python test_bootup_config_rollback.py",
+    "expected_result": "Print statement indicating successful config rollback"
+  }
+}
 ]
 ###ENDLIST###
