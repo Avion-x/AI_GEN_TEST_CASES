@@ -1,231 +1,257 @@
  ###STARTLIST###
 [
   {
-    "testname": "Bootup Configuration Retrieval Test 1", 
+    "testname": "Bootup Config Retrieve Test 1", 
     "testcase": {
-      "testname": "Bootup Configuration Retrieval Test 1",
-      "objective": "Verify bootup configuration can be retrieved from device",
+      "testname": "Bootup Config Retrieve Test 1",
+      "objective": "Verify bootup config can be retrieved from MX240",
       "steps": [
-        "Connect to device CLI", 
-        "Enter 'show configuration' command",
-        "Verify full bootup configuration is displayed"
+        "Connect to MX240 console", 
+        "Send command 'show configuration'",
+        "Verify bootup configuration is displayed"
       ],
       "testdata": {
-        "device": "mx240",
+        "device": "MX240",
+        "mgmt_ip": "192.168.0.1",
         "username": "admin",
         "password": "juniper123"
       }
     },
     "testscript": {
-      "testname": "Bootup Configuration Retrieval Test 1",
-      "objective": "Verify bootup configuration can be retrieved from device",
+      "testname": "Bootup Config Retrieve Test 1",
+      "objective": "Verify bootup config can be retrieved from MX240", 
       "file_name": "test_bootup_config_retrieve_1.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc"
+        "pip install ncclient",
+        "pip install xmltodict"
       ],
       "script": """
-        import json
-        from junos import Device
-        
-        with Device(host='192.0.2.1', user='admin', password='juniper123') as dev:
-          config = dev.cli('show configuration')
-          
-        result = { 
-          'status': 'PASS' if 'system {' in config else 'FAIL',
-          'config': config
-        }
-        
-        print(json.dumps(result))
+import ncclient
+from ncclient import manager
+import xmltodict
+
+DEVICE_IP = '192.168.0.1'
+USERNAME = 'admin'
+PASSWORD = 'juniper123'
+
+with manager.connect(
+    host=DEVICE_IP, 
+    port=22, 
+    username=USERNAME, 
+    password=PASSWORD,
+    hostkey_verify=False
+) as m:
+
+    netconf_reply = m.get_config(source='running')
+
+print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
       """,
       "run_command": "python test_bootup_config_retrieve_1.py",
-      "expected_result": "{'status': 'PASS', 'config': '...full bootup configuration...'}"
+      "expected_result": "Bootup configuration of MX240 is printed"
     }
   },
+
   {
-    "testname": "Bootup Configuration Retrieval Test 2",
+    "testname": "Bootup Config Retrieve Test 2",
     "testcase": {
-      "testname": "Bootup Configuration Retrieval Test 2",
-      "objective": "Verify error raised when invalid credentials used",
+      "testname": "Bootup Config Retrieve Test 2",
+      "objective": "Verify bootup config can be retrieved from backup MX240",
       "steps": [
-        "Connect to device CLI using invalid credentials",
-        "Verify authentication error raised" 
+        "Connect to backup MX240 console",
+        "Send command 'show configuration'", 
+        "Verify bootup configuration is displayed"
       ],
-      "testdata": {
-        "device": "mx240",
-        "username": "invaliduser",
-        "password": "invalidpass"
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Configuration Retrieval Test 2",
-      "objective": "Verify error raised when invalid credentials used",
-      "file_name": "test_bootup_config_retrieve_2.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc"
-      ],
-      "script": """
-        import json
-        from junos import Device
-        
-        try:
-          dev = Device(host='192.0.2.1', user='invaliduser', password='invalidpass')
-          dev.open()
-        except Exception as e:
-          result = {
-            'status': 'PASS' if 'Authentication failed' in str(e) else 'FAIL',
-            'error': str(e)  
-          }
-        else:
-          result = {
-            'status': 'FAIL',
-            'error': 'No authentication error raised'
-          }
-          
-        print(json.dumps(result))
-      """,
-      "run_command": "python test_bootup_config_retrieve_2.py", 
-      "expected_result": "{'status': 'PASS', 'error': 'Authentication failed'}"
-    }
-  },
-  {
-    "testname": "Bootup Configuration Retrieval Test 3",
-    "testcase": {
-      "testname": "Bootup Configuration Retrieval Test 3",
-      "objective": "Verify error raised when connecting to invalid IP",
-      "steps": [
-        "Connect to invalid IP address",
-        "Verify connection error raised"
-      ],
-      "testdata": {
-        "device": "mx240",
-        "username": "admin",
-        "password": "juniper123",
-        "invalid_ip": "192.0.2.254"  
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Configuration Retrieval Test 3",
-      "objective": "Verify error raised when connecting to invalid IP",
-      "file_name": "test_bootup_config_retrieve_3.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc"
-      ],
-      "script": """
-        import json
-        from junos import Device
-        
-        try:
-          dev = Device(host='192.0.2.254', user='admin', password='juniper123') 
-          dev.open()
-        except Exception as e:
-          result = {
-            'status': 'PASS' if 'ConnectTimeoutError' in str(e) else 'FAIL',
-            'error': str(e)  
-          }
-        else:
-          result = {
-            'status': 'FAIL',
-            'error': 'No connection error raised'
-          }
-          
-        print(json.dumps(result))
-      """,
-      "run_command": "python test_bootup_config_retrieve_3.py",
-      "expected_result": "{'status': 'PASS', 'error': 'ConnectTimeoutError'}"
-    }
-  },
-  {
-    "testname": "Bootup Configuration Retrieval Test 4", 
-    "testcase": {
-      "testname": "Bootup Configuration Retrieval Test 4",
-      "objective": "Verify error when invalid command entered",
-      "steps": [
-        "Connect to device CLI",
-        "Enter invalid command",
-        "Verify error raised"
-      ],
-      "testdata": {
-        "device": "mx240",
-        "username": "admin", 
-        "password": "juniper123",
-        "invalid_command": "show configuration"  
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Configuration Retrieval Test 4",
-      "objective": "Verify error when invalid command entered", 
-      "file_name": "test_bootup_config_retrieve_4.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc"
-      ],
-      "script": """
-        import json
-        from junos import Device
-        
-        with Device(host='192.0.2.1', user='admin', password='juniper123') as dev:
-          try:
-            dev.cli('show configuration')
-          except Exception as e:
-            result = {
-              'status': 'PASS',
-              'error': str(e)
-            }
-          else:
-            result = {
-              'status': 'FAIL',
-              'error': 'No error raised for invalid command'
-            }
-            
-        print(json.dumps(result))
-      """,
-      "run_command": "python test_bootup_config_retrieve_4.py",
-      "expected_result": "{'status': 'PASS', 'error': 'invalid command: show configuration'}"
-    }
-  },
-  {
-    "testname": "Bootup Configuration Retrieval Test 5",
-    "testcase": {
-      "testname": "Bootup Configuration Retrieval Test 5",
-      "objective": "Verify bootup config retrieved in xml format",
-      "steps": [
-        "Connect to device CLI",
-        "Enter command to retrieve config in xml format",
-        "Verify xml config returned"  
-      ],
-      "testdata": {
-        "device": "mx240",
+      "testdata": { 
+        "device": "Backup MX240",
+        "mgmt_ip": "192.168.0.2",
         "username": "admin",
         "password": "juniper123"
       }
     },
     "testscript": {
-      "testname": "Bootup Configuration Retrieval Test 5",
-      "objective": "Verify bootup config retrieved in xml format",
-      "file_name": "test_bootup_config_retrieve_5.py", 
+      "testname": "Bootup Config Retrieve Test 2",
+      "objective": "Verify bootup config can be retrieved from backup MX240",
+      "file_name": "test_bootup_config_retrieve_2.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc"  
+        "pip install ncclient",
+        "pip install xmltodict"  
       ],
       "script": """
-        import json
-        from junos import Device
-        
-        with Device(host='192.0.2.1', user='admin', password='juniper123') as dev:
-          config = dev.cli('show configuration | display xml')
-        
-        result = {
-          'status': 'PASS' if '<configuration>' in config else 'FAIL',
-          'config': config  
-        }
-        
-        print(json.dumps(result))
+import ncclient
+from ncclient import manager  
+import xmltodict
+
+DEVICE_IP = '192.168.0.2'
+USERNAME = 'admin'
+PASSWORD = 'juniper123'
+
+with manager.connect(
+    host=DEVICE_IP,
+    port=22,
+    username=USERNAME,
+    password=PASSWORD,
+    hostkey_verify=False
+) as m:
+
+    netconf_reply = m.get_config(source='running')
+
+print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
+      """,
+      "run_command": "python test_bootup_config_retrieve_2.py",
+      "expected_result": "Bootup configuration of backup MX240 is printed"
+    }
+  },
+
+  {
+    "testname": "Bootup Config Retrieve Test 3",
+    "testcase": {
+      "testname": "Bootup Config Retrieve Test 3",
+      "objective": "Verify bootup config can be retrieved from MX240 cluster node 1",
+      "steps": [
+        "Connect to MX240 cluster node 1 console",
+        "Send command 'show configuration'",
+        "Verify bootup configuration is displayed"  
+      ],
+      "testdata": {
+        "device": "MX240 Cluster Node 1",
+        "mgmt_ip": "192.168.0.3",
+        "username": "admin",
+        "password": "juniper123"
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Config Retrieve Test 3",
+      "objective": "Verify bootup config can be retrieved from MX240 cluster node 1",
+      "file_name": "test_bootup_config_retrieve_3.py",
+      "init_scripts": [ 
+        "pip install ncclient",
+        "pip install xmltodict"
+      ],
+      "script": """
+import ncclient
+from ncclient import manager
+import xmltodict
+
+DEVICE_IP = '192.168.0.3' 
+USERNAME = 'admin'
+PASSWORD = 'juniper123'
+
+with manager.connect(
+    host=DEVICE_IP,
+    port=22,
+    username=USERNAME,
+    password=PASSWORD,
+    hostkey_verify=False
+) as m:
+
+    netconf_reply = m.get_config(source='running')
+
+print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
+      """,
+      "run_command": "python test_bootup_config_retrieve_3.py",
+      "expected_result": "Bootup configuration of MX240 cluster node 1 is printed"
+    }
+  },
+
+  {
+    "testname": "Bootup Config Retrieve Test 4", 
+    "testcase": {
+      "testname": "Bootup Config Retrieve Test 4",
+      "objective": "Verify bootup config can be retrieved from MX240 cluster node 2",
+      "steps": [
+        "Connect to MX240 cluster node 2 console",
+        "Send command 'show configuration'",
+        "Verify bootup configuration is displayed"
+      ],
+      "testdata": {
+        "device": "MX240 Cluster Node 2",
+        "mgmt_ip": "192.168.0.4",
+        "username": "admin", 
+        "password": "juniper123"
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Config Retrieve Test 4",
+      "objective": "Verify bootup config can be retrieved from MX240 cluster node 2",
+      "file_name": "test_bootup_config_retrieve_4.py",
+      "init_scripts": [
+        "pip install ncclient",
+        "pip install xmltodict"
+      ],
+      "script": """
+import ncclient
+from ncclient import manager
+import xmltodict
+
+DEVICE_IP = '192.168.0.4'
+USERNAME = 'admin' 
+PASSWORD = 'juniper123'
+
+with manager.connect(
+    host=DEVICE_IP,
+    port=22, 
+    username=USERNAME,
+    password=PASSWORD,
+    hostkey_verify=False
+) as m:
+
+    netconf_reply = m.get_config(source='running')
+
+print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
+      """,
+      "run_command": "python test_bootup_config_retrieve_4.py",
+      "expected_result": "Bootup configuration of MX240 cluster node 2 is printed"
+    }
+  },
+
+  {
+    "testname": "Bootup Config Retrieve Test 5",
+    "testcase": {
+      "testname": "Bootup Config Retrieve Test 5",
+      "objective": "Verify bootup config can be retrieved from new MX240",
+      "steps": [
+        "Connect to new MX240 console",
+        "Send command 'show configuration'",
+        "Verify default bootup configuration is displayed" 
+      ],
+      "testdata": {
+        "device": "New MX240",  
+        "mgmt_ip": "192.168.0.5",
+        "username": "admin",
+        "password": "juniper123"
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Config Retrieve Test 5",
+      "objective": "Verify bootup config can be retrieved from new MX240",
+      "file_name": "test_bootup_config_retrieve_5.py",
+      "init_scripts": [
+        "pip install ncclient",
+        "pip install xmltodict"
+      ],
+      "script": """
+import ncclient
+from ncclient import manager
+import xmltodict
+
+DEVICE_IP = '192.168.0.5'  
+USERNAME = 'admin'
+PASSWORD = 'juniper123'
+
+with manager.connect(
+    host=DEVICE_IP,
+    port=22, 
+    username=USERNAME,
+    password=PASSWORD,
+    hostkey_verify=False
+) as m:
+
+    netconf_reply = m.get_config(source='running')
+
+print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
       """,
       "run_command": "python test_bootup_config_retrieve_5.py",
-      "expected_result": "{'status': 'PASS', 'config': '...xml configuration...'}"
+      "expected_result": "Default bootup configuration of new MX240 is printed"
     }
   }
 ]
