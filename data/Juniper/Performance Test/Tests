@@ -1,0 +1,170 @@
+ Here are 5 unit test cases and python test scripts for testing buffer management on Juniper MX480 routers:
+
+###STARTLIST###
+[
+{"testname": "Test Buffer Overflow", 
+"testcase": {
+  "testname": "Test Buffer Overflow",
+  "objective": "Verify that the router rejects packets that would overflow the buffer",
+  "steps": ["Send packets to router interface that exceed buffer size", "Verify that packets are dropped and error is logged"]   
+},
+"testscript":{
+  "testname": "Test Buffer Overflow",
+  "objective": "Verify that the router rejects packets that would overflow the buffer",    
+  "file_name": "test_buffer_overflow.py",
+  "init_scripts": ["pip install scapy"],
+  "script": """
+from scapy.all import *
+
+# Send a packet larger than buffer size to test interface
+oversized_packet = IP(dst="192.168.1.1")/UDP(dport=5000)/("X"*65535) 
+
+send(oversized_packet,iface="ge-0/0/0")
+
+# Check log for buffer overflow error
+f = open("/var/log/messages")
+log = f.read()
+f.close()
+
+assert "Buffer overflow" in log
+""",
+  "run_command": "python test_buffer_overflow.py",
+  "expected_result": "AssertionError not raised, buffer overflow error logged"
+}
+},
+
+{"testname": "Test Buffer Underflow",
+"testcase": {
+  "testname": "Test Buffer Underflow",
+  "objective": "Verify that the router rejects insufficiently sized packets",
+  "steps": ["Send undersized packet to router interface", "Verify that packet is dropped and error is logged"]
+},  
+"testscript":{
+  "testname": "Test Buffer Underflow",
+  "objective": "Verify that the router rejects insufficiently sized packets",
+  "file_name": "test_buffer_underflow.py",  
+  "init_scripts": ["pip install scapy"],
+  "script": """  
+from scapy.all import *
+
+# Send a packet that is too small
+tiny_packet = IP(len=10, ttl=1)
+
+send(tiny_packet, iface="ge-0/0/0")
+
+# Check log for buffer underflow error  
+f = open("/var/log/messages")
+log = f.read()
+f.close()
+
+assert "Buffer underflow" in log
+""",
+  "run_command": "python test_buffer_underflow.py",
+  "expected_result": "AssertionError not raised, buffer underflow error logged"
+}
+},
+
+{"testname": "Test Buffer Leak",
+"testcase": {
+  "testname": "Test Buffer Leak",
+  "objective": "Verify that the router does not leak buffers",
+  "steps": ["Send traffic to fill buffers", "Stop traffic", "Verify buffers are freed after timeout"]  
+},
+"testscript":{
+  "testname": "Test Buffer Leak",
+  "objective": "Verify that the router does not leak buffers",
+  "file_name": "test_buffer_leak.py",
+  "init_scripts": ["pip install scapy"],  
+  "script": """
+from scapy.all import *
+import time
+
+# Send traffic to fill buffer 
+for i in range(10000):
+  send(IP(dst="192.168.1.1")/TCP(dport=5000),iface="ge-0/0/0") 
+
+# Stop traffic  
+time.sleep(10)
+
+# Check buffer usage  
+before = get_buffer_count()
+time.sleep(60)
+after = get_buffer_count()
+
+assert before > after
+""",
+  "run_command": "python test_buffer_leak.py",
+  "expected_result": "AssertionError not raised, buffers freed after timeout"  
+}
+},
+
+{"testname": "Test Buffer Threshold",  
+"testcase": {
+  "testname": "Test Buffer Threshold",
+  "objective": "Verify that router takes action when buffer threshold is crossed",
+  "steps": ["Send traffic to fill buffers over threshold", "Verify router takes configured action (e.g. drops packets)"]
+},
+"testscript":{
+  "testname": "Test Buffer Threshold",
+  "objective": "Verify that router takes action when buffer threshold is crossed",
+  "file_name": "test_buffer_threshold.py",
+  "init_scripts": ["pip install scapy"],
+  "script": """  
+from scapy.all import *
+
+# Fill buffers over threshold
+for i in range(10001):
+  send(IP(dst="192.168.1.1")/TCP(dport=5000),iface="ge-0/0/0")
+
+# Check for configured action 
+f = open("/var/log/messages")
+log = f.read() 
+f.close()
+
+assert "Buffer threshold exceeded, dropping packets" in log
+""",
+  "run_command": "python test_buffer_threshold.py",
+  "expected_result": "AssertionError not raised, threshold action logged"  
+}
+},
+
+{"testname": "Test Buffer Allocation",
+"testcase": {
+  "testname": "Test Buffer Allocation",
+  "objective": "Verify that router allocates buffers to interfaces as configured",
+  "steps": ["Check configured buffer allocation", "Send traffic on interfaces", "Verify interface buffer usage matches configuration"]   
+},
+"testscript":{
+  "testname": "Test Buffer Allocation",
+  "objective": "Verify that router allocates buffers to interfaces as configured",
+  "file_name": "test_buffer_allocation.py",
+  "init_scripts": ["pip install paramiko"],
+  "script": """
+import paramiko
+
+# Connect to router
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect("192.168.1.1", username="admin", password="admin")
+
+# Check configured allocation
+stdin, stdout, stderr = ssh.exec_command("show configuration interfaces")
+config = stdout.read().decode()
+
+assert "ge-0/0/0 {shared-buffer-alloc 20%}" in config
+assert "ge-0/0/1 {shared-buffer-alloc 30%}" in config
+
+# Check actual usage
+stdin, stdout, stderr = ssh.exec_command("show interfaces queue")  
+output = stdout.read().decode()
+
+assert "ge-0/0/0 20%" in output
+assert "ge-0/0/1 30%" in output
+
+ssh.close()
+""",
+  "run_command": "python test_buffer_allocation.py",
+  "expected_result": "AssertionError not raised, interface buffer usage matches configuration" 
+}
+}]
+###ENDLIST###
