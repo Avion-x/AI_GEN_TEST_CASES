@@ -1,0 +1,108 @@
+ ###STARTLIST###
+
+[
+   {
+      "testname":"Verify PoE Budget and Consumption",
+      "testcase":{
+         "testname":"Verify PoE Budget and Consumption",
+         "objective":"Verify that the PoE budgets and consumed power values are correct based on the connected PoE devices.",
+         "steps":[
+            "1. Connect known PoE devices to different ports on the switch.",
+            "2. Verify PoE budgets and consumed power values via CLI commands.",
+            "3. Values should match expectations based on connected PoE devices."
+         ],
+         "testdata":{
+            "poe_devices":[
+               {"name":"VoIP Phone", "port":"ge-0/0/1", "power":6.5},
+               {"name":"IP Camera", "port":"ge-0/0/2", "power":12.95}
+            ],
+            "poe_budget":500,
+            "poe_consumed":19
+         }
+      },
+      "testscript":{
+         "testname":"test_poe_budget",
+         "objective":"Verify PoE budget and consumption",
+         "file_name":"test_poe_budget.py",
+         "init_scripts":[
+            "pip install junos-eznc"
+         ],
+         "script":"""
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+import json
+
+with open('test_data.json') as f:
+    testdata = json.load(f)
+
+dev = Device(host='192.168.1.1', user='test', password='Password123')
+dev.open()
+
+poe_info = dev.rpc.get_chassis_inventory()
+poe_budget = poe_info.findtext('.//poe-power-budget-maximum-available-power')
+poe_consumed = poe_info.findtext('.//poe-power-operational-consumed-power')
+
+assert poe_budget == str(testdata['poe_budget'])
+assert poe_consumed == str(testdata['poe_consumed'])
+
+dev.close()
+""",
+         "run_command":"python test_poe_budget.py",
+         "expected_result":"PoE budget and consumption values match expected values."
+      }
+   },
+   {
+      "testname":"Verify PoE Priority",
+      "testcase":{
+         "testname":"Verify PoE Priority",  
+         "objective":"Verify that PoE priority works as expected when power budget is exceeded.",
+         "steps":[
+            "1. Connect PoE devices to switch ports, exceeding total power budget.",
+            "2. Verify higher priority ports (e.g. IP phones) still get power.",
+            "3. Verify lower priority ports (e.g. IP cameras) are denied power."   
+         ],
+         "testdata":{
+            "poe_devices":[
+               {"name":"VoIP Phone 1", "port":"ge-0/0/1", "priority":"high", "power":6.5},
+               {"name":"VoIP Phone 2", "port":"ge-0/0/2", "priority":"high", "power":6.5},
+               {"name":"IP Camera 1", "port":"ge-0/0/3", "priority":"low", "power":12.95},
+               {"name":"IP Camera 2", "port":"ge-0/0/4", "priority":"low", "power":12.95}         
+            ],
+            "poe_budget":100
+         }
+      },
+      "testscript":{
+         "testname":"test_poe_priority",
+         "objective":"Verify PoE priority",
+         "file_name":"test_poe_priority.py",
+         "init_scripts":[ 
+            "pip install junos-eznc"
+         ],
+         "script":"""  
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+import json
+   
+with open('test_data.json') as f:
+   testdata = json.load(f)
+   
+dev = Device(host='192.168.1.1', user='test', password='Password123')
+dev.open()
+
+poe_info = dev.rpc.get_chassis_inventory()
+
+for device in testdata['poe_devices']:
+   port_status = poe_info.findtext('.//interface[name=\"'+ device['port'] +'\"]/poe-interface-status')
+   if device['priority'] == 'high':
+      assert port_status == 'on'
+   else:
+      assert port_status == 'deniedInsufficientPower'
+
+dev.close()
+""",
+         "run_command":"python test_poe_priority.py",
+         "expected_result":"High priority ports get PoE power. Low priority ports are denied power."   
+      }
+   }
+]
+###ENDLIST###
