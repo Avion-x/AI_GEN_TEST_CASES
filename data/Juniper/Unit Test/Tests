@@ -1,217 +1,225 @@
- Here are 5 python test scripts for Bootup Configuration Retrieval Test cases for MX240 router:
+ Here are 5 unit test cases with python test scripts for Bootup process of Juniper MX240 router:
 
-```python
 ###STARTLIST###
-[
-{
-  "testname": "Test Bootup Config Retrieval",
+
+[{
+  "testname": "Test Boot ROM Integrity",
   "testcase": {
-    "testname": "Test Bootup Config Retrieval", 
-    "objective": "Verify bootup configuration is retrieved and applied on device startup",
+    "testname": "Test Boot ROM Integrity",
+    "objective": "To verify the integrity of the boot ROM by checking the checksum",
     "steps": [
-      "Connect to device console/NETCONF",
-      "Reload device",
-      "Verify device boots up with Day 0 configuration"
-    ]
+      "Calculate checksum of boot ROM", 
+      "Verify checksum matches expected value"
+    ],
+    "test_data": {
+      "expected_checksum": "0x1234ABCD"  
+    }
   },
 
   "testscript": {
-    "testname": "Test Bootup Config Retrieval",
-    "objective": "Verify bootup configuration is retrieved and applied on device startup", 
-    "file_name": "test_bootup_config.py",
-    "init_scripts": [
-      "pip install ncclient"
-    ],
+    "testname": "Test Boot ROM Integrity", 
+    "objective": "To verify the integrity of the boot ROM by checking the checksum",
+    "file_name": "test_bootrom.py",
+    "init_scripts": "pip install junos-eznc",
     "script": """
-import ncclient
+import jnpr.junos
+from jnpr.junos import Device
 
-HOST = "1.1.1.1"
-USER = "netconf"
-PASS = "juniper123"
+def test_bootrom(dev):
+  rom_checksum = dev.rpc.get_bootrom_checksum()
+  assert rom_checksum == expected_checksum
 
-with ncclient.manager.connect(
-    host=HOST,
-    port=830,
-    username=USER,
-    password=PASS,
-    hostkey_verify=False
-) as m:
+dev = Device('host', user='myuser', password='mypassword') 
+dev.open()
 
-    resp = m.get_config(source="candidate")
-    print(resp)
+expected_checksum = '0x1234ABCD'
+test_bootrom(dev)
+print('Boot ROM integrity test passed!')
 """,
-    "run_command": "python test_bootup_config.py",
-    "expected_result": "Device boots up with Day 0 candidate configuration"
+
+"run_command": "python test_bootrom.py",
+"expected_result": "Boot ROM integrity test passed!"
   }
 },
 
 {
-  "testname": "Test Local Backup Config Retrieval",
-  "testcase": {  
-    "testname": "Test Local Backup Config Retrieval",
-    "objective": "Verify local backup configuration is retrieved and applied on device startup when primary config is missing", 
-    "steps": [
-      "Delete current running configuration on device",
-      "Reload device", 
-      "Verify device boots up with last saved local backup configuration"
-    ]
-  },
+  "testname": "Test Boot Loader Version",
   
-  "testscript": {
-    "testname": "Test Local Backup Config Retrieval",
-    "objective": "Verify local backup configuration is retrieved and applied on device startup when primary config is missing",
-    "file_name": "test_local_backup.py",
-    "init_scripts": [
-      "pip install ncclient"  
+  "testcase": {
+    "testname": "Test Boot Loader Version",
+    "objective": "To verify the router boots with the correct boot loader version",
+    "steps": [
+      "Retrieve boot loader version from device",
+      "Verify boot loader version matches expected"
     ],
-    "script": """  
-import ncclient
+    "test_data": {
+      "expected_version": "17.3R1.10"  
+    }
+  },
 
-HOST = "1.1.1.1"
-USER = "netconf"
-PASS = "juniper123"
+  "testscript": {
+    "testname": "Test Boot Loader Version",
+    "objective": "To verify the router boots with the correct boot loader version",
+    "file_name": "test_bootloader.py",  
+    "init_scripts": "pip install junos-eznc",
+    "script": """  
+import jnpr.junos
+from jnpr.junos import Device
+
+def test_bootloader(dev, expected_version):
+  actual_version = dev.rpc.get_package_information(package_name='junos-boot-initramfs')
+  assert actual_version == expected_version
+
+dev = Device('host')
+dev.open()
+
+expected_version = '17.3R1.10'
+test_bootloader(dev, expected_version)
+
+print('Boot loader version test passed!')
+    """,
+    
+    "run_command": "python test_bootloader.py", 
+    "expected_result": "Boot loader version test passed!"
+  }
+},
+
+{
+  "testname": "Test Kernel Load",
   
-with ncclient.manager.connect(
-    host=HOST,  
-    port=830,
-    username=USER,
-    password=PASS,
-    hostkey_verify=False
-) as m:
-
-    resp = m.get_config(source="candidate")
-    print(resp)
-""",
-    "run_command": "python test_local_backup.py",
-    "expected_result": "Device boots up with local backup configuration"
-  }
-},
-
-{
-  "testname": "Test Factory Default Config Retrieval", 
   "testcase": {
-    "testname": "Test Factory Default Config Retrieval",
-    "objective": "Verify factory default configuration is retrieved and applied when no other configs are available",
+    "testname": "Test Kernel Load",
+    "objective": "Verify the Junos kernel image loads successfully",  
     "steps": [
-      "Delete current running and backup configurations on device",
-      "Reload device",
-      "Verify device boots up with factory default configuration" 
-    ]
+      "Start device boot process",
+      "Check for kernel console messages indicating successful load"
+    ],
+    "test_data": {
+      "expected_message": "Kernel loaded successfully"
+    }
   },
-   
+
   "testscript": {
-    "testname": "Test Factory Default Config Retrieval",
-    "objective": "Verify factory default configuration is retrieved and applied when no other configs are available",
-    "file_name": "test_factory_default.py",  
-    "init_scripts": [
-      "pip install ncclient"
-    ],
+    "testname": "Test Kernel Load",
+    "objective": "Verify the Junos kernel image loads successfully",
+    "file_name": "test_kernel.py",
+    "init_scripts": "pip install junos-eznc",
     "script": """
-import ncclient
+import re
+from jnpr.junos import Device
 
-HOST = "1.1.1.1"  
-USER = "netconf"
-PASS = "juniper123"
-   
-with ncclient.manager.connect(
-    host=HOST,
-    port=830,
-    username=USER,
-    password=PASS,
-    hostkey_verify=False
-) as m:
+def test_kernel_load(dev, expected_message):
+  console_output = dev.cli('show console log')
+  match = re.search(expected_message, console_output)
+  assert match is not None
 
-    resp = m.get_config(source="candidate")
-    print(resp)  
-""",
-    "run_command": "python test_factory_default.py",
-    "expected_result": "Device boots up with factory default configuration"
+dev = Device('host')
+dev.open()
+
+expected_message = 'Kernel loaded successfully'
+test_kernel_load(dev, expected_message)
+
+print('Kernel load test passed!')
+    """,
+
+    "run_command": "python test_kernel.py",
+    "expected_result": "Kernel load test passed!" 
   }
 },
 
 {
-  "testname": "Test Rescue Configuration Retrieval",
+  "testname": "Test Routing Engine Boot",
+  
   "testcase": {
-    "testname": "Test Rescue Configuration Retrieval",
-    "objective": "Verify rescue configuration is retrieved and applied when factory default config fails",
+    "testname": "Test Routing Engine Boot",
+    "objective": "Verify routing engines boot successfully",
     "steps": [
-      "Delete current running, backup and factory default configs on device", 
-      "Reload device",
-      "Verify device boots up with rescue configuration"
-    ]
+      "Check chassis status for expected state",
+      "Verify correct RE boot timestamp in log"  
+    ],
+    "test_data": {
+      "expected_status": "OK",
+      "expected_timestamp": "2017-03-05T11:22:33"  
+    }
   },
 
-  "testscript": {    
-    "testname": "Test Rescue Configuration Retrieval",
-    "objective": "Verify rescue configuration is retrieved and applied when factory default config fails",
-    "file_name": "test_rescue_config.py",
-    "init_scripts": [
-      "pip install ncclient"
+  "testscript": {
+    "testname": "Test Routing Engine Boot",
+    "objective": "Verify routing engines boot successfully",
+    "file_name": "test_re.py",
+    "init_scripts": "pip install junos-eznc",  
+    "script": """
+from jnpr.junos import Device 
+
+def test_re_boot(dev, expected_status, expected_timestamp):
+  status = dev.rpc.get_chassis_inventory() 
+  assert status == expected_status
+
+  log = dev.rpc.get_route_engine_information()
+  timestamp = log['route-engine-information'][0]['start-time']
+  assert timestamp == expected_timestamp
+
+dev = Device('host')
+dev.open()
+  
+expected_status = 'OK'
+expected_timestamp '2017-03-05T11:22:33'
+
+test_re_boot(dev, expected_status, expected_timestamp)
+print('RE boot test passed!')
+    """,
+  
+    "run_command": "python test_re.py",
+    "expected_result": "RE boot test passed!"
+  }
+},
+
+{
+  "testname": "Test FPC Boot",
+  
+  "testcase": {
+    "testname": "Test FPC Boot",
+    "objective": "Verify all FPCs boot successfully",
+    "steps": [
+      "Check FPC status for expected state",
+      "Verify correct FPC boot timestamps in log"
     ],
+    "test_data": {
+      "expected_status": ["OK", "OK"],
+      "expected_timestamps": ["2017-03-05T11:25:11", "2017-03-05T11:25:22"]
+    }
+  },
+
+  "testscript": {
+    "testname": "Test FPC Boot",
+    "objective": "Verify all FPCs boot successfully",
+    "file_name": "test_fpc.py",
+    "init_scripts": "pip install junos-eznc",
     "script": """  
-import ncclient
+from jnpr.junos import Device
 
-HOST = "1.1.1.1"
-USER = "netconf" 
-PASS = "juniper123"
+def test_fpc_boot(dev, expected_status, expected_timestamps):
+  status = dev.rpc.get_chassis_inventory()
+  fpc_status = [pic['status'] for pic in status['chassis-inventory']['chassis']['chassis-module']]
+  assert fpc_status == expected_status
 
-with ncclient.manager.connect(
-    host=HOST,  
-    port=830,
-    username=USER,
-    password=PASS,
-    hostkey_verify=False
-) as m:
+  log = dev.rpc.get_chassis_chassis_module_log()
+  timestamps = [entry['time-stamp'] for entry in log['chassis-module-log']]
+  assert timestamps == expected_timestamps 
 
-    resp = m.get_config(source="candidate")
-    print(resp)
-""",
-    "run_command": "python test_rescue_config.py",
-    "expected_result": "Device boots up with rescue configuration"
+dev = Device('host')
+dev.open()
+
+expected_status = ['OK', 'OK'] 
+expected_timestamps = ['2017-03-05T11:25:11', '2017-03-05T11:25:22']
+
+test_fpc_boot(dev, expected_status, expected_timestamps)
+print('FPC boot test passed!')
+    """,
+
+    "run_command": "python test_fpc.py",
+    "expected_result": "FPC boot test passed!"
   }
-},
+}]
 
-{
-  "testname": "Test Minimum Required Configuration Retrieval",
-  "testcase": {
-    "testname": "Test Minimum Required Configuration Retrieval", 
-    "objective": "Verify minimum required config is retrieved when all other configs fail",
-    "steps": [
-      "Delete current running, backup, factory default and rescue configs on device",
-      "Reload device", 
-      "Verify device boots up with minimum required configuration"
-    ]
-  },
-
-  "testscript": {
-    "testname": "Test Minimum Required Configuration Retrieval",
-    "objective": "Verify minimum required config is retrieved when all other configs fail",
-    "file_name": "test_minimum_config.py",
-    "init_scripts": [
-      "pip install ncclient"   
-    ],
-    "script": """
-import ncclient  
-
-HOST = "1.1.1.1"
-USER = "netconf"
-PASS = "juniper123"
-
-with ncclient.manager.connect(
-    host=HOST,
-    port=830, 
-    username=USER,
-    password=PASS,
-    hostkey_verify=False
-) as m:
-
-    resp = m.get_config(source="candidate")
-    print(resp)
-""",
-    "run_command": "python test_minimum_config.py",
-    "expected_result": "Device boots up with minimum required configuration" 
-  }
-}
-]
 ###ENDLIST###
-```
