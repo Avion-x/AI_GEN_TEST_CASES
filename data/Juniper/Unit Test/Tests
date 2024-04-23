@@ -1,258 +1,217 @@
- ###STARTLIST###
+ Here are 5 python test scripts for Bootup Configuration Retrieval Test cases for MX240 router:
+
+```python
+###STARTLIST###
 [
-  {
-    "testname": "Bootup Config Retrieve Test 1", 
-    "testcase": {
-      "testname": "Bootup Config Retrieve Test 1",
-      "objective": "Verify bootup config can be retrieved from MX240",
-      "steps": [
-        "Connect to MX240 console", 
-        "Send command 'show configuration'",
-        "Verify bootup configuration is displayed"
-      ],
-      "testdata": {
-        "device": "MX240",
-        "mgmt_ip": "192.168.0.1",
-        "username": "admin",
-        "password": "juniper123"
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Config Retrieve Test 1",
-      "objective": "Verify bootup config can be retrieved from MX240", 
-      "file_name": "test_bootup_config_retrieve_1.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """
-import ncclient
-from ncclient import manager
-import xmltodict
-
-DEVICE_IP = '192.168.0.1'
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
-
-with manager.connect(
-    host=DEVICE_IP, 
-    port=22, 
-    username=USERNAME, 
-    password=PASSWORD,
-    hostkey_verify=False
-) as m:
-
-    netconf_reply = m.get_config(source='running')
-
-print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
-      """,
-      "run_command": "python test_bootup_config_retrieve_1.py",
-      "expected_result": "Bootup configuration of MX240 is printed"
-    }
+{
+  "testname": "Test Bootup Config Retrieval",
+  "testcase": {
+    "testname": "Test Bootup Config Retrieval", 
+    "objective": "Verify bootup configuration is retrieved and applied on device startup",
+    "steps": [
+      "Connect to device console/NETCONF",
+      "Reload device",
+      "Verify device boots up with Day 0 configuration"
+    ]
   },
 
-  {
-    "testname": "Bootup Config Retrieve Test 2",
-    "testcase": {
-      "testname": "Bootup Config Retrieve Test 2",
-      "objective": "Verify bootup config can be retrieved from backup MX240",
-      "steps": [
-        "Connect to backup MX240 console",
-        "Send command 'show configuration'", 
-        "Verify bootup configuration is displayed"
-      ],
-      "testdata": { 
-        "device": "Backup MX240",
-        "mgmt_ip": "192.168.0.2",
-        "username": "admin",
-        "password": "juniper123"
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Config Retrieve Test 2",
-      "objective": "Verify bootup config can be retrieved from backup MX240",
-      "file_name": "test_bootup_config_retrieve_2.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install xmltodict"  
-      ],
-      "script": """
+  "testscript": {
+    "testname": "Test Bootup Config Retrieval",
+    "objective": "Verify bootup configuration is retrieved and applied on device startup", 
+    "file_name": "test_bootup_config.py",
+    "init_scripts": [
+      "pip install ncclient"
+    ],
+    "script": """
 import ncclient
-from ncclient import manager  
-import xmltodict
 
-DEVICE_IP = '192.168.0.2'
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
+HOST = "1.1.1.1"
+USER = "netconf"
+PASS = "juniper123"
 
-with manager.connect(
-    host=DEVICE_IP,
-    port=22,
-    username=USERNAME,
-    password=PASSWORD,
+with ncclient.manager.connect(
+    host=HOST,
+    port=830,
+    username=USER,
+    password=PASS,
     hostkey_verify=False
 ) as m:
 
-    netconf_reply = m.get_config(source='running')
-
-print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
-      """,
-      "run_command": "python test_bootup_config_retrieve_2.py",
-      "expected_result": "Bootup configuration of backup MX240 is printed"
-    }
-  },
-
-  {
-    "testname": "Bootup Config Retrieve Test 3",
-    "testcase": {
-      "testname": "Bootup Config Retrieve Test 3",
-      "objective": "Verify bootup config can be retrieved from MX240 cluster node 1",
-      "steps": [
-        "Connect to MX240 cluster node 1 console",
-        "Send command 'show configuration'",
-        "Verify bootup configuration is displayed"  
-      ],
-      "testdata": {
-        "device": "MX240 Cluster Node 1",
-        "mgmt_ip": "192.168.0.3",
-        "username": "admin",
-        "password": "juniper123"
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Config Retrieve Test 3",
-      "objective": "Verify bootup config can be retrieved from MX240 cluster node 1",
-      "file_name": "test_bootup_config_retrieve_3.py",
-      "init_scripts": [ 
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """
-import ncclient
-from ncclient import manager
-import xmltodict
-
-DEVICE_IP = '192.168.0.3' 
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
-
-with manager.connect(
-    host=DEVICE_IP,
-    port=22,
-    username=USERNAME,
-    password=PASSWORD,
-    hostkey_verify=False
-) as m:
-
-    netconf_reply = m.get_config(source='running')
-
-print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
-      """,
-      "run_command": "python test_bootup_config_retrieve_3.py",
-      "expected_result": "Bootup configuration of MX240 cluster node 1 is printed"
-    }
-  },
-
-  {
-    "testname": "Bootup Config Retrieve Test 4", 
-    "testcase": {
-      "testname": "Bootup Config Retrieve Test 4",
-      "objective": "Verify bootup config can be retrieved from MX240 cluster node 2",
-      "steps": [
-        "Connect to MX240 cluster node 2 console",
-        "Send command 'show configuration'",
-        "Verify bootup configuration is displayed"
-      ],
-      "testdata": {
-        "device": "MX240 Cluster Node 2",
-        "mgmt_ip": "192.168.0.4",
-        "username": "admin", 
-        "password": "juniper123"
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Config Retrieve Test 4",
-      "objective": "Verify bootup config can be retrieved from MX240 cluster node 2",
-      "file_name": "test_bootup_config_retrieve_4.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """
-import ncclient
-from ncclient import manager
-import xmltodict
-
-DEVICE_IP = '192.168.0.4'
-USERNAME = 'admin' 
-PASSWORD = 'juniper123'
-
-with manager.connect(
-    host=DEVICE_IP,
-    port=22, 
-    username=USERNAME,
-    password=PASSWORD,
-    hostkey_verify=False
-) as m:
-
-    netconf_reply = m.get_config(source='running')
-
-print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
-      """,
-      "run_command": "python test_bootup_config_retrieve_4.py",
-      "expected_result": "Bootup configuration of MX240 cluster node 2 is printed"
-    }
-  },
-
-  {
-    "testname": "Bootup Config Retrieve Test 5",
-    "testcase": {
-      "testname": "Bootup Config Retrieve Test 5",
-      "objective": "Verify bootup config can be retrieved from new MX240",
-      "steps": [
-        "Connect to new MX240 console",
-        "Send command 'show configuration'",
-        "Verify default bootup configuration is displayed" 
-      ],
-      "testdata": {
-        "device": "New MX240",  
-        "mgmt_ip": "192.168.0.5",
-        "username": "admin",
-        "password": "juniper123"
-      }
-    },
-    "testscript": {
-      "testname": "Bootup Config Retrieve Test 5",
-      "objective": "Verify bootup config can be retrieved from new MX240",
-      "file_name": "test_bootup_config_retrieve_5.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install xmltodict"
-      ],
-      "script": """
-import ncclient
-from ncclient import manager
-import xmltodict
-
-DEVICE_IP = '192.168.0.5'  
-USERNAME = 'admin'
-PASSWORD = 'juniper123'
-
-with manager.connect(
-    host=DEVICE_IP,
-    port=22, 
-    username=USERNAME,
-    password=PASSWORD,
-    hostkey_verify=False
-) as m:
-
-    netconf_reply = m.get_config(source='running')
-
-print(xmltodict.parse(netconf_reply.xml)['rpc-reply']['configuration'])
-      """,
-      "run_command": "python test_bootup_config_retrieve_5.py",
-      "expected_result": "Default bootup configuration of new MX240 is printed"
-    }
+    resp = m.get_config(source="candidate")
+    print(resp)
+""",
+    "run_command": "python test_bootup_config.py",
+    "expected_result": "Device boots up with Day 0 candidate configuration"
   }
+},
+
+{
+  "testname": "Test Local Backup Config Retrieval",
+  "testcase": {  
+    "testname": "Test Local Backup Config Retrieval",
+    "objective": "Verify local backup configuration is retrieved and applied on device startup when primary config is missing", 
+    "steps": [
+      "Delete current running configuration on device",
+      "Reload device", 
+      "Verify device boots up with last saved local backup configuration"
+    ]
+  },
+  
+  "testscript": {
+    "testname": "Test Local Backup Config Retrieval",
+    "objective": "Verify local backup configuration is retrieved and applied on device startup when primary config is missing",
+    "file_name": "test_local_backup.py",
+    "init_scripts": [
+      "pip install ncclient"  
+    ],
+    "script": """  
+import ncclient
+
+HOST = "1.1.1.1"
+USER = "netconf"
+PASS = "juniper123"
+  
+with ncclient.manager.connect(
+    host=HOST,  
+    port=830,
+    username=USER,
+    password=PASS,
+    hostkey_verify=False
+) as m:
+
+    resp = m.get_config(source="candidate")
+    print(resp)
+""",
+    "run_command": "python test_local_backup.py",
+    "expected_result": "Device boots up with local backup configuration"
+  }
+},
+
+{
+  "testname": "Test Factory Default Config Retrieval", 
+  "testcase": {
+    "testname": "Test Factory Default Config Retrieval",
+    "objective": "Verify factory default configuration is retrieved and applied when no other configs are available",
+    "steps": [
+      "Delete current running and backup configurations on device",
+      "Reload device",
+      "Verify device boots up with factory default configuration" 
+    ]
+  },
+   
+  "testscript": {
+    "testname": "Test Factory Default Config Retrieval",
+    "objective": "Verify factory default configuration is retrieved and applied when no other configs are available",
+    "file_name": "test_factory_default.py",  
+    "init_scripts": [
+      "pip install ncclient"
+    ],
+    "script": """
+import ncclient
+
+HOST = "1.1.1.1"  
+USER = "netconf"
+PASS = "juniper123"
+   
+with ncclient.manager.connect(
+    host=HOST,
+    port=830,
+    username=USER,
+    password=PASS,
+    hostkey_verify=False
+) as m:
+
+    resp = m.get_config(source="candidate")
+    print(resp)  
+""",
+    "run_command": "python test_factory_default.py",
+    "expected_result": "Device boots up with factory default configuration"
+  }
+},
+
+{
+  "testname": "Test Rescue Configuration Retrieval",
+  "testcase": {
+    "testname": "Test Rescue Configuration Retrieval",
+    "objective": "Verify rescue configuration is retrieved and applied when factory default config fails",
+    "steps": [
+      "Delete current running, backup and factory default configs on device", 
+      "Reload device",
+      "Verify device boots up with rescue configuration"
+    ]
+  },
+
+  "testscript": {    
+    "testname": "Test Rescue Configuration Retrieval",
+    "objective": "Verify rescue configuration is retrieved and applied when factory default config fails",
+    "file_name": "test_rescue_config.py",
+    "init_scripts": [
+      "pip install ncclient"
+    ],
+    "script": """  
+import ncclient
+
+HOST = "1.1.1.1"
+USER = "netconf" 
+PASS = "juniper123"
+
+with ncclient.manager.connect(
+    host=HOST,  
+    port=830,
+    username=USER,
+    password=PASS,
+    hostkey_verify=False
+) as m:
+
+    resp = m.get_config(source="candidate")
+    print(resp)
+""",
+    "run_command": "python test_rescue_config.py",
+    "expected_result": "Device boots up with rescue configuration"
+  }
+},
+
+{
+  "testname": "Test Minimum Required Configuration Retrieval",
+  "testcase": {
+    "testname": "Test Minimum Required Configuration Retrieval", 
+    "objective": "Verify minimum required config is retrieved when all other configs fail",
+    "steps": [
+      "Delete current running, backup, factory default and rescue configs on device",
+      "Reload device", 
+      "Verify device boots up with minimum required configuration"
+    ]
+  },
+
+  "testscript": {
+    "testname": "Test Minimum Required Configuration Retrieval",
+    "objective": "Verify minimum required config is retrieved when all other configs fail",
+    "file_name": "test_minimum_config.py",
+    "init_scripts": [
+      "pip install ncclient"   
+    ],
+    "script": """
+import ncclient  
+
+HOST = "1.1.1.1"
+USER = "netconf"
+PASS = "juniper123"
+
+with ncclient.manager.connect(
+    host=HOST,
+    port=830, 
+    username=USER,
+    password=PASS,
+    hostkey_verify=False
+) as m:
+
+    resp = m.get_config(source="candidate")
+    print(resp)
+""",
+    "run_command": "python test_minimum_config.py",
+    "expected_result": "Device boots up with minimum required configuration" 
+  }
+}
 ]
 ###ENDLIST###
+```
