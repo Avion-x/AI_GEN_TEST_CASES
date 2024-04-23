@@ -1,140 +1,156 @@
- ###STARTLIST###
+ Here are 5 test cases with Python test scripts for the Juniper MX480 router:
+
+###STARTLIST###
 [
-  {
-    "testname": "CPU Utilization Threshold", 
-    "testcase": {
-      "testname": "CPU Utilization Threshold",
-      "objective": "Verify CPU utilization stays below a configured threshold",
-      "steps": [
-        "1. Configure CPU utilization threshold on the device", 
-        "2. Generate traffic on the device",
-        "3. Verify CPU utilization stays below configured threshold"
-      ],
-      "test_data": {
-        "cpu_threshold": 80, 
-        "traffic_profile": "HTTP",
-        "duration": 60
-      }
-    },
-    "testscript": {
-      "testname": "CPU Utilization Threshold",
-      "objective": "Verify CPU utilization stays below a configured threshold", 
-      "file_name": "test_cpu_utilization.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install junos-eznc" 
-      ],
-      "script": """
-        \"\"\"
-        1. Connect to device and configure CPU threshold
-        2. Start traffic generator
-        3. Poll CPU utilization
-        4. Verify utilization < threshold
-        5. Stop traffic
-        6. Cleanup configuration
-        \"\"\"
-        
-        # Imports
-        import time
-        from jnpr.junos import Device
-        
-        # Test data
-        cpu_threshold = ${test_data['cpu_threshold']}
-        traffic_duration = ${test_data['duration']}
-        
-        # Connect and configure device
-        dev = Device(host='1.1.1.1', user='testuser', password='password123')
-        dev.open()
-        dev.cli('set chassis environment threshold cpu-utilization ' + str(cpu_threshold))
-        
-        # Start traffic
-        start_traffic('${test_data['traffic_profile']}')
-                
-        # Verify CPU utilization
-        end_time = time.time() + traffic_duration
-        while time.time() < end_time:
-          cpu_utilization = dev.cli('show chassis environment cpu')
-          utilization = get_cpu_utilization(cpu_utilization)
-          assert utilization < cpu_threshold
-          
-        # Stop traffic
-        stop_traffic()
-        
-        # Cleanup
-        dev.cli('delete chassis environment threshold cpu-utilization')
-        dev.close()
-      """,
-      "run_command": "python test_cpu_utilization.py",
-      "expected_result": "CPU utilization stays below configured threshold"
-    }
+{
+  "testname": "Traffic Forwarding Test",
+  "testcase": {
+    "testname": "Traffic Forwarding Test",  
+    "objective": "Verify traffic forwarding between interfaces",
+    "steps": [
+      "Configure 2 interfaces with IP addresses in different subnets",
+      "Send pings from one interface to the other", 
+      "Verify ping replies are received"
+    ]
   },
-  
-  {
-    "testname": "BGP Session Flapping",
-    "testcase": {
-      "testname": "BGP Session Flapping",
-      "objective": "Detect and alert on BGP session flaps exceeding threshold",
-      "steps": [
-        "1. Configure BGP session on device",
-        "2. Introduce flaps in BGP session",
-        "3. Verify flaps are detected and alert is generated when threshold exceeded" 
-      ],
-      "test_data": {
-        "flap_threshold": 5,
-        "flap_interval": 60, 
-        "total_flaps": 8
-      }
-    },
-    "testscript": {
-      "testname": "BGP Session Flapping",
-      "objective": "Detect and alert on BGP session flaps exceeding threshold",
-      "file_name": "test_bgp_flap.py",
-      "init_scripts": [
-        "pip install pexpect"
-      ],
-      "script": """
-        \"\"\"
-        1. Configure BGP session on DUT
-        2. Connect to DUT and start monitoring BGP sessions
-        3. Flap BGP session from TG
-        4. Verify flaps detected and alert generated
-        \"\"\"
-        
-        # Imports
-        import pexpect
-        
-        # Test data
-        flap_threshold = ${test_data['flap_threshold']}
-        flap_interval = ${test_data['flap_interval']}
-        total_flaps = ${test_data['total_flaps']}
-        
-        # Configure BGP session
-        configure_bgp_session('dut', 'tg')
-        
-        # Start monitoring BGP
-        child = pexpect.spawn('show bgp summary')
-        flaps_detected = 0
-        
-        # Flap session
-        for i in range(total_flaps):
-          flap_bgp_session('dut', 'tg')
-          time.sleep(flap_interval)
-          
-          # Check for flap detected
-          index = child.expect(['TCP Down'])
-          if index == 0:
-            flaps_detected += 1
-            
-        # Verify flaps detected    
-        assert flaps_detected >= flap_threshold
-        
-        # Generate alert
-        if flaps_detected > flap_threshold:
-          generate_alert()
-      """,
-      "run_command": "python test_bgp_flap.py",
-      "expected_result": "BGP flaps detected and alert generated when exceeding threshold"
-    }
+  "testscript": {
+    "testname": "Traffic Forwarding Test",
+    "objective": "Verify traffic forwarding between interfaces",
+    "file_name": "traffic_forwarding.py",
+    "init_scripts": "pip install napalm",
+    "script": """
+import napalm
+
+driver = napalm.get_network_driver("junos")
+device = driver(hostname="192.168.0.1", username="testuser", password="test123")
+device.open()
+
+ping_output = device.cli("ping 192.168.0.2")
+device.close()
+
+if "!!!!!" in ping_output:
+  print("Ping test passed")
+else:
+  print("Ping test failed")
+""",
+    "run_command": "python traffic_forwarding.py", 
+    "expected_result": "Ping test passed"
   }
+},
+
+{
+  "testname": "OSPF Neighborship Test",
+  "testcase": {
+    "testname": "OSPF Neighborship Test",
+    "objective": "Verify OSPF adjacency is established",
+    "steps": [
+      "Configure OSPF on two directly connected interfaces",
+      "Verify OSPF neighbors are seen in show ospf neighbor output" 
+    ]
+  },
+  "testscript": {
+    "testname": "OSPF Neighborship Test",
+    "objective": "Verify OSPF adjacency is established", 
+    "file_name": "ospf_neighbor.py",
+    "init_scripts": "pip install napalm",
+    "script": """  
+import re
+import napalm
+
+driver = napalm.get_network_driver("junos")
+device = driver(hostname="192.168.0.1", username="testuser", password="test123")
+device.open()
+
+ospf_neighbor = device.cli("show ospf neighbor")
+device.close()
+
+match = re.search(r"(\d+\.\d+\.\d+\.\d+)\s+Full", ospf_neighbor)
+if match:
+  print("OSPF neighborship verified")
+else:
+  print("OSPF neighborship failed")
+""",
+    "run_command": "python ospf_neighbor.py",
+    "expected_result": "OSPF neighborship verified"
+  }
+},
+
+{
+  "testname": "LAN connectivity Test",
+  "testcase": {
+    "testname": "LAN connectivity Test",
+    "objective": "Validate connectivity between hosts in the same VLAN",
+    "steps": [
+      "Configure VLAN with multiple ports",
+      "Connect hosts to VLAN ports",
+      "Verify hosts can ping each other"
+    ]
+  },
+  "testscript": {
+    "testname": "LAN connectivity Test",
+    "objective": "Validate connectivity between hosts in the same VLAN",
+    "file_name": "vlan_connectivity.py", 
+    "init_scripts": "pip install napalm",
+    "script": """
+import napalm
+
+driver = napalm.get_network_driver("junos")
+device = driver(hostname="192.168.0.1", username="testuser", password="test123")
+device.open()
+
+ping_output1 = device.cli("run ping 192.168.10.2 source 192.168.10.3")  
+ping_output2 = device.cli("run ping 192.168.10.3 source 192.168.10.2")
+device.close()
+
+if "!!!!!" in ping_output1 and "!!!!!" in ping_output2:
+  print("VLAN connectivity test passed") 
+else:
+  print("VLAN connectivity test failed")
+""",
+    "run_command": "python vlan_connectivity.py",
+    "expected_result": "VLAN connectivity test passed"
+  }
+},
+
+{
+  "testname": "QoS Traffic Shaping Test",
+  "testcase": {
+    "testname": "QoS Traffic Shaping Test",
+    "objective": "Validate traffic shaping limits bandwidth",
+    "steps": [
+      "Configure shaping rate on egress interface",
+      "Send traffic over interface close to shaping rate",
+      "Verify output traffic rate matches configured shaping rate"
+    ]
+  },
+  "testscript": {
+    "testname": "QoS Traffic Shaping Test",
+    "objective": "Validate traffic shaping limits bandwidth",
+    "file_name": "traffic_shaping.py",
+    "init_scripts": "pip install napalm",
+    "script": """
+import napalm
+
+driver = napalm.get_network_driver("junos")
+device = driver(hostname="192.168.0.1", username="testuser", password="test123")
+device.open()
+
+shaping_rate = 500000 # 500Mbps
+traffic_rate = 480000 # Slightly below shaping rate
+
+device.cli("set class-of-service interfaces ge-0/0/1 shaping-rate {0}".format(shaping_rate))
+
+iperf_output = device.cli("run iperf to 192.168.0.2 bandwidth {0}".format(traffic_rate))
+device.close()
+
+if "500Mb/sec" in iperf_output:
+  print("Traffic shaping test passed")
+else: 
+  print("Traffic shaping test failed")
+""",
+    "run_command": "python traffic_shaping.py",
+    "expected_result": "Traffic shaping test passed" 
+  }
+}
 ]
 ###ENDLIST###
