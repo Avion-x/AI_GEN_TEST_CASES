@@ -1,0 +1,82 @@
+ Here are 5 unit test cases and python test scripts for BBootup Configuration Retrieval Test and Bootup Hardware Initialization Test for MX240 router:
+
+###STARTLIST###
+[
+  {
+    "testname": "Test BBootup Config Retrieval", 
+    "testcase": {
+      "testname": "Test BBootup Config Retrieval",
+      "objective": "Verify BBootup configuration is retrieved correctly on bootup",
+      "steps": [
+        "1. Power on the MX240 router",
+        "2. Verify BBootup configuration file is read",
+        "3. Verify correct bootup configuration is applied"
+      ],
+      "testdata": {
+        "bbootup_config_file": "/config/bbootup_config.conf",
+        "expected_config": "interface ge-0/0/0 unit 0 family inet address 1.1.1.1/24"  
+      }
+    },
+    "testscript": {
+      "testname": "Test BBootup Config Retrieval",
+      "objective": "Verify BBootup configuration is retrieved correctly on bootup", 
+      "file_name": "test_bbootup_config.py",
+      "init_scripts": [
+        "pip install juniper-eznc"
+      ],
+      "script": """
+        from jnpr.junos import Device
+        
+        dev = Device(host='1.1.1.1', user='foo', password='bar')
+        dev.open()
+        
+        bbootup_config = dev.rpc.get_config(options={'database':'bbootup'})
+        
+        assert bbootup_config == testdata['expected_config']
+      """,
+      "run_command": "python test_bbootup_config.py",
+      "expected_result": "PASS"
+    }
+  },
+  {
+    "testname": "Test Hardware Init",
+    "testcase": {
+      "testname": "Test Hardware Init",
+      "objective": "Verify hardware components initialize correctly on bootup",
+      "steps": [ 
+        "1. Power on the MX240 router",
+        "2. Check dmesg logs for hardware component initialization messages",
+        "3. Verify no errors during initialization"   
+      ],
+      "testdata": {
+        "expected_results": [
+          "FPC 0 Initialized", 
+          "PIC 0 Initialized",
+          "Port ge-0/0/0 up" 
+        ]
+      }  
+    }, 
+    "testscript": {
+      "testname": "Test Hardware Init",
+      "objective": "Verify hardware components initialize correctly on bootup",
+      "file_name": "test_hardware_init.py",
+      "init_scripts": [
+        "pip install juniper-eznc"  
+      ],
+      "script": """
+        from jnpr.junos import Device
+        
+        dev = Device(host='1.1.1.1', user='foo', password='bar')
+        dev.open()
+        
+        dmesg = dev.rpc.get_log(filename='/var/log/dmesg')
+        
+        for result in testdata['expected_results']:
+          assert result in dmesg
+      """,
+      "run_command": "python test_hardware_init.py", 
+      "expected_result": "PASS"
+    }
+  } 
+]
+###ENDLIST###
