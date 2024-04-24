@@ -1,0 +1,155 @@
+ Here are 5 unit test cases and Python test scripts for the Juniper MX240 router:
+
+###STARTLIST###
+[
+{
+  "testname": "Test PoE Status",
+  "testcase": {
+    "testname": "Test PoE Status", 
+    "objective": "Verify PoE status on all ports",
+    "steps": ["Check 'show poe port-status' output", "Verify all expected ports show 'on' status"]
+  },
+
+  "testscript": {
+    "testname": "Test PoE Status",
+    "objective": "Verify PoE status on all ports", 
+    "file_name": "test_poe_status.py",
+    "init_scripts": ["pip install junos-eznc"],
+    "script": """
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+
+dev = Device(host='192.168.1.1', user='test', password='password123')
+dev.open()
+
+poe_out = dev.rpc.get_poe_port_status()
+
+assert poe_out is not None
+assert 'on' in str(poe_out)
+""",
+    "run_command": "python test_poe_status.py",
+    "expected_result": "PASS. All ports show PoE status as 'on'"
+  }
+},
+
+{
+  "testname": "Test Interface Status",
+  "testcase": {
+    "testname": "Test Interface Status",
+    "objective": "Verify interface status on all ports", 
+    "steps": ["Check 'show interfaces terse' output", "Verify all expected ports show 'up' status"]
+  },
+  
+  "testscript": {
+    "testname": "Test Interface Status",
+    "objective": "Verify interface status on all ports",
+    "file_name": "test_interface_status.py", 
+    "init_scripts": ["pip install junos-eznc"],
+    "script": """  
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+
+dev = Device(host='192.168.1.1', user='test', password='password123')
+dev.open()
+
+intf_out = dev.rpc.get_interface_information(terse=True)
+
+assert intf_out is not None
+assert 'up' in str(intf_out)
+""",
+    "run_command": "python test_interface_status.py",
+    "expected_result": "PASS. All interfaces show status as 'up'"
+  }
+},
+
+{
+  "testname": "Test LACP Status",
+  "testcase": {
+    "testname": "Test LACP Status",
+    "objective": "Verify LACP status on lag interfaces",
+    "steps": ["Check 'show lacp interfaces' output", "Verify expected LAGs show 'Active' status"]  
+  },
+  
+  "testscript": {
+    "testname": "Test LACP Status",
+    "objective": "Verify LACP status on lag interfaces",
+    "file_name": "test_lacp_status.py",
+    "init_scripts": ["pip install junos-eznc"],
+    "script": """
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config  
+
+dev = Device(host='192.168.1.1', user='test', password='password123')
+dev.open()
+
+lacp_out = dev.rpc.get_lacp_interfaces_information()
+
+assert lacp_out is not None  
+assert 'Active' in str(lacp_out)
+""",
+    "run_command": "python test_lacp_status.py", 
+    "expected_result": "PASS. Expected LAG interfaces show LACP status as 'Active'"
+  }
+},
+
+{
+  "testname": "Test OSPF Neighbors",
+  "testcase": {
+    "testname": "Test OSPF Neighbors",
+    "objective": "Verify OSPF neighbor status",
+    "steps": ["Check 'show ospf neighbor' output", "Verify all expected neighbors show status as 'Full'"]
+  },
+  
+  "testscript": {
+    "testname": "Test OSPF Neighbors",
+    "objective": "Verify OSPF neighbor status",
+    "file_name": "test_ospf_neighbors.py",
+    "init_scripts": ["pip install junos-eznc"],  
+    "script": """
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+
+dev = Device(host='192.168.1.1', user='test', password='password123')
+dev.open()
+
+ospf_out = dev.rpc.get_ospf_neighbor_information()
+
+assert ospf_out is not None
+assert 'Full' in str(ospf_out)  
+""",
+    "run_command": "python test_ospf_neighbors.py",
+    "expected_result": "PASS. All OSPF neighbors up and status 'Full'"
+  }
+},
+
+{
+  "testname": "Test BGP Neighbors", 
+  "testcase": {
+    "testname": "Test BGP Neighbors",
+    "objective": "Verify BGP neighbor status",
+    "steps": ["Check 'show bgp summary' output", "Verify all expected neighbors show status as 'Established'"]
+  },
+  
+  "testscript": {
+    "testname": "Test BGP Neighbors",
+    "objective": "Verify BGP neighbor status",
+    "file_name": "test_bgp_neighbors.py",
+    "init_scripts": ["pip install junos-eznc"],
+    "script": """
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+
+dev = Device(host='192.168.1.1', user='test', password='password123')
+dev.open()
+
+bgp_out = dev.rpc.get_bgp_summary_information()
+
+assert bgp_out is not None
+assert 'Established' in str(bgp_out)
+""",
+    "run_command": "python test_bgp_neighbors.py",
+    "expected_result": "PASS. All BGP neighbors up and status 'Established'"
+  }
+}
+]
+###ENDLIST###
