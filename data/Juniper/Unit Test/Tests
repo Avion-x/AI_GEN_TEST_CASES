@@ -1,190 +1,297 @@
- Here are 5 unit test cases with Python test scripts for MX240 Bootup process:
+ Here are 5 unit test cases with Python test scripts for MX240 bootup process:
 
 ###STARTLIST###
+
 [
+
 {
-  "testname": "Test Bootup Message",
-  "testcase": {
-    "testname": "Test Bootup Message", 
-    "objective": "Verify the MX240 displays the correct bootup message",
-    "steps": [
-      "Device displays 'Booting kernel' during startup",
-      "Device displays Junos version number during startup"
-    ]
-  },
-  "testscript": {
-    "testname": "Test Bootup Message",
-    "objective": "Verify the MX240 displays the correct bootup message", 
-    "file_name": "test_bootup_message.py",
-    "init_scripts": [
-      "pip install paramiko"
-    ],
-    "script": """
+
+"testname": "Test Default Bootup",  
+
+"testcase": {
+
+"testname": "Test Default Bootup",
+
+"objective": "Verify the device boots up with factory default configuration",
+
+"steps": ["Device boots up successfully", "Default hostname is set", "Default login credentials work"]
+
+},
+
+"testscript": {
+
+"testname": "Test Default Bootup",
+
+"objective": "Verify default bootup",  
+
+"file_name": "test_default_bootup.py",
+
+"init_scripts": ["import paramiko", "import time", "import unittest"],
+
+"script": """
+
+import paramiko
+import time
+import unittest
+
+class TestDefaultBootup(unittest.TestCase):
+
+    def test_default_bootup(self):
+        ip = "192.168.1.1"
+        uname = "admin" 
+        pword = "admin"
+
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        client.connect(ip, username=uname, password=pword)
+        
+        stdin, stdout, stderr = client.exec_command("show chassis hostname")
+        output = stdout.read().decode()
+        self.assertIn("switch", output)
+        
+        stdin, stdout, stderr = client.exec_command("show version")  
+        output = stdout.read().decode()
+        self.assertIn("JUNOS Software Release", output)
+        
+if __name__ == '__main__':
+    unittest.main()
+""",
+
+"run_command": "python test_default_bootup.py",
+
+"expected_result": "OK"
+
+}
+
+},
+
+{ 
+
+"testname": "Test Bootup with Custom Config",
+
+"testcase": {
+
+"testname": "Test Bootup with Custom Config",
+
+"objective": "Verify bootup with custom hostname and login credentials",
+
+"steps": ["Device boots up successfully", "Custom hostname is set", "Custom login credentials work"]  
+
+},
+
+"testscript": {
+
+"testname": "Test Bootup with Custom Config",
+
+"objective": "Verify bootup with custom config",
+
+"file_name": "test_custom_bootup.py", 
+
+"init_scripts": ["import paramiko", "import time", "import unittest"],
+
+"script": """
+
+import paramiko
+import time
+import unittest
+
+class TestCustomBootup(unittest.TestCase):
+
+    def test_custom_bootup(self):
+        ip = "192.168.1.1"
+        uname = "netadmin"
+        pword = "password123"
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        client.connect(ip, username=uname, password=pword)
+        
+        stdin, stdout, stderr = client.exec_command("show chassis hostname")
+        output = stdout.read().decode()
+        self.assertIn("coreswitch", output)
+        
+if __name__ == '__main__':
+    unittest.main()  
+""",
+
+"run_command": "python test_custom_bootup.py",
+
+"expected_result": "OK"
+
+}
+
+},
+
+{
+
+"testname": "Test Bootup with Invalid Config",
+
+"testcase": {
+
+"testname": "Test Bootup with Invalid Config",
+
+"objective": "Verify handling of invalid configuration during bootup",
+
+"steps": ["Device detects invalid config", "Boots up in safe mode with factory default config", "Logs invalid config details"]
+
+},
+
+"testscript": {
+
+"testname": "Test Bootup with Invalid Config",
+
+"objective": "Verify bootup with invalid config",
+
+"file_name": "test_invalid_config_bootup.py",
+
+"init_scripts": ["import paramiko", "import re", "import unittest"],
+
+"script": """
+
 import paramiko
 import re
+import unittest
 
-ip = '192.168.1.1'
-username = 'admin'
-password = 'juniper123'
+class TestInvalidConfigBootup(unittest.TestCase):
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(ip, username=username, password=password)
+    def test_invalid_config_bootup(self):
+        ip = "192.168.1.1"
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        client.connect(ip, username="admin", password="admin")
+        
+        stdin, stdout, stderr = client.exec_command("show log messages | match invalid")
+        output = stdout.read().decode()
+        self.assertRegex(output, "Invalid configuration")  
+        
+if __name__ == '__main__':
+    unittest.main()
+""",
 
-stdin, stdout, stderr = ssh.exec_command('show version')
-output = stdout.read().decode('utf-8')
+"run_command": "python test_invalid_config_bootup.py",
 
-match = re.search(r'Booting kernel.*', output)
-assert match is not None
+"expected_result": "OK" 
 
-junos_version = re.search(r'Junos [\\d\\.]+ ', output).group()
-assert 'Junos 17.4R1' in junos_version
-    """,
-    "run_command": "python test_bootup_message.py", 
-    "expected_result": "No assertion errors"
-  }
-},
-
-{
-  "testname": "Test Interface Up",
-  "testcase": {
-    "testname": "Test Interface Up",
-    "objective": "Verify all interfaces come up during bootup",
-    "steps": [
-      "Check interface status for ge-0/0/0", 
-      "Interface ge-0/0/0 should be up"
-    ]
-  },
-  "testscript": {
-    "testname": "Test Interface Up",
-    "objective": "Verify all interfaces come up during bootup",
-    "file_name": "test_interface_up.py",
-    "init_scripts": [
-      "pip install junos-eznc"  
-    ],
-    "script": """
-from jnpr.junos import Device  
-
-dev = Device(host='192.168.1.1', user='admin', password='juniper123')
-dev.open()
-
-intf_obj = dev.rpc.get_interface_information(interface_name='ge-0/0/0')
-intf_status = intf_obj.find('.//oper-status').text
-
-assert intf_status == 'up'
-
-dev.close()
-    """,
-    "run_command": "python test_interface_up.py",
-    "expected_result": "No assertion errors"
-  }
-},
-
-{
-  "testname": "Test Routing Protocol Up",
-  "testcase": {
-    "testname": "Test Routing Protocol Up",
-    "objective": "Verify OSPF protocol comes up properly", 
-    "steps": [
-      "Check OSPF neighbor status",
-      "Verify OSPF neighbors are formed"  
-    ]
-  },
-  "testscript": {
-    "testname": "Test Routing Protocol Up",
-    "objective": "Verify OSPF protocol comes up properly",
-    "file_name": "test_routing_up.py",
-    "init_scripts": [
-      "pip install junos-eznc"
-    ],
-    "script": """  
-from jnpr.junos import Device
-dev = Device(host='192.168.1.1', user='admin', password='juniper123')
-dev.open()
-
-ospf_nbrs = dev.rpc.get_ospf_neighbor_information()
-ospf_nbr_count = len(ospf_nbrs.findall('ospf-neighbor'))
-
-assert ospf_nbr_count > 0
-
-dev.close()
-    """,
-    "run_command": "python test_routing_up.py",
-    "expected_result": "No assertion errors"
-  }
-},
-
-{
-  "testname": "Test Interface Errors",
-  "testcase": {
-    "testname": "Test Interface Errors",
-    "objective": "Verify no interface errors during bootup",
-    "steps": [
-      "Check interface status for all interfaces",
-      "Verify no interfaces have errors"
-    ]
-  },
-  "testscript": {
-    "testname": "Test Interface Errors",
-    "objective": "Verify no interface errors during bootup",
-    "file_name": "test_interface_errors.py", 
-    "init_scripts": [
-      "pip install junos-eznc"
-    ],
-    "script": """
-from jnpr.junos import Device
-
-dev = Device(host='192.168.1.1', user='admin', password='juniper123')
-dev.open()
-
-interfaces = dev.rpc.get_interface_information()
-intfs_with_errors = interfaces.findall('.//interface[contains(admin-status, "Testing") or contains(oper-status, "Failed")]')
-
-assert len(intfs_with_errors) == 0
-
-dev.close()
-    """,
-    "run_command": "python test_interface_errors.py",
-    "expected_result": "No assertion errors"
-  }
-},
-
-{
-  "testname": "Test CPU Utilization", 
-  "testcase": {
-    "testname": "Test CPU Utilization",
-    "objective": "Verify CPU utilization is normal during bootup",
-    "steps": [
-      "Check CPU utilization after bootup completes", 
-      "CPU utilization should be < 50%"  
-    ]
-  },
-  "testscript": {
-    "testname": "Test CPU Utilization",
-    "objective": "Verify CPU utilization is normal during bootup",
-    "file_name": "test_cpu_utilization.py",
-    "init_scripts": [
-      "pip install junos-eznc"
-    ],
-    "script": """
-from jnpr.junos import Device
-import time
-
-dev = Device(host='192.168.1.1', user='admin', password='juniper123')
-dev.open()
-
-time.sleep(60) # Wait for system to fully boot
-
-cpu_info = dev.rpc.get_route_engine_information()
-cpu_util = int(cpu_info.findtext('route-engine/cpu-idle-pct'))
-
-assert cpu_util > 50
-
-dev.close()
-    """,
-    "run_command": "python test_cpu_utilization.py",
-    "expected_result": "No assertion errors"
-  }
 }
+
+},
+
+{
+
+"testname": "Test Exceeding Bootup Time",
+
+"testcase": {
+
+"testname": "Test Exceeding Bootup Time",  
+
+"objective": "Verify handling when bootup time exceeds threshold",
+
+"steps": ["Bootup time exceeds 300 seconds threshold", "System logs timeout event", "Boots up in safe mode"]
+
+},
+
+"testscript": {
+
+"testname": "Test Exceeding Bootup Time",
+
+"objective": "Verify handling when bootup takes too long",
+
+"file_name": "test_bootup_timeout.py",
+
+"init_scripts": ["import paramiko", "import re", "import unittest"],
+
+"script": """
+
+import paramiko
+import re 
+import unittest
+
+class TestBootupTimeout(unittest.TestCase):
+
+    def test_bootup_timeout(self):
+        ip = "192.168.1.1"
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        client.connect(ip, username="admin", password="admin")
+        
+        stdin, stdout, stderr = client.exec_command("show log messages | match bootup")
+        output = stdout.read().decode()
+        self.assertRegex(output, "Bootup time exceeded 300 seconds")
+        
+if __name__ == '__main__':
+    unittest.main()
+""",
+
+"run_command": "python test_bootup_timeout.py",
+
+"expected_result": "OK"
+
+}
+
+},
+
+{
+
+"testname": "Test Incorrect Bootup Image",  
+
+"testcase": {
+
+"testname": "Test Incorrect Bootup Image",
+
+"objective": "Verify handling of incorrect bootup image",
+
+"steps": ["System detects incorrect bootup image", "Boots into safe mode", "Logs image mismatch error"]
+
+},
+
+"testscript": {
+
+"testname": "Test Incorrect Bootup Image",
+
+"objective": "Verify handling of incorrect bootup image",
+
+"file_name": "test_incorrect_image.py",
+
+"init_scripts": ["import paramiko", "import re", "import unittest"],
+
+"script": """
+
+import paramiko
+import re
+import unittest
+
+class TestIncorrectImage(unittest.TestCase):
+
+    def test_incorrect_image(self):
+        ip = "192.168.1.1"
+        
+        client = paramiko.SSHClient() 
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        client.connect(ip, username="admin", password="admin")
+        
+        stdin, stdout, stderr = client.exec_command("show log messages | match image")
+        output = stdout.read().decode()
+        self.assertRegex(output, "Incorrect bootup image detected")
+        
+if __name__ == '__main__':
+    unittest.main()
+""",
+
+"run_command": "python test_incorrect_image.py",
+
+"expected_result": "OK"
+
+}
+
+}
+
 ]
+
 ###ENDLIST###
