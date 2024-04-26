@@ -4,82 +4,124 @@
     "testname": "Bootup Configuration Retrieval Test", 
     "testcase": {
       "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Verify that the device retrieves and loads the startup configuration from persistent storage during bootup",
+      "objective": "Validate that the device is able to successfully retrieve bootup configuration from persistent storage",
       "steps": [
-        "1. Power on the device", 
-        "2. Verify startup configuration has been loaded from persistent storage",
-        "3. Verify running configuration matches startup configuration"
-      ]
+        "1. Power on the device",
+        "2. Verify bootup sequence starts", 
+        "3. Verify device loads bootup configuration from persistent storage",
+        "4. Verify device applies bootup configuration" 
+      ],
+      "test_data": {
+        "boot_config_location": "/config/juniper.conf",
+        "boot_config_contents": "set system host-name myhost"  
+      }
     },
     "testscript": {
       "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Verify that the device retrieves and loads the startup configuration from persistent storage during bootup",      
+      "objective": "Automate Bootup Configuration Retrieval Test",
       "file_name": "test_bootup_config_retrieval.py",
-      "init_scripts": "pip install junos-eznc",
-      "script": """\"\"\"
-import re
-from jnpr.junos import Device
+      "init_scripts": [
+        "import unittest",
+        "import json",
+        "import os",
+        "import sys",
+        "import paramiko"
+      ],
+      "script": """
+        class TestBootupConfigRetrieval(unittest.TestCase):
 
-def test_bootup_config_retrieval(host, user, password):
-    dev = Device(host=host, user=user, password=password)
-    dev.open()
-    
-    startup_config = dev.cli('show configuration | display set')
-    running_config = dev.cli('show configuration | display set')
-    
-    assert startup_config == running_config
+          def test_bootup_config_retrieval(self):
+            
+            # Load test data
+            test_data_file = 'test_data.json' 
+            with open(test_data_file) as f:
+                test_data = json.load(f)
 
-\"\"\"
-""",
-      "run_command": "python test_bootup_config_retrieval.py --host=192.0.2.1 --user=test --password=password123",
-      "expected_result": "No AssertionError raised, test passes"
+            boot_config_location = test_data['boot_config_location']
+            boot_config_contents = test_data['boot_config_contents']
+
+            # Connect to device
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect('1.1.1.1', username='testuser', password='testpass')
+
+            # Check bootup configuration  
+            stdin, stdout, stderr = ssh_client.exec_command('show configuration')
+            config = stdout.read().decode('utf-8')
+
+            self.assertIn(boot_config_contents, config)
+          
+            ssh_client.close()
+
+          if __name__ == '__main__':
+            unittest.main()
+      """,
+      "run_command": "python test_bootup_config_retrieval.py",
+      "expected_result": "OK"
     }
   },
+
   {
     "testname": "Bootup Hardware Initialization Test",
     "testcase": {
       "testname": "Bootup Hardware Initialization Test",
-      "objective": "Verify that all hardware components are detected and initialized during bootup",
+      "objective": "Validate hardware components are properly initialized during bootup",
       "steps": [
-        "1. Power on the device",
-        "2. Verify CPU, memory, ports, fans are detected",
-        "3. Verify hardware components initialized successfully" 
-      ]
+        "1. Power on the device", 
+        "2. Verify bootup sequence starts",
+        "3. Verify CPU initialization messages are logged",
+        "4. Verify memory initialization messages are logged",
+        "5. Verify PCI devices initialization messages are logged",
+        "6. Verify storage devices initialization messages are logged",
+        "7. Verify ports/interfaces initialization messages are logged"
+      ] 
     },
     "testscript": {
       "testname": "Bootup Hardware Initialization Test",
-      "objective": "Verify that all hardware components are detected and initialized during bootup",
-      "file_name": "test_bootup_hw_init.py",
-      "init_scripts": "pip install junos-eznc",
-      "script": """\"\"\"
-from jnpr.junos import Device
-import pytest
-
-def test_bootup_hw_init(host, user, password):
-    dev = Device(host=host, user=user, password=password)
-    dev.open()
-    
-    # Check CPU
-    cpu_output = dev.cli('show chassis routing-engine') 
-    assert 'RE model' in cpu_output
-    
-    # Check memory
-    mem_output = dev.cli('show chassis routing-engine')
-    assert 'Memory' in mem_output
-    
-    # Check ports
-    port_output = dev.cli('show interfaces terse')
-    assert len(port_output.splitlines()) > 0
-    
-    # Check fans 
-    fan_output = dev.cli('show chassis environment')
-    assert 'Fans' in fan_output
-    
-\"\"\"
-""",
-      "run_command": "python test_bootup_hw_init.py --host=192.0.2.1 --user=test --password=password123",
-      "expected_result": "No AssertionError raised, test passes"
+      "objective": "Automate Bootup Hardware Initialization Test",
+      "file_name": "test_bootup_hw_init.py", 
+      "init_scripts": [
+        "import re",
+        "import unittest",
+        "import paramiko"
+      ],
+      "script": """
+        class TestBootupHardwareInit(unittest.TestCase):
+          
+          def test_bootup_hw_init(self):
+              
+            # Connect to device
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect('1.1.1.1', username='testuser', password='testpass')
+              
+            # Check bootup log
+            stdin, stdout, stderr = ssh_client.exec_command('show log messages')
+            init_log = stdout.read().decode('utf-8')
+              
+            # Verify CPU initialization
+            self.assertRegex(init_log, r'CPU .+ initialization done')
+              
+            # Verify memory initialization  
+            self.assertRegex(init_log, r'Memory initialization done')
+              
+            # Verify PCI devices initialization
+            self.assertRegex(init_log, r'PCI .+ initialization done')
+              
+            # Verify storage devices initialization
+            self.assertRegex(init_log, r'Storage .+ initialization done')
+              
+            # Verify ports/interfaces initialization
+            self.assertRegex(init_log, r'Interface .+ initialization done')
+              
+            ssh_client.close()
+            
+          if __name__ == '__main__':
+            unittest.main()
+      """,
+      "run_command": "python test_bootup_hw_init.py",
+      "expected_result": "OK"
     }
-  }  
+  }
 ]
 ###ENDLIST###
