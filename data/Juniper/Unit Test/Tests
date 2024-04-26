@@ -1,63 +1,47 @@
  ###STARTLIST###
 [
   {
-    "testname": "Bootup Configuration Retrieval Test", 
+    "testname": "Bootup Configuration Retrieval Test",
     "testcase": {
-      "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Validate that the device is able to successfully retrieve bootup configuration from persistent storage",
+      "testname": "Bootup Configuration Retrieval Test", 
+      "objective": "Verify device retrieves and loads the correct configuration file during bootup",
       "steps": [
-        "1. Power on the device",
-        "2. Verify bootup sequence starts", 
-        "3. Verify device loads bootup configuration from persistent storage",
-        "4. Verify device applies bootup configuration" 
+        "1. Power on the Juniper MX240 router",
+        "2. Observe console prints config file name being loaded", 
+        "3. Verify config file loaded matches expected config"
       ],
       "test_data": {
-        "boot_config_location": "/config/juniper.conf",
-        "boot_config_contents": "set system host-name myhost"  
+        "expected_config_file": "mx240.conf" 
       }
     },
     "testscript": {
       "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Automate Bootup Configuration Retrieval Test",
-      "file_name": "test_bootup_config_retrieval.py",
+      "objective": "Automated test script to verify correct config retrieval during bootup",
+      "file_name": "test_config_retrieval.py",
       "init_scripts": [
-        "import unittest",
-        "import json",
-        "import os",
-        "import sys",
-        "import paramiko"
+        "pip install netmiko",
+        "pip install jinja2"
       ],
       "script": """
-        class TestBootupConfigRetrieval(unittest.TestCase):
-
-          def test_bootup_config_retrieval(self):
-            
-            # Load test data
-            test_data_file = 'test_data.json' 
-            with open(test_data_file) as f:
-                test_data = json.load(f)
-
-            boot_config_location = test_data['boot_config_location']
-            boot_config_contents = test_data['boot_config_contents']
-
-            # Connect to device
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_client.connect('1.1.1.1', username='testuser', password='testpass')
-
-            # Check bootup configuration  
-            stdin, stdout, stderr = ssh_client.exec_command('show configuration')
-            config = stdout.read().decode('utf-8')
-
-            self.assertIn(boot_config_contents, config)
-          
-            ssh_client.close()
-
-          if __name__ == '__main__':
-            unittest.main()
+        import netmiko
+        
+        device = {
+          'device_type': 'juniper_junos',
+          'ip': '192.168.1.1',
+          'username': 'testuser',
+          'password': 'test123' 
+        }
+        
+        net_connect = netmiko.ConnectHandler(**device)
+        bootup_config = net_connect.send_command_expect("show configuration")
+        
+        if "{{ expected_config_file }}" in bootup_config:
+          print("Test Passed")
+        else:
+          print("Test Failed")
       """,
-      "run_command": "python test_bootup_config_retrieval.py",
-      "expected_result": "OK"
+      "run_command": "python test_config_retrieval.py",
+      "expected_result": "Test Passed"
     }
   },
 
@@ -65,63 +49,144 @@
     "testname": "Bootup Hardware Initialization Test",
     "testcase": {
       "testname": "Bootup Hardware Initialization Test",
-      "objective": "Validate hardware components are properly initialized during bootup",
+      "objective": "Verify hardware components are detected and initialized during bootup",
       "steps": [
-        "1. Power on the device", 
-        "2. Verify bootup sequence starts",
-        "3. Verify CPU initialization messages are logged",
-        "4. Verify memory initialization messages are logged",
-        "5. Verify PCI devices initialization messages are logged",
-        "6. Verify storage devices initialization messages are logged",
-        "7. Verify ports/interfaces initialization messages are logged"
-      ] 
+        "1. Power on the Juniper MX240 router", 
+        "2. Check console prints for hardware initialization messages",
+        "3. Verify critical hardware like CPU, memory, ports, fans are initialized"
+      ],
+      "test_data": {
+        "expected_hardware": ["Management Port", "Line Card 1", "Line Card 2", "FPC 1", "FPC 2", "Power Supply 1", "Power Supply 2", "Fan Tray"]  
+      }
     },
     "testscript": {
       "testname": "Bootup Hardware Initialization Test",
-      "objective": "Automate Bootup Hardware Initialization Test",
-      "file_name": "test_bootup_hw_init.py", 
+      "objective": "Automated test script to verify hardware initialization", 
+      "file_name": "test_hw_init.py",
       "init_scripts": [
-        "import re",
-        "import unittest",
-        "import paramiko"
+        "pip install netmiko"
       ],
       "script": """
-        class TestBootupHardwareInit(unittest.TestCase):
-          
-          def test_bootup_hw_init(self):
-              
-            # Connect to device
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_client.connect('1.1.1.1', username='testuser', password='testpass')
-              
-            # Check bootup log
-            stdin, stdout, stderr = ssh_client.exec_command('show log messages')
-            init_log = stdout.read().decode('utf-8')
-              
-            # Verify CPU initialization
-            self.assertRegex(init_log, r'CPU .+ initialization done')
-              
-            # Verify memory initialization  
-            self.assertRegex(init_log, r'Memory initialization done')
-              
-            # Verify PCI devices initialization
-            self.assertRegex(init_log, r'PCI .+ initialization done')
-              
-            # Verify storage devices initialization
-            self.assertRegex(init_log, r'Storage .+ initialization done')
-              
-            # Verify ports/interfaces initialization
-            self.assertRegex(init_log, r'Interface .+ initialization done')
-              
-            ssh_client.close()
+        import re
+        import netmiko
+        
+        device = {  
+          'device_type': 'juniper_junos',
+          'ip': '192.168.1.1',    
+          'username': 'testuser',
+          'password': 'test123'
+        }
+        
+        net_connect = netmiko.ConnectHandler(**device)
+        bootup_log = net_connect.send_command_expect("show log messages | match initialized")
+        
+        hw_matches = re.findall("(.*) initialized", bootup_log)
+        
+        for hw in "{{ expected_hardware }}":
+          if hw not in hw_matches:
+            print(f"{hw} initialization not found in bootup log")
+            exit(1)
             
-          if __name__ == '__main__':
-            unittest.main()
+        print("Test Passed")  
       """,
-      "run_command": "python test_bootup_hw_init.py",
-      "expected_result": "OK"
+      "run_command": "python test_hw_init.py",
+      "expected_result": "Test Passed"
     }
-  }
+  },
+
+  {
+    "testname": "Bootup Firmware Verification Test",
+    "testcase": {
+      "testname": "Bootup Firmware Verification Test",
+      "objective": "Verify firmware version matches expected during bootup",
+      "steps": [
+        "1. Power on the Juniper MX240 router",
+        "2. Check console prints for firmware version",
+        "3. Verify firmware version matches expected"   
+      ],
+      "test_data": {
+        "expected_firmware": "14.1R1.9"
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Firmware Verification Test",
+      "objective": "Automated test script to verify firmware version",
+      "file_name": "test_firmware_verify.py", 
+      "init_scripts": [
+        "pip install netmiko"
+      ],
+      "script": """
+        import re
+        import netmiko
+        
+        device = {
+          'device_type': 'juniper_junos',
+          'ip': '192.168.1.1',
+          'username': 'testuser', 
+          'password': 'test123'
+        }
+        
+        net_connect = netmiko.ConnectHandler(**device)
+        firmware_version = net_connect.send_command_expect("show version")
+        
+        match = re.search(r"Junos: (\\d+\\.\\d+R\\d+\\.\\d+)", firmware_version)
+        if match.group(1) == "{{ expected_firmware }}":
+          print("Test Passed")
+        else:
+          print("Test Failed")
+      """,
+      "run_command": "python test_firmware_verify.py",
+      "expected_result": "Test Passed"
+    }
+  },
+  
+  {
+    "testname": "Bootup Interface Initialization Test", 
+    "testcase": {
+      "testname": "Bootup Interface Initialization Test",
+      "objective": "Verify all expected interfaces are initialized during bootup",
+      "steps": [
+        "1. Power on the Juniper MX240 router",
+        "2. Check console prints for interface initialization",
+        "3. Verify all expected interfaces are initialized"
+      ],
+      "test_data": {
+        "expected_interfaces": ["ge-0/0/0", "ge-0/0/1", "ge-0/0/2", "ge-0/0/3"]
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Interface Initialization Test",
+      "objective": "Automated test script to verify interface initialization",
+      "file_name": "test_interface_init.py",
+      "init_scripts": [ 
+        "pip install netmiko"
+      ],
+      "script": """
+        import re
+        import netmiko
+        
+        device = {
+          'device_type': 'juniper_junos',
+          'ip': '192.168.1.1',
+          'username': 'testuser',
+          'password': 'test123' 
+        }
+        
+        net_connect = netmiko.ConnectHandler(**device)
+        interface_status = net_connect.send_command_expect("show interfaces terse")
+        
+        interface_list = re.findall(r"(ge-\\d+/\\d+/\\d+)", interface_status)
+        
+        for interface in "{{ expected_interfaces }}":
+          if interface not in interface_list:
+            print(f"{interface} not initialized during bootup")
+            exit(1)
+          
+        print("Test Passed")
+      """,
+      "run_command": "python test_interface_init.py", 
+      "expected_result": "Test Passed"
+    }
+  }  
 ]
 ###ENDLIST###
