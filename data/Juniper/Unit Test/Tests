@@ -1,63 +1,98 @@
- Here is the Python list with JSON objects for the VPN Bandwidth Management test cases and scripts for MX240:
+ Here is the Python list with JSON objects for VPN Bandwidth Management test cases and scripts for Juniper MX240:
 
 ```python
 ###STARTLIST###
 [
-  {
-    "testname": "VPN Bandwidth Management", 
-    "testcase": {
-      "testname": "Verify VPN Bandwidth",
-      "objective": "Validate VPN bandwidth settings are applied correctly",
-      "steps": [
-        "1. Configure VPN with bandwidth settings", 
-        "2. Generate traffic across VPN",
-        "3. Verify traffic rate matches configured bandwidth"
-      ]
-    },
-    "testscript": {
-      "testname": "VPN Bandwidth Test",
-      "objective": "Test VPN bandwidth settings",
-      "file_name": "vpn_bandwidth.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"        
-      ],
-      "script": """
-        import netmiko
+{"testname": "VPN BWM - Basic Functionality", 
+ "testcase":
+  {"testname": "VPN BWM - Basic Functionality",
+   "objective": "Verify basic VPN bandwidth management functionality on MX240", 
+   "steps": 
+    [
+     "Configure VPN BWM policy and assign to VPN",
+     "Verify VPN traffic rate limited as per configured BWM policy"
+    ]
+  },
+ "testscript": 
+  {"testname": "VPN BWM - Basic Functionality",
+   "objective": "Verify basic VPN bandwidth management functionality on MX240",
+   "file_name": "vpn_bwm_basic.py",
+   "init_scripts": 
+    """
+    import paramiko
+    import time
+    """,
+   "script": 
+    """
+    #Initialize SSH connection
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect('192.168.0.1', username='pyuser', password='pypassword')
+    
+    #Apply BWM policy 
+    ssh.exec_command('set policy-options policy-statement BWM-POLICY then bandwidth-limit 1m')
+    ssh.exec_command('set interfaces ge-0/0/0 unit 0 family inet filter input BWM-POLICY')
+    
+    #Generate traffic and verify rate limited 
+    ssh.exec_command('traffic-generator source ge-0/0/0 destination 10.10.10.10 rate 5m')
+    time.sleep(60)
+    output = ssh.exec_command('show interfaces ge-0/0/0 extensive')
+    if '1Mbps' in output:
+        print("Traffic rate limited successfully")
+    else:
+        print("Traffic rate limiting failed")
         
-        DEVICE_IP = '192.168.0.1'
-        DEVICE_USERNAME = 'admin' 
-        DEVICE_PASSWORD = 'password'
-        
-        net_connect = netmiko.ConnectHandler(ip=DEVICE_IP, username=DEVICE_USERNAME, password=DEVICE_PASSWORD)
-        
-        # Configure VPN with bandwidth settings
-        config_commands = [
-          'set interfaces ge-0/0/1 unit 0 family inet address 10.10.10.1/24',
-          'set interfaces st0 unit 0 family inet address 172.16.1.1/24',
-          'set interfaces st0 unit 0 family inet6 address 2001:db8::1/64',
-          'set policy-options policy-statement VPN-BW then bandwidth 50m'
-        ]
-        net_connect.send_config_set(config_commands)
-        
-        # Generate traffic across VPN
-        net_connect.send_command('start traffic generator') 
-        
-        # Verify traffic rate
-        output = net_connect.send_command('show interface st0')
-        if '50 Mbps' in output:
-          print('Traffic rate matches configured bandwidth')
-        else:
-          print('Traffic rate does not match configured bandwidth')
-          
-        net_connect.disconnect()
-      """,
-      "run_command": "python vpn_bandwidth.py",
-      "expected_result": "Traffic rate matches configured bandwidth"
-    }
+    ssh.close()
+    """,
+   "run_command": "python vpn_bwm_basic.py",
+   "expected_result": "Traffic rate limited successfully"
   }
+ },
+ {"testname": "VPN BWM - Burst Size",
+  "testcase":
+   {"testname": "VPN BWM - Burst Size",
+    "objective": "Verify VPN bandwidth burst size configuration on MX240",
+    "steps":
+     [
+      "Configure VPN BWM policy with burst size",
+      "Verify traffic burst allowed as per configured size" 
+     ]
+   },
+  "testscript":
+   {"testname": "VPN BWM - Burst Size",
+    "objective": "Verify VPN bandwidth burst size configuration on MX240",
+    "file_name": "vpn_bwm_burst.py",
+    "init_scripts":
+     """
+     import paramiko
+     import time
+     """,
+    "script":
+     """
+     #Initialize SSH connection
+     ssh = paramiko.SSHClient()
+     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+     ssh.connect('192.168.0.1', username='pyuser', password='pypassword')
+     
+     #Apply BWM policy with burst size
+     ssh.exec_command('set policy-options policy-statement BWM-POLICY then bandwidth-limit 1m burst-size 10m')
+     ssh.exec_command('set interfaces ge-0/0/0 unit 0 family inet filter input BWM-POLICY')
+     
+     #Generate traffic burst and verify allowed
+     ssh.exec_command('traffic-generator source ge-0/0/0 destination 10.10.10.10 burst 20m')
+     time.sleep(60)
+     output = ssh.exec_command('show interfaces ge-0/0/0 extensive')
+     if '10Mbps' in output:
+         print("Traffic burst allowed successfully")
+     else:
+         print("Traffic burst limiting failed")
+         
+     ssh.close()
+     """,
+    "run_command": "python vpn_bwm_burst.py", 
+    "expected_result": "Traffic burst allowed successfully"
+   }
+ }
 ]
 ###ENDLIST###
 ```
-
-The above generates a Python list with a single JSON object that includes a test case and script to validate VPN bandwidth configuration on a Juniper MX240 router. Let me know if you need any clarification or have additional requirements!
