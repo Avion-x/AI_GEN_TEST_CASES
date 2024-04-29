@@ -1,198 +1,104 @@
- Here are the 5 unit test cases and python test scripts for Juniper MX240 bootup testing:
-
-###STARTLIST###
+ ###STARTLIST###
 [
-{
-  "testname": "Bootup Configuration Retrieval Test", 
-  "testcase": {
-    "testname": "Bootup Configuration Retrieval Test",
-    "objective": "Verify that the device is able to retrieve the startup configuration from persistent storage during bootup",
-    "steps": [
-      "Device boots up",
-      "Device loads bootloader", 
-      "Bootloader initializes hardware",
-      "Bootloader loads firmware into memory",
-      "Firmware verifies integrity of startup configuration file",
-      "Firmware loads startup configuration into memory" 
-    ]
+  {
+    "testname": "Bootup Configuration Retrieval Test", 
+    "testcase": {
+      "testname": "Bootup Configuration Retrieval Test",
+      "objective": "To verify the device is able to retrieve bootup configuration correctly",
+      "steps": [
+        "1. Power on the device",
+        "2. Wait for device to complete bootup process",
+        "3. Check if device retrieved the bootup configuration correctly by executing 'show configuration' command and verifying with expected configuration",
+        "4. No errors should be seen in logs related to configuration retrieval"
+      ],
+      "test_data": {
+        "expected_config": "<expected bootup configuration here>" 
+      }
+    },
+    "testscript": {
+      "testname": "Bootup Configuration Retrieval Test",
+      "objective": "To verify the device is able to retrieve bootup configuration correctly",
+      "file_name": "test_bootup_config_retrieval.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install json"
+      ],
+      "script": """
+        import paramiko
+        import json
+        
+        ip = '<device_ip>'
+        username = '<username>'
+        password = '<password>'
+        
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname=ip,username=username,password=password)
+        
+        stdin, stdout, stderr = ssh_client.exec_command('show configuration')
+        config = stdout.read().decode('utf-8')
+        
+        with open('expected_config.json') as f:
+          expected_config = json.load(f)
+        
+        if config == expected_config:
+          print("Test Passed")
+        else:
+          print("Test Failed. Config retrieval unsuccessful")
+        
+        ssh_client.close()
+      """,
+      "run_command": "python test_bootup_config_retrieval.py",
+      "expected_result": "Test Passed"
+    }
   },
-  "testscript": {
-    "testname": "Bootup Configuration Retrieval Test",
-    "objective": "Automated test script to verify startup configuration retrieval",
-    "file_name": "test_startup_config_retrieval.py",
-    "init_scripts":[
-      "pip install junos-eznc",
-      "pip install paramiko"
-    ],
-    "script": """
-import junos 
-import unittest
 
-class TestStartupConfigRetrieval(unittest.TestCase):
-    
-    def test_startup_config(self):
-        dev = Device(host='1.1.1.1', user='testuser', password='password123')
-        dev.open()
-        startup_config = dev.cli('show config')
-        self.assertIn('system {', startup_config)
-""",
-    "run_command": "python test_startup_config_retrieval.py",
-    "expected_result": "OK"
-  }
-},
-
-{
-  "testname": "Bootup Hardware Initialization Test",
-  "testcase": {
+  {
     "testname": "Bootup Hardware Initialization Test",
-    "objective": "Verify hardware components are properly initialized during bootup",
-    "steps": [
-      "Device powers on",
-      "POST tests are executed",
-      "Hardware components initialized",
-      "Bootloader verifies integrity of hardware",
-      "Bootloader initializes hardware for booting"
-    ]
-  },
-  "testscript": {
-    "testname": "Bootup Hardware Initialization Test",
-    "objective": "Automated test script to verify hardware initialization",   
-    "file_name": "test_hw_init.py",
-    "init_scripts":[
-      "pip install junos-eznc", 
-      "pip install paramiko"
-    ],
-    "script": """  
-import unittest
-from jnpr.junos import Device
-
-class TestHardwareInit(unittest.TestCase):
-
-    def test_hw_init(self):
-        dev = Device(host='1.1.1.1', user='testuser', password='password123') 
-        dev.open()
-        output = dev.cli('show chassis hardware')
-        self.assertRegex(output, 'Hardware inventory:')
-""",
-    "run_command": "python test_hw_init.py",
-    "expected_result": "OK"
+    "testcase": {
+      "testname": "Bootup Hardware Initialization Test",
+      "objective": "To verify hardware components initialize correctly during bootup",
+      "steps": [
+        "1. Power on the device", 
+        "2. Check console logs and LED status for any hardware initialization errors",
+        "3. Execute 'show chassis hardware' and verify all components show correct status",
+        "4. No errors related to hardware initialization should be present in logs"
+      ]
+    },
+    "testscript": {
+      "testname": "Bootup Hardware Initialization Test",
+      "objective": "To verify hardware components initialize correctly during bootup",
+      "file_name": "test_bootup_hardware_init.py",
+      "init_scripts": [
+        "pip install paramiko"
+      ],
+      "script": """
+        import re
+        import paramiko
+        
+        ip = '<device_ip>'
+        username = '<username>'
+        password = '<password>'
+        
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname=ip,username=username,password=password)
+        
+        stdin, stdout, stderr = ssh_client.exec_command('show chassis hardware')
+        output = stdout.read().decode('utf-8')
+        
+        errors = re.search(r'Error|Failed', output)
+        
+        if errors:
+          print('Test Failed. Hardware initialization errors found')
+        else:
+          print('Test Passed. No hardware initialization errors')
+          
+        ssh_client.close()
+      """,
+      "run_command": "python test_bootup_hardware_init.py", 
+      "expected_result": "Test Passed. No hardware initialization errors"
+    }
   }
-},
-
-{
-  "testname": "Bootup Firmware Verification Test",
-  "testcase": {
-    "testname": "Bootup Firmware Verification Test",
-    "objective": "Verify firmware integrity before loading during bootup", 
-    "steps": [
-      "Device finds boot firmware image",
-      "Bootloader calculates checksum of image",
-      "Bootloader compares calculated checksum with stored checksum",
-      "If checksums match, firmware is verified"
-    ]
-  },
-  "testscript": {
-    "testname": "Bootup Firmware Verification Test",
-    "objective": "Automated test script to verify firmware verification",
-    "file_name": "test_firmware_verify.py",
-    "init_scripts":[
-      "pip install junos-eznc",
-      "pip install paramiko"  
-    ],
-    "script": """
-import re
-import unittest
-from jnpr.junos import Device
-
-class TestFirmwareVerification(unittest.TestCase):
-
-    def test_firmware_validation(self):
-        dev = Device(host='1.1.1.1', user='testuser', password='password123')
-        dev.open()
-        output = dev.cli('show system firmware')
-        self.assertRegex(output, 'Verified:')  
-""",
-    "run_command": "python test_firmware_verify.py",
-    "expected_result": "OK"
-  }
-},
-
-{
-  "testname": "Bootup Interface Initialization Test",
-  "testcase": {
-    "testname": "Bootup Interface Initialization Test",
-    "objective": "Verify interfaces are properly initialized during bootup",
-    "steps": [
-      "Firmware initializes network interfaces",
-      "Interfaces are brought up one by one", 
-      "Firmware verifies interface settings",
-      "Interfaces configuration loaded",
-      "Interfaces enabled for sending/receiving packets"
-    ]
-  },
-  "testscript": {  
-    "testname": "Bootup Interface Initialization Test",
-    "objective": "Automated test script to verify interface initialization",
-    "file_name": "test_interface_init.py", 
-    "init_scripts":[
-      "pip install junos-eznc",
-      "pip install paramiko"
-    ],
-    "script": """
-import re 
-import unittest
-from jnpr.junos import Device
-
-class TestInterfaceInit(unittest.TestCase):
-
-    def test_interface_init(self):
-        dev = Device(host='1.1.1.1', user='testuser', password='password123')
-        dev.open()
-        output = dev.cli('show interfaces terse')
-        self.assertRegex(output, 'ge.*up') 
-""",
-    "run_command": "python test_interface_init.py",
-    "expected_result": "OK"
-  }
-},
-
-{
-  "testname": "Bootup Logging Initialization Test",
-  "testcase": {
-    "testname": "Bootup Logging Initialization Test",
-    "objective": "Verify logging is initialized correctly during bootup",
-    "steps": [
-      "Bootloader initializes filesystem",
-      "Filesystem mount points created",
-      "Log files created on filesystem",
-      "Logging service started", 
-      "Logging configured based on configuration"
-    ]
-  },
-  "testscript": {
-    "testname": "Bootup Logging Initialization Test",
-    "objective": "Automated test script to verify logging initialization",
-    "file_name": "test_logging_init.py",
-    "init_scripts":[
-      "pip install junos-eznc",
-      "pip install paramiko"   
-    ],
-    "script": """
-import re
-import unittest 
-from jnpr.junos import Device
-
-class TestLoggingInit(unittest.TestCase):
-    
-    def test_logging_init(self):
-        dev = Device(host='1.1.1.1', user='testuser', password='password123')
-        dev.open()
-        output = dev.cli('show log messages')
-        self.assertRegex(output, 'last message repeated')
-""",
-    "run_command": "python test_logging_init.py",
-    "expected_result": "OK"
-  } 
-}
 ]
 ###ENDLIST###
