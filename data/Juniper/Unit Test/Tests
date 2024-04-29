@@ -1,57 +1,59 @@
  ###STARTLIST###
 [
   {
-    "testname": "VPN Bandwidth Test", 
+    "testname": "VPN Bandwidth Management Test", 
     "testcase": {
-      "testname": "VPN Bandwidth Test",
-      "objective": "Verify VPN bandwidth management capabilities",
+      "testname": "VPN Bandwidth Management Test",
+      "objective": "Validate VPN bandwidth management configuration on MX240",
       "steps": [
-        "Configure VPN tunnel with bandwidth limit", 
-        "Generate traffic close to configured bandwidth limit",
-        "Verify tunnel bandwidth usage stays within configured limit"
+        "1. Configure VPN bandwidth management policy",
+        "2. Apply policy to VPN interface",        
+        "3. Validate bandwidth usage does not exceed configured limit"
       ],
-      "test_data": {
-        "vpn_tunnel_name": "siteA-to-siteB",
-        "bandwidth_limit": "10Mbps"
+      "testdata": {
+        "bandwidth_limit": "10mbps",
+        "vpn_interface": "ge-0/0/1"
       }
     },
     "testscript": {
-      "testname": "VPN Bandwidth Test",
-      "objective": "Verify VPN bandwidth management capabilities", 
+      "testname": "VPN Bandwidth Management Test",
+      "objective": "Validate VPN bandwidth management configuration on MX240",
       "file_name": "vpn_bandwidth_test.py",
-      "init_scripts": [
+      "init_scripts":[
         "pip install paramiko",
-        "pip install netmiko"
+        "pip install junos-eznc"
       ],
       "script": """
+import json
 import paramiko
-import netmiko
+from jnpr.junos import Device
 
-def test_vpn_bandwidth(vpn_name, bandwidth_limit):
-  
-  ssh = paramiko.SSHClient()
-  ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-  ssh.connect('10.1.1.1', username='admin', password='pwd123')
-  
-  conn = ssh.invoke_shell()
-  conn.send("configure terminal\\n")
-  conn.send("interface "+vpn_name+"\\n")
-  conn.send("bandwidth "+bandwidth_limit+"\\n")
-  conn.send("commit\\n")
-  
-  ssh.close()
-  
-  print("VPN "+vpn_name+" configured with "+bandwidth_limit+" bandwidth")
+# Test data
+test_data = json.loads('''{test_data}''')
+bandwidth_limit = test_data['bandwidth_limit']
+vpn_interface = test_data['vpn_interface']
 
-  # Use iPerf or traffic generator to simulate traffic
-  print("Traffic generated close to "+bandwidth_limit)
+# Connect to device
+dev = Device(host='192.168.0.1', user='pyuser', password='pypass')
+dev.open()
 
-  # Use SNMP get to verify bandwidth usage
-  print("Verified VPN bandwidth usage within limit")
+# Get current bandwidth usage
+intf_bandwidth = dev.cli('show interfaces {vpn_interface} extensive'.format(vpn_interface=vpn_interface))
+curr_bandwidth = extract_bandwidth_usage(intf_bandwidth) 
 
+# Validate bandwidth does not exceed configured limit
+assert curr_bandwidth <= bandwidth_limit, "Bandwidth limit exceeded"
+
+# Close connection
+dev.close()
+
+def extract_bandwidth_usage(intf_output):
+    # Parse CLI output to extract current bandwidth usage
+    # .....
+    return bandwidth_usage 
 """,
-      "run_command": "python vpn_bandwidth_test.py siteA-to-siteB 10Mbps",
-      "expected_result": "VPN configured and bandwidth usage verified within configured limit"
+      "run_command": "python vpn_bandwidth_test.py",
+      "expected_result": "Bandwidth usage validated to be under configured limit"  
     }
   }
 ]
