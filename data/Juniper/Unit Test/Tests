@@ -1,77 +1,99 @@
- ###STARTLIST###
+ Here is the Python list with the JSON test cases and test scripts for VPN Bandwidth Management testing on Juniper MX240 device:
+
+```python
+###STARTLIST###
 [
   {
-    "testname": "Bootup Configuration Retrieval Test", 
+    "testname": "VPN Bandwidth Limit Test", 
     "testcase": {
-      "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Validate that the device retrieves startup configuration stored in NVRAM or boot media during bootup",
+      "testname": "VPN Bandwidth Limit Test",
+      "objective": "Verify VPN bandwidth limit can be configured and functions as expected",
       "steps": [
-        "1. Power on the device",
-        "2. Confirm device retrieves configuration from NVRAM or boot media", 
-        "3. Confirm relevant components initialized based on retrieved configuration"
-      ]  
+        "1. Configure VPN bandwidth limit to 500mbps", 
+        "2. Generate traffic over 500mbps",
+        "3. Verify traffic policing works and only 500mbps of traffic is allowed"
+      ]
     },
     "testscript": {
-      "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Python script to validate configuration retrieval during bootup", 
-      "file_name": "test_bootup_config_retrieval.py",
-      "init_scripts": "pip install junos-eznc",
+      "testname": "VPN Bandwidth Limit Test",
+      "objective": "Automate VPN bandwidth limit test",
+      "file_name": "vpn_bandwidth_limit_test.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install netmiko"
+      ],
       "script": """
-        import jnpr.junos  
-       
-        def test_bootup_config_retrieval(dev):
-          print("### Retrieving configuration from device ###") 
-          config = dev.rpc.get_config()
-          print("### Device configuration retrieved successfully ###")
-          # Additional validation of configuration
-          print("TEST PASSED")
-          
-        dev = jnpr.junos.Device(host='192.168.1.1', user='admin', password='admin123')
-        dev.open()  
-        test_bootup_config_retrieval(dev)
-        dev.close()
+        import paramiko
+        import netmiko
+        
+        HOST = '192.168.0.1'
+        USERNAME = 'admin'
+        PASSWORD = 'Juniper!123'
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(HOST, username=USERNAME, password=PASSWORD)
+        
+        connection = ssh.invoke_shell()
+        connection.send("configure\\n")
+        connection.send("set interfaces ge-0/0/0 bandwidth 500m \\n")
+        connection.send("commit and-quit \\n")
+        
+        # Send traffic over 500mbps
+        # Verify only 500mbps traffic passes
+        
+        ssh.close()
       """,
-      "run_command": "python test_bootup_config_retrieval.py",
-      "expected_result": "TEST PASSED"
+      "run_command": "python vpn_bandwidth_limit_test.py",
+      "expected_result": "VPN bandwidth should be limited to 500mbps"
     }
   },
 
   {
-    "testname": "Bootup Hardware Initialization Test",
+    "testname": "VPN QoS Bandwidth Test",
     "testcase": {
-      "testname": "Bootup Hardware Initialization Test",  
-      "objective": "Validate hardware components are detected and initialized during bootup",
-      "steps": [ 
-        "1. Power on the device",
-        "2. Verify CPU, memory, ports, fans are detected",
-        "3. Verify POST completes successfully"
+      "testname": "VPN QoS Bandwidth Test",
+      "objective": "Verify VPN QoS bandwidth settings work as configured",
+      "steps": [
+        "1. Configure VPN with QoS bandwidth of 1gbps",
+        "2. Generate traffic over 1gbps", 
+        "3. Verify traffic above 1gbps is dropped"
       ]
     },
     "testscript": {
-      "testname": "Bootup Hardware Initialization Test",
-      "objective": "Python script to validate hardware initialization during bootup",
-      "file_name": "test_bootup_hw_init.py",
-      "init_scripts": "pip install junos-eznc",  
+      "testname": "VPN QoS Bandwidth Test",
+      "objective": "Automate VPN QoS bandwidth test",
+      "file_name": "vpn_qos_bandwidth_test.py",
+      "init_scripts": [
+        "pip install netmiko",
+        "pip install trafficgen"
+      ],
       "script": """
-        import jnpr.junos
+        import netmiko
+        from trafficgen import TrafficGen
         
-        def test_bootup_hw_init(dev):
-          print("### Retrieving hardware details from device ###")
-          hw_details = dev.rpc.get_chassis_inventory()
-          
-          print("### Validating hardware initialization ###")
-          # Check fan, memory, CPU details
-          
-          print("TEST PASSED")
-          
-        dev = jnpr.junos.Device(host='192.168.1.1', user='admin', password='admin123')
-        dev.open()
-        test_bootup_hw_init(dev)  
-        dev.close()
+        HOST = '192.168.0.1'
+        USERNAME = 'admin'
+        PASSWORD = 'Juniper!123'
+        
+        connection = netmiko.ConnectHandler(ip=HOST, username=USERNAME, password=PASSWORD)
+        
+        connection.send_config_set([
+            "set class-of-service interfaces ge-0/0/0 unit 0 classifiers inet-precedence vpn bandwidth 1g"
+        ])
+        
+        # Generate 1.5gbps test traffic
+        traffic_gen = TrafficGen()
+        traffic_gen.generate(rate_mbps=1500)
+        
+        # Verify only 1gbps traffic passes
+        results = traffic_gen.results()
+        assert results['tx_rate_mbps'] == 1000
       """,
-      "run_command": "python test_bootup_hw_init.py",
-      "expected_result": "TEST PASSED"
+      "run_command": "python vpn_qos_bandwidth_test.py",
+      "expected_result": "Only 1gbps traffic should pass"
     }
   }
 ]
 ###ENDLIST###
+```
