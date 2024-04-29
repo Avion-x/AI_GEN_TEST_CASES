@@ -1,78 +1,86 @@
- ###STARTLIST###
+ Here are 5 unit test cases and python test scripts for Juniper MX240 router bootup testing:
+
+###STARTLIST###
 [
   {
     "testname": "Bootup Configuration Retrieval Test", 
     "testcase": {
       "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Verify that the device can retrieve startup configuration from persistent storage during bootup",
+      "objective": "Verify that the router retrieves the startup configuration from persistent storage",
       "steps": [
-        "1. Power on the device",
-        "2. Check console logs for messages related to loading startup configuration", 
-        "3. Verify that the loaded startup configuration matches the expected configuration"
-      ]
+        "1. Power on the router",
+        "2. Verify that the router loads the startup configuration from /config/juniper.conf" 
+      ],
+      "test_data": {
+        "startup_config_location": "/config/juniper.conf"
+      }
     },
     "testscript": {
       "testname": "Bootup Configuration Retrieval Test",
-      "objective": "Verify that the device can retrieve startup configuration from persistent storage during bootup",
-      "file_name": "test_bootup_config_retrieval.py",
+      "objective": "Verify that the router retrieves the startup configuration from persistent storage", 
+      "file_name": "test_config_retrieval.py",
       "init_scripts": [
-        "import re",
-        "import unittest",
-        "from paramiko import SSHClient"
+        "pip install paramiko",
+        "pip install netmiko"
       ],
       "script": """
-      ssh = SSHClient()
-      ssh.connect('192.168.0.1', username='admin', password='password')
-      
-      stdin, stdout, stderr = ssh.exec_command('show configuration | compare')
-      output = stdout.readlines()
-      
-      match = re.search('No changes between working and active configurations', ''.join(output))
-      self.assertIsNotNone(match)
+        import paramiko
+        import netmiko
+        
+        startup_config_location = \"\"\"/config/juniper.conf\"\"\"
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect('192.168.1.1', username='admin', password='admin123')
+        
+        remote_connection = ssh.invoke_shell()
+        remote_connection.send(\"show configuration | display set\")
+        output = remote_connection.recv(10000)
+        
+        if startup_config_location in output:
+          print(\"Test Passed. Startup config retrieved from \" + startup_config_location)
+        else:
+          print(\"Test Failed. Startup config not retrieved from \" + startup_config_location)
       """,
-      "run_command": "python test_bootup_config_retrieval.py",
-      "expected_result": "No differences between running and startup configuration found during retrieval and load"
+      "run_command": "python test_config_retrieval.py",
+      "expected_result": "Test Passed. Startup config retrieved from /config/juniper.conf"
     }
   },
-
+  
   {
     "testname": "Bootup Hardware Initialization Test",
     "testcase": {
-       "testname": "Bootup Hardware Initialization Test",
-       "objective": "Verify that all hardware components are properly initialized during bootup",
-       "steps": [
-         "1. Power on the device",
-         "2. Check console logs for hardware initialization messages",
-         "3. Verify interface status shows all ports up after initialization", 
-         "4. Validate LED status indicators"
-       ]
+      "testname": "Bootup Hardware Initialization Test",
+      "objective": "Verify that all hardware components are initialized during bootup",
+      "steps": [
+        "1. Power on the router", 
+        "2. Verify that fans, power supplies, ports, LEDs, and all hardware components are initialized"
+      ]
     },
     "testscript": {
       "testname": "Bootup Hardware Initialization Test",
-      "objective": "Verify that all hardware components are properly initialized during bootup",
-      "file_name": "test_bootup_hw_init.py",
-      "init_scripts": [ 
-        "import re",
-        "import unittest",
-        "from netmiko import ConnectHandler"
+      "objective": "Verify that all hardware components are initialized during bootup",
+      "file_name": "test_hardware_init.py",
+      "init_scripts": [
+        "pip install paramiko"
       ],
       "script": """
-        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='admin', password='password')
+        import paramiko
         
-        output = device.send_command('show interfaces terse')      
-        interfaces = re.findall('^ge.*', output, re.M)
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect('192.168.1.1', username='admin', password='admin123')
         
-        failed = []
-        for interface in interfaces:
-          if not '(up)' in interface:
-            failed.append(interface)
-            
-        self.assertEqual(len(failed), 0)
+        stdin, stdout, stderr = ssh.exec_command(\"show chassis hardware\")
+        output = stdout.read().decode()
         
-        print('All interfaces up') 
+        if \"FPC 0\" in output and \"Power Supply\" in output and \"Fan\" in output:
+          print(\"Test Passed. Hardware components initialized.\") 
+        else:
+          print(\"Test Failed. Hardware components not fully initialized.\")
       """,
-      "run_command": "python test_bootup_hw_init.py", 
-      "expected_result": "All interface ports initialized and up after bootup. No ports down."
+      "run_command": "python test_hardware_init.py",
+      "expected_result": "Test Passed. Hardware components initialized."
     }
   },
 
@@ -80,158 +88,138 @@
     "testname": "Bootup Firmware Verification Test",
     "testcase": {
       "testname": "Bootup Firmware Verification Test",
-      "objective": "Validate firmware integrity and compatibility during bootup process",
+      "objective": "Verify firmware integrity during bootup",
       "steps": [
-        "1. Power on the device",
-        "2. Check console logs for firmware version and compatibility status",
-        "3. Verify firmware version matches expected version",
-        "4. Confirm no incompatibility warnings or errors"   
-      ]
+        "1. Power on the router",
+        "2. Verify firmware checksums match expected values"   
+      ],
+      "test_data": {
+        "expected_checksums": {
+          "/junos.tgz": "a1b2c3d4",
+          "/kernel.img": "w1x2y3z4"  
+        }
+      }
     },
     "testscript": {
       "testname": "Bootup Firmware Verification Test",
-      "objective": "Validate firmware integrity and compatibility during bootup process",
-      "file_name": "test_bootup_fw_verify.py",
+      "objective": "Verify firmware integrity during bootup",
+      "file_name": "test_firmware_verify.py", 
       "init_scripts": [
-        "import re",
-        "import unittest",
-        "from paramiko import SSHClient"   
+        "pip install paramiko"
       ],
       "script": """
-        ssh = SSHClient()
-        ssh.connect('192.168.0.1', username='admin', password='password')
+        import paramiko
         
-        stdin, stdout, stderr = ssh.exec_command('show version')
-        output = stdout.readlines()
+        expected_checksums = {\"/junos.tgz\": \"a1b2c3d4\", \"/kernel.img\": \"w1x2y3z4\"}
         
-        version = re.search('JUNOS .*sw', output[0]).group()
-        self.assertEqual(version, 'JUNOS 18.2R1.9 sw')
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect('192.168.1.1', username='admin', password='admin123')
         
-        compat_status = re.search('FPC compatibility check passed', ''.join(output))
-        self.assertIsNotNone(compat_status)
-      """,
-      "run_command": "python test_bootup_fw_verify.py",
-      "expected_result": "Firmware version validated and no compatibility issues found during bootup"
-    }
-  },
-
-  {
-    "testname": "Bootup Interface Initialization Test",
-    "testcase": {
-      "testname": "Bootup Interface Initialization Test",
-      "objective": "Verify all network interfaces are initialized correctly during bootup",
-      "steps": [
-        "1. Power on the device", 
-        "2. Check interface status after bootup",
-        "3. Verify all expected interfaces are present in configuration",
-        "4. Confirm link status of interfaces"
-      ]
-    },
-    "testscript": {
-      "testname": "Bootup Interface Initialization Test",
-      "objective": "Verify all network interfaces are initialized correctly during bootup", 
-      "file_name": "test_bootup_interface_init.py",
-      "init_scripts": [
-        "import re ",
-        "import unittest",
-        "from netmiko import ConnectHandler"
-      ],
-      "script": """
-        device = ConnectHandler(device_type='juniper', ip='192.168.0.1', username='admin', password='password')
+        stdin, stdout, stderr = ssh.exec_command(\"show system checksum\")
+        output = stdout.read().decode()
         
-        output = device.send_command('show interfaces terse')
-        interfaces = re.findall('^ge.*', output, re.M)
-        
-        missing = []
-        for interface in ['ge-0/0/0', 'ge-0/0/1']:
-          if interface not in interfaces:
-            missing.append(interface)
+        checksums_match = True
+        for file, checksum in expected_checksums.items():
+          if checksum not in output:
+            checksums_match = False
+            break
             
-        self.assertEqual(len(missing), 0)
-        
-        print('All expected interfaces initialized')
+        if checksums_match:
+          print(\"Test Passed. Firmware checksums matched expected values.\")
+        else:
+          print(\"Test Failed. Firmware checksums did not match expected values.\")
       """,
-      "run_command": "python test_bootup_interface_init.py",
-      "expected_result": "All expected interfaces initialized and present after bootup"
+      "run_command": "python test_firmware_verify.py",
+      "expected_result": "Test Passed. Firmware checksums matched expected values."
     }
   },
 
   {
-    "testname": "Bootup Self-Test Diagnostics Test",
+    "testname": "Bootup Interface Initialization Test", 
     "testcase": {
-      "testname": "Bootup Self-Test Diagnostics Test",
-      "objective": "Validate hardware self-tests and diagnostics complete successfully during bootup",
+      "testname": "Bootup Interface Initialization Test",
+      "objective": "Verify all interfaces are initialized during bootup",
       "steps": [
-        "1. Power on the device",
-        "2. Check console logs for self-test and diagnostic messages",
-        "3. Verify no failures or errors reported",
-        "4. Confirm expected diagnostic tests performed" 
-      ]
+        "1. Power on the router",
+        "2. Verify all interfaces are brought up and operational"  
+      ],
+      "test_data": {
+        "interface_count": 48
+      }  
     },
     "testscript": {
-      "testname": "Bootup Self-Test Diagnostics Test",
-      "objective": "Validate hardware self-tests and diagnostics complete successfully during bootup",
-      "file_name": "test_bootup_diagnostics.py",
+      "testname": "Bootup Interface Initialization Test",
+      "objective": "Verify all interfaces are initialized during bootup",
+      "file_name": "test_interface_init.py",
       "init_scripts": [
-        "import re", 
-        "import unittest",
-        "from paramiko import SSHClient"
+        "pip install netmiko"
       ],
       "script": """
-        ssh = SSHClient()
-        ssh.connect('192.168.0.1', username='admin', password='password')
+        from netmiko import ConnectHandler
         
-        stdin, stdout, stderr = ssh.exec_command('show chassis hardware')
-        output = stdout.readlines()
+        interface_count = 48
         
-        diag_status = re.search('Chassis diagnostic type:*sanity/quick', ''.join(output))
-        self.assertIsNotNone(diag_status)
+        device = ConnectHandler(device_type='juniper', ip='192.168.1.1', username='admin', password='admin123')
+        output = device.send_command(\"show interfaces terse\")
+        interfaces = len(output.splitlines())
         
-        print('Chassis diagnostics completed successfully')
+        if interfaces >= interface_count:
+          print(\"Test Passed. \" + str(interfaces) + \" interfaces initialized.\")
+        else:
+          print(\"Test Failed. Expected \" + str(interface_count) + \" interfaces but found \" + str(interfaces))
       """,
-      "run_command": "python test_bootup_diagnostics.py",
-      "expected_result": "Bootup diagnostics completed successfully with no failures"
+      "run_command": "python test_interface_init.py",
+      "expected_result": "Test Passed. 48 interfaces initialized."
     }
   },
 
   {
-    "testname": "Bootup Power-On Self-Test (POST) Test",
+    "testname": "Bootup Logging Initialization Test",
     "testcase": {
-      "testname": "Bootup Power-On Self-Test (POST) Test",
-      "objective": "Verify Power-On Self-Test (POST) completes successfully during bootup",
+      "testname": "Bootup Logging Initialization Test",
+      "objective": "Verify logging is initialized during bootup",
       "steps": [
-        "1. Power on the device",
-        "2. Check console logs for POST results",
-        "3. Confirm no POST failures reported",
-        "4. Verify expected POST tests performed"
-      ]
+        "1. Power on the router",
+        "2. Verify system log and event log files are present" 
+      ],
+      "test_data": {
+        "log_files": ["/var/log/messages", "/var/log/events.log"]  
+      }
     },
     "testscript": {
-      "testname": "Bootup Power-On Self-Test (POST) Test",
-      "objective": "Verify Power-On Self-Test (POST) completes successfully during bootup",
-      "file_name": "test_bootup_post.py",
+      "testname": "Bootup Logging Initialization Test",
+      "objective": "Verify logging is initialized during bootup",
+      "file_name": "test_logging_init.py",
       "init_scripts": [
-        "import re",
-        "import unittest",
-        "from paramiko import SSHClient"  
+        "pip install paramiko"  
       ],
       "script": """
-        ssh = SSHClient()
-        ssh.connect('192.168.0.1', username='admin', password='password')
+        import paramiko
         
-        stdin, stdout, stderr = ssh.exec_command('show chassis hardware')
-        output = stdout.readlines()
+        log_files = [\"/var/log/messages\", \"/var/log/events.log\"]
         
-        post_status = re.search('Chassis ONLINE', ''.join(output))
-        self.assertIsNotNone(post_status)
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect('192.168.1.1', username='admin', password='admin123')
         
-        print('POST completed successfully')
+        stdin, stdout, stderr = ssh.exec_command(\"ls /var/log\")
+        output = stdout.read().decode()
+        
+        logging_initialized = True
+        for log_file in log_files:
+          if log_file not in output:
+            logging_initialized = False
+            break 
+          
+        if logging_initialized:
+          print(\"Test Passed. Log files found: \" + ', '.join(log_files))
+        else:
+          print(\"Test Failed. One or more log files not initialized.\")
       """,
-      "run_command": "python test_bootup_post.py",
-      "expected_result": "POST completed successfully with no failures during bootup"
+      "run_command": "python test_logging_init.py", 
+      "expected_result": "Test Passed. Log files found: /var/log/messages, /var/log/events.log"
     }
   }
 ]
 ###ENDLIST###
-
-The test cases and scripts cover some key aspects
