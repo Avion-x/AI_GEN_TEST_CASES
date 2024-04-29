@@ -1,112 +1,101 @@
- Here are the test cases and scripts for STP Port Security testing on Juniper MX240 devices:
+ Here is the Python list with test cases and scripts for STP Port Security testing on Juniper MX240 as per the given requirements:
 
+```python
 ###STARTLIST###
 [
   {
-    "testname": "STP Port Security - Block Port on Security Violation", 
+    "testname": "STP Port State", 
     "testcase": {
-      "testname": "STP Port Security - Block Port on Security Violation",
-      "objective": "Verify that the port is blocked when max MAC addresses are learned on that port",
+      "testname": "STP Port State",
+      "objective": "Verify STP port state transitions to blocking on enabling port security",
       "steps": [
-        "Configure STP Port Security on fe-0/0/10 interface with max 2 MAC addresses", 
-        "Connect 3 devices to fe-0/0/10 interface",
-        "Verify fe-0/0/10 enters err-disabled state after the 2nd MAC is learned"
+        "Configure STP on the switch", 
+        "Enable port security on the interface",
+        "Verify port state changes to blocking"
       ],
-      "test_data": {
-        "interface": "fe-0/0/10",
-        "max_mac_count": 2 
+      "testdata": {
+        "switch": "MX240",
+        "interface": "ge-0/0/1"
       }
     },
     "testscript": {
-      "testname": "STP Port Security - Block Port on Security Violation",
-      "objective": "Verify that the port is blocked when max MAC addresses are learned on that port", 
-      "file_name": "test_stp_port_security.py",
-      "init_scripts":[
-        "pip install jnpr.junos",
-        "pip install pprint"
+      "testname": "STP Port State",
+      "objective": "Verify STP port state transitions to blocking on enabling port security", 
+      "file_name": "stp_portstate.py",
+      "init_scripts": [
+        "pip install py-junos-eznc",
+        "pip install json"
       ],
       "script": """
-from jnpr.junos import Device
-from pprint import pprint
-
-dev = Device(host='192.0.2.1', user='test', password='Password')
-dev.open()
-
-interface = test_data['interface']
-max_mac_count = test_data['max_mac_count']
-
-dev.cli('set interfaces ' + interface + ' ethernet-switching port-security max-mac-count ' + str(max_mac_count))
-
-# Connect 3 devices 
-
-mac_table = dev.cli('show ethernet-switching table')
-
-if interface in mac_table and len(mac_table[interface]) > max_mac_count:
-  print(interface + ' blocked due to port security violation')
-else:
-  print(interface + ' did not block')  
-
-dev.close()
+        \"\"\"Test Script to verify STP port state with port security\"\"\"
+        
+        import json
+        from jnpr.junos import Device
+        
+        dev = Device(host='192.168.1.1', user='blah', password='blah')
+        dev.open()
+        
+        interface = dev.cli('show spanning-tree interface ge-0/0/1')
+        
+        port_state = interface.findall('.//port-state')[0].text
+        
+        if port_state == 'blocking':
+          print('Test Passed')
+        else:
+          print('Test Failed')
+          
+        dev.close()
       """,
-      "run_command": "python test_stp_port_security.py",
-      "expected_result": "fe-0/0/10 blocked due to port security violation"
+      "run_command": "python stp_portstate.py",
+      "expected_result": "Test Passed"
     }
   },
-
+  
   {
-    "testname": "STP Port Security - Re-enable Port After Timeout",
+    "testname": "Number of MAC Addresses",
     "testcase": {
-      "testname": "STP Port Security - Re-enable Port After Timeout",
-      "objective": "Verify that the blocked port is re-enabled after the err-disabled timeout",
+      "testname": "Number of MAC Addresses",
+      "objective": "Verify only configured number of MAC addresses can be learned when port security enabled",
       "steps": [
-        "Configure STP Port Security on fe-0/0/10 with block-timeout 300 seconds",
-        "Trigger security violation to block fe-0/0/10", 
-        "Wait for 300 seconds",
-        "Verify fe-0/0/10 is re-enabled after 300 seconds"
+        "Configure maximum 2 MAC addresses allowed on the interface",
+        "Learn 3 new MAC addresses on the interface", 
+        "Verify port state changes to error-disabled after learning 3rd MAC" 
       ],
-      "test_data": {
-        "interface": "fe-0/0/10",
-        "timeout": 300
+      "testdata": {
+        "interface": "ge-0/0/2",
+        "max_macs": 2
       }
-    },
+    }, 
     "testscript": {
-      "testname": "STP Port Security - Re-enable Port After Timeout",
-      "objective": "Verify that the blocked port is re-enabled after the err-disabled timeout",
-      "file_name": "test_stp_port_security_timeout.py",
-      "init_scripts":[
-        "pip install jnpr.junos",
-        "pip install time" 
+      "testname": "Number of MAC Addresses",
+      "objective": "Verify only configured number of MAC addresses can be learned when port security enabled",
+      "file_name": "max_macs.py",
+      "init_scripts": [
+        "pip install py-junos-eznc",
+        "pip install json"  
       ],
-      "script": """  
-from jnpr.junos import Device
-import time
-
-dev = Device(host='192.0.2.1', user='test', password='Password')
-dev.open()
-
-interface = test_data['interface']
-timeout = test_data['timeout']
-
-dev.cli('set interfaces ' + interface + ' ethernet-switching port-security block-time ' + str(timeout))
-
-# Trigger security violation
-
-time.sleep(timeout)
-
-port_status = dev.cli('show interfaces ' + interface + ' terse')
-
-if 'up' in port_status:
-  print(interface + ' re-enabled after ' + str(timeout) + ' seconds')  
-else:
-  print(interface + ' did not re-enable after timeout')
-      
-dev.close()
-    """,
-      "run_command": "python test_stp_port_security_timeout.py",
-      "expected_result": "fe-0/0/10 re-enabled after 300 seconds"
+      "script": """
+        \"\"\"Test Script to verify maximum MAC addresses with port security\"\"\"
+        
+        import json
+        from jnpr.junos import Device
+        
+        dev = Device(host='192.168.1.1', user='blah', password='blah')
+        dev.open()
+        
+        interface_status = dev.cli('show interfaces ge-0/0/2')
+        
+        if interface_status.find('error-disabled') >= 0:
+          print('Test Passed')
+        else:
+          print('Test Failed')
+          
+        dev.close()
+      """,
+      "run_command": "python max_macs.py",
+      "expected_result": "Test Passed"
     }
-  }  
+  }
 ]
 ###ENDLIST###
-
-The test cases cover validating port blocking on security violation and port re-enabling after err-disabled timeout. The test scripts leverage the Junos PyEZ library to connect to the Juniper device, configure port security, trigger violations, check status and verify expected behavior. The scripts are structured based on your requirements with all the necessary fields included. Let me know if you need any clarification or have additional requirements to cover.
+```
