@@ -1,57 +1,99 @@
- ###STARTLIST###
+ Here is the Python list with JSON test objects for VPN Bandwidth Management tests on Juniper MX240 devices:
+
+```python
+###STARTLIST###
 [
-  {
-    "testname": "VPN Bandwidth Management Test", 
-    "testcase": {
-      "testname": "VPN Bandwidth Management Test",
-      "objective": "Verify VPN bandwidth management configuration on MX240",
-      "steps": [
-        "Configure VPN bandwidth management policy", 
-        "Apply policy to VPN interface",
-        "Generate traffic and verify configured bandwidth limits"
-      ],
-      "testdata": {
-        "vpn_policy": "vpn-bw-policy",
-        "vpn_interface": "ge-0/0/1",
-        "bandwidth_limit": "50mbps"
-      }
-    },
-    "testscript": {
-      "testname": "VPN Bandwidth Management Test",
-      "objective": "Verify VPN bandwidth management configuration on MX240",      
-      "file_name": "vpn_bw_test.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
-      ],
-      "script": """
-import paramiko
-import time
-
-def test_vpn_bw(vpn_policy, vpn_interface, bandwidth_limit):
-  
-  conn = paramiko.SSHClient()
-  conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-  conn.connect('192.168.0.1', username='pyuser', password='pypass')
-  
-  conn.exec_command('configure')
-  
-  conn.exec_command('set policy-options policy-statement ' + vpn_policy) 
-  conn.exec_command('then bandwidth ' + bandwidth_limit)
-  conn.exec_command('apply-groups vpn')
-  
-  conn.exec_command('set interfaces ' + vpn_interface + ' apply-groups ' + vpn_policy)
-  
-  print("VPN Bandwidth Policy Configured")
-
-  conn.exec_command('commit')
-  conn.exec_command('exit')
-
-  print("Generated traffic and verified bandwidth limit")
-""",
-      "run_command": "python vpn_bw_test.py",
-      "expected_result": "VPN Bandwidth Policy Configured\\nGenerated traffic and verified bandwidth limit"
+{
+  "testname": "VPN Bandwidth Management Config Test",
+  "testcase": {
+    "testname": "VPN Bandwidth Management Config Test", 
+    "objective": "Verify VPN bandwidth management configuration",
+    "steps": [
+      "Configure VPN bandwidth management",
+      "Commit configuration",
+      "Verify VPN bandwidth management configuration"
+    ],
+    "test_data": {
+      "vpn_name": "VPN1",
+      "bandwidth_limit": "50m" 
     }
+  },
+  "testscript": {
+    "testname": "VPN Bandwidth Management Config Test",
+    "objective": "Verify VPN bandwidth management configuration", 
+    "file_name": "vpn_bw_test.py",
+    "init_scripts": [
+      "pip install paramiko"
+    ],
+    "script": """
+import paramiko
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect('192.168.0.1', username='admin', password='password')
+
+stdin, stdout, stderr = ssh.exec_command('show configuration interfaces')
+output = stdout.read().decode('utf-8')
+
+if 'bandwidth-limit 50m' in output:
+  print('Test Passed')
+else:
+  print('Test Failed')  
+""",
+    "run_command": "python vpn_bw_test.py",
+    "expected_result": "Test Passed"
   }
+},
+{
+  "testname": "VPN Bandwidth Management Monitoring Test",
+  "testcase": {
+    "testname": "VPN Bandwidth Management Monitoring Test",
+    "objective": "Verify VPN bandwidth usage monitoring",
+    "steps": [
+      "Generate traffic over VPN",
+      "Verify VPN bandwidth usage" 
+    ],
+    "test_data": {
+      "vpn_name": "VPN1",
+      "traffic_tool": "iperf",
+      "duration": "60s",
+      "bandwidth_limit": "50m"
+    }
+  },
+  "testscript": {
+    "testname": "VPN Bandwidth Management Monitoring Test",
+    "objective": "Verify VPN bandwidth usage monitoring",
+    "file_name": "vpn_bw_monitor_test.py",
+    "init_scripts": [
+      "pip install paramiko",
+      "pip install iperf3"  
+    ],
+    "script": """  
+import paramiko
+import iperf3
+
+client = iperf3.Client()
+client.duration = 60
+client.server_hostname = '192.168.0.2'
+client.port = 5201
+result = client.run()
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+ssh.connect('192.168.0.1', username='admin', password='password')
+
+stdin, stdout, stderr = ssh.exec_command('show interfaces ge-0/0/1 extensive')
+output = stdout.read().decode('utf-8')
+
+if result.sent_Mbps > 50:
+  print('Bandwidth limit exceeded') 
+else:
+  print('Test Passed')
+""",
+    "run_command": "python vpn_bw_monitor_test.py", 
+    "expected_result": "Test Passed"
+  }
+}
 ]
 ###ENDLIST###
+```
