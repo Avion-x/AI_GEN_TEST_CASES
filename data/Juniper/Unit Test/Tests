@@ -1,101 +1,61 @@
- Here is the Python list with test cases and scripts for STP Port Security testing on Juniper MX240 as per the given requirements:
-
-```python
-###STARTLIST###
+ ###STARTLIST###
 [
   {
-    "testname": "STP Port State", 
+    "testname": "Traffic Policing Test", 
     "testcase": {
-      "testname": "STP Port State",
-      "objective": "Verify STP port state transitions to blocking on enabling port security",
+      "testname": "Traffic Policing Test",
+      "objective": "Verify traffic policing is working properly with configured policers",
       "steps": [
-        "Configure STP on the switch", 
-        "Enable port security on the interface",
-        "Verify port state changes to blocking"
+        "Configure a policer to limit traffic to 100 kbps", 
+        "Send traffic at 150 kbps and verify traffic is policed down to 100 kbps"
       ],
-      "testdata": {
-        "switch": "MX240",
-        "interface": "ge-0/0/1"
+      "test_data": {
+        "policer_bandwidth": "100kbps"
       }
     },
     "testscript": {
-      "testname": "STP Port State",
-      "objective": "Verify STP port state transitions to blocking on enabling port security", 
-      "file_name": "stp_portstate.py",
+      "testname": "Traffic Policing Test",
+      "objective": "Verify traffic policing is working properly with configured policers",
+      "file_name": "traffic_policing_test.py",
       "init_scripts": [
-        "pip install py-junos-eznc",
-        "pip install json"
+        "pip install paramiko",
+        "pip install junos-eznc" 
       ],
       "script": """
-        \"\"\"Test Script to verify STP port state with port security\"\"\"
-        
-        import json
-        from jnpr.junos import Device
-        
-        dev = Device(host='192.168.1.1', user='blah', password='blah')
-        dev.open()
-        
-        interface = dev.cli('show spanning-tree interface ge-0/0/1')
-        
-        port_state = interface.findall('.//port-state')[0].text
-        
-        if port_state == 'blocking':
-          print('Test Passed')
-        else:
-          print('Test Failed')
-          
-        dev.close()
-      """,
-      "run_command": "python stp_portstate.py",
-      "expected_result": "Test Passed"
+import json
+import logging
+from jnpr.junos import Device
+from jnpr.junos.utils.config import Config
+
+# Set up logging
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+
+# Initialize device connection
+dev = Device(host='192.168.1.1', user='netconf', password='password123')
+dev.open()
+
+# Configure policer
+cu = Config(dev)
+cu.load('set firewall policer TEST_POLICER if-exceeding bandwidth-limit {test_data[policer_bandwidth]}', format='set')
+cu.commit()
+
+# Send test traffic
+# Code to generate and send traffic at 150kbps
+
+# Verify policed traffic rate 
+# Code to verify policed traffic rate is 100kbps
+
+# Cleanup policer config
+cu.load('delete firewall policer TEST_POLICER', format='set')
+cu.commit()
+
+# Close device connection
+dev.close()
+""",
+      "run_command": "python traffic_policing_test.py",
+      "expected_result": "Test traffic successfully policed down to configured policer limit"
     }
-  },
-  
-  {
-    "testname": "Number of MAC Addresses",
-    "testcase": {
-      "testname": "Number of MAC Addresses",
-      "objective": "Verify only configured number of MAC addresses can be learned when port security enabled",
-      "steps": [
-        "Configure maximum 2 MAC addresses allowed on the interface",
-        "Learn 3 new MAC addresses on the interface", 
-        "Verify port state changes to error-disabled after learning 3rd MAC" 
-      ],
-      "testdata": {
-        "interface": "ge-0/0/2",
-        "max_macs": 2
-      }
-    }, 
-    "testscript": {
-      "testname": "Number of MAC Addresses",
-      "objective": "Verify only configured number of MAC addresses can be learned when port security enabled",
-      "file_name": "max_macs.py",
-      "init_scripts": [
-        "pip install py-junos-eznc",
-        "pip install json"  
-      ],
-      "script": """
-        \"\"\"Test Script to verify maximum MAC addresses with port security\"\"\"
-        
-        import json
-        from jnpr.junos import Device
-        
-        dev = Device(host='192.168.1.1', user='blah', password='blah')
-        dev.open()
-        
-        interface_status = dev.cli('show interfaces ge-0/0/2')
-        
-        if interface_status.find('error-disabled') >= 0:
-          print('Test Passed')
-        else:
-          print('Test Failed')
-          
-        dev.close()
-      """,
-      "run_command": "python max_macs.py",
-      "expected_result": "Test Passed"
-    }
-  }
+  } 
 ]
 ###ENDLIST###
-```
