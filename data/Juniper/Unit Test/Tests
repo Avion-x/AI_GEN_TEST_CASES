@@ -1,166 +1,133 @@
- Here are 5 unit test cases and test scripts for BBootup Configuration on MX240:
+ ###STARTLIST###
 
-###STARTLIST###
 [
 {
-  "testname": "Test Bootup Configuration Retrieval",
+  "testname": "Bootup Configuration Retrieval Test",
   "testcase": {
-    "testname": "Test Bootup Configuration Retrieval",
-    "objective": "Verify bootup configuration is retrieved correctly", 
-    "steps": ["Check configuration file is read during boot", "Validate running configuration matches startup configuration"],
-    "test_data": {"startup_config": "set system host-name MX240"}
+    "testname": "Bootup Configuration Retrieval Test", 
+    "objective": "Verify that the device is able to retrieve the startup configuration from persistent storage during bootup",
+    "steps": [
+      "1. Turn off the device",
+      "2. Turn on the device and allow it to complete bootup",
+      "3. Verify that the running configuration contains the expected settings from startup config", 
+      "4. Verify that log messages indicate startup config was loaded"
+    ]
   },
 
   "testscript": {
-    "testname": "Test Bootup Configuration Retrieval",
-    "objective": "Verify bootup configuration is retrieved correctly",
+    "testname": "Bootup Configuration Retrieval Test",
+    "objective": "Automate Bootup Configuration Retrieval Test with Python",
     "file_name": "test_bootup_config_retrieval.py",
-    "init_scripts": "pip install junos-eznc",
+    "init_scripts": [
+      "pip install paramiko",
+      "pip install junos-eznc"  
+    ],
     "script": """
-import json
+import unittest
 from junos import Device
 
-test_data = json.loads('''***''') 
+class TestBootupConfigRetrieval(unittest.TestCase):
 
-dev = Device(host='192.168.1.1', user='netconf', password='pwd123')
-dev.open()
-
-running_config = dev.cli('show configuration')
-startup_config = test_data['startup_config']
-
-assert startup_config in running_config
-    """,
-    "run_command": "python test_bootup_config_retrieval.py", 
-    "expected_result": "Test passes"
+    def test_bootup_config_retrieval(self):
+        dev = Device(host='1.1.1.1', user='python', password=' Python123') 
+        dev.open()
+        self.assertEqual(dev.facts['hostname'], 'SRX100')
+        self.assertIn('set system host-name SRX100', dev.cli('show configuration'))
+        dev.close()
+""",
+    "run_command": "python test_bootup_config_retrieval.py",
+    "expected_result": "OK" 
   }
 },
 
 {
-  "testname": "Test Bootup Hardware Initialization",
-  
+  "testname": "Bootup Hardware Initialization Test",
   "testcase": {
-    "testname": "Test Bootup Hardware Initialization",
-    "objective": "Validate hardware components initialize correctly during bootup",
-    "steps": ["Verify component X powers on", "Check component Y initialization logs"], 
-    "test_data": {}
+    "testname": "Bootup Hardware Initialization Test",
+    "objective": "Verify hardware components are initialized correctly during bootup",
+    "steps": [
+      "1. Turn off the device",
+      "2. Turn on the device and allow it to complete bootup",
+      "3. Verify hardware components initialization messages in log",
+      "4. Verify hardware components are functioning correctly" 
+    ]
   },
 
   "testscript": {
-    "testname": "Test Bootup Hardware Initialization",
-    "objective": "Validate hardware components initialize correctly during bootup", 
+    "testname": "Bootup Hardware Initialization Test",
+    "objective": "Automate Bootup Hardware Initialization Test with Python", 
     "file_name": "test_bootup_hardware_init.py",
-    "init_scripts": "pip install junos-eznc",
+    "init_scripts": [
+      "pip install paramiko"
+    ],
     "script": """  
-import re
-from junos import Device
-  
-dev = Device(host='192.168.1.1', user='netconf', password='pwd123') 
-dev.open()
-  
-power_on_log = dev.cli('show log messages')
-init_log = dev.cli('show log messages') 
+import unittest
+import paramiko
 
-assert re.search('Power on self test', power_on_log)
-assert re.search('Component Y initialized', init_log)
-    """,
+class TestBootupHardwareInit(unittest.TestCase):
+
+    def test_bootup_hardware_init(self):
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect('1.1.1.1', username='python', password='Python123')
+        stdin, stdout, stderr = ssh.exec_command('show log messages | match hardware')
+        log = stdout.read().decode()
+        self.assertIn('FPC 0 Hardware initialization done', log)
+        self.assertIn('PIC 0 Hardware initialization done', log)
+        ssh.close()
+""",
     "run_command": "python test_bootup_hardware_init.py",
-    "expected_result": "Test passes"
+    "expected_result": "OK"
   }
 },
 
 {
-  "testname": "Test Bootup Firmware Verification",
-  
+  "testname": "Bootup Firmware Verification Test",
   "testcase": {
-    "testname": "Test Bootup Firmware Verification",
-    "objective": "Validate firmware version during bootup",
-    "steps": ["Retrieve firmware version", "Compare to expected version"],
-    "test_data": {"expected_firmware": "17.3R3.10"}  
+    "testname": "Bootup Firmware Verification Test",
+    "objective": "Verify firmware integrity during bootup",
+    "steps": [
+      "1. Corrupt firmware image on device",
+      "2. Reboot device",
+      "3. Verify bootup fails with error indicating firmware verification failed"
+    ]
   },
 
   "testscript": {
-    "testname": "Test Bootup Firmware Verification",
-    "objective": "Validate firmware version during bootup",
-    "file_name": "test_bootup_firmware_verify.py", 
-    "init_scripts": "pip install junos-eznc",
+    "testname": "Bootup Firmware Verification Test",
+    "objective": "Automate Bootup Firmware Verification Test with Python",
+    "file_name": "test_bootup_firmware_verify.py",
+    "init_scripts": [
+      "pip install paramiko"  
+    ],
     "script": """
-import json
-from junos import Device
+import unittest  
+import paramiko
 
-test_data = json.loads('''***''')
+class TestBootupFirmwareVerify(unittest.TestCase):
 
-dev = Device(host='192.168.1.1', user='netconf', password='pwd123')
-dev.open()
+    def test_bootup_firmware_verify(self):
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-firmware_ver = dev.cli('show version | match JUNOS')
-expected_ver = test_data['expected_firmware'] 
+        # Corrupt firmware image
+        stdin, stdout, stderr = ssh.exec_command('rm jinstall-ex-2100-11.2-20170502.0-domestic-signed.tgz')
+        
+        # Reboot device
+        ssh.exec_command('request system reboot')
+        
+        # Check for firmware verification errors 
+        ssh.connect('1.1.1.1', username='python', password='Python123')
+        stdin, stdout, stderr = ssh.exec_command('show log messages | match firmware')
+        log = stdout.read().decode()
+        self.assertIn('Firmware integrity verification failed', log)
 
-assert expected_ver in firmware_ver
-    """,
+        ssh.close()
+""",
     "run_command": "python test_bootup_firmware_verify.py",
-    "expected_result": "Test passes"
-  }
-},
-
-{
-  "testname": "Test Bootup Interface Initialization",
-  
-  "testcase": {
-    "testname": "Test Bootup Interface Initialization",
-    "objective": "Validate interfaces initialize during bootup",
-    "steps": ["Check interface initialization logs"],
-    "test_data": {}  
-  },
-
-  "testscript": {
-    "testname": "Test Bootup Interface Initialization", 
-    "objective": "Validate interfaces initialize during bootup",
-    "file_name": "test_bootup_interface_init.py",
-    "init_scripts": "pip install junos-eznc", 
-    "script": """
-from junos import Device
-
-dev = Device(host='192.168.1.1', user='netconf', password='pwd123')
-dev.open()
-
-init_log = dev.cli('show log messages')
-
-assert 'ge-0/0/0 Initialized' in init_log
-assert 'ge-0/0/1 Initialized' in init_log 
-    """,
-    "run_command": "python test_bootup_interface_init.py",
-    "expected_result": "Test passes"
-  }
-},
-
-{
-  "testname": "Test Bootup Self Test Diagnostics",
-  
-  "testcase": {
-    "testname": "Test Bootup Self Test Diagnostics",
-    "objective": "Validate self diagnostics execute and pass",
-    "steps": ["Check self diagnostics logs for errors"],
-    "test_data": {}
-  },
-
-  "testscript": {
-    "testname": "Test Bootup Self Test Diagnostics",
-    "objective": "Validate self diagnostics execute and pass",
-    "file_name": "test_bootup_diagnostics.py",
-    "init_scripts": "pip install junos-eznc",
-    "script": """
-from junos import Device
-
-dev = Device(host='192.168.1.1', user='netconf', password='pwd123')
-dev.open()
-
-diag_log = dev.cli('show log self-diagnostics')
-
-assert 'Self diagnostics passed' in diag_log
-    """, 
-    "run_command": "python test_bootup_diagnostics.py",
-    "expected_result": "Test passes" 
+    "expected_result": "OK"
   }
 }
+
 ]
 ###ENDLIST###
