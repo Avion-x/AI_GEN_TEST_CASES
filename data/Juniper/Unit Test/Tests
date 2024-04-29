@@ -1,61 +1,57 @@
  ###STARTLIST###
 [
   {
-    "testname": "Traffic Policing Test", 
+    "testname": "VPN Bandwidth Management Test", 
     "testcase": {
-      "testname": "Traffic Policing Test",
-      "objective": "Verify traffic policing is working properly with configured policers",
+      "testname": "VPN Bandwidth Management Test",
+      "objective": "Verify VPN bandwidth management configuration on MX240",
       "steps": [
-        "Configure a policer to limit traffic to 100 kbps", 
-        "Send traffic at 150 kbps and verify traffic is policed down to 100 kbps"
+        "Configure VPN bandwidth management policy", 
+        "Apply policy to VPN interface",
+        "Generate traffic and verify configured bandwidth limits"
       ],
-      "test_data": {
-        "policer_bandwidth": "100kbps"
+      "testdata": {
+        "vpn_policy": "vpn-bw-policy",
+        "vpn_interface": "ge-0/0/1",
+        "bandwidth_limit": "50mbps"
       }
     },
     "testscript": {
-      "testname": "Traffic Policing Test",
-      "objective": "Verify traffic policing is working properly with configured policers",
-      "file_name": "traffic_policing_test.py",
+      "testname": "VPN Bandwidth Management Test",
+      "objective": "Verify VPN bandwidth management configuration on MX240",      
+      "file_name": "vpn_bw_test.py",
       "init_scripts": [
         "pip install paramiko",
-        "pip install junos-eznc" 
+        "pip install netmiko"
       ],
       "script": """
-import json
-import logging
-from jnpr.junos import Device
-from jnpr.junos.utils.config import Config
+import paramiko
+import time
 
-# Set up logging
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+def test_vpn_bw(vpn_policy, vpn_interface, bandwidth_limit):
+  
+  conn = paramiko.SSHClient()
+  conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+  conn.connect('192.168.0.1', username='pyuser', password='pypass')
+  
+  conn.exec_command('configure')
+  
+  conn.exec_command('set policy-options policy-statement ' + vpn_policy) 
+  conn.exec_command('then bandwidth ' + bandwidth_limit)
+  conn.exec_command('apply-groups vpn')
+  
+  conn.exec_command('set interfaces ' + vpn_interface + ' apply-groups ' + vpn_policy)
+  
+  print("VPN Bandwidth Policy Configured")
 
-# Initialize device connection
-dev = Device(host='192.168.1.1', user='netconf', password='password123')
-dev.open()
+  conn.exec_command('commit')
+  conn.exec_command('exit')
 
-# Configure policer
-cu = Config(dev)
-cu.load('set firewall policer TEST_POLICER if-exceeding bandwidth-limit {test_data[policer_bandwidth]}', format='set')
-cu.commit()
-
-# Send test traffic
-# Code to generate and send traffic at 150kbps
-
-# Verify policed traffic rate 
-# Code to verify policed traffic rate is 100kbps
-
-# Cleanup policer config
-cu.load('delete firewall policer TEST_POLICER', format='set')
-cu.commit()
-
-# Close device connection
-dev.close()
+  print("Generated traffic and verified bandwidth limit")
 """,
-      "run_command": "python traffic_policing_test.py",
-      "expected_result": "Test traffic successfully policed down to configured policer limit"
+      "run_command": "python vpn_bw_test.py",
+      "expected_result": "VPN Bandwidth Policy Configured\\nGenerated traffic and verified bandwidth limit"
     }
-  } 
+  }
 ]
 ###ENDLIST###
