@@ -1,46 +1,108 @@
  ###STARTLIST###
-
 [
   {
-    "testname": "QoS Marking Test for MX240", 
+    "testname": "QoS Marking Test case 1 for MX240", 
     "testcase": {
-      "testname": "Verify QoS Marking",
-      "objective": "Verify QoS marking based on DSCP values",
+      "testname": "QoS Marking Test case 1 for MX240",
+      "objective": "Verify QoS marking based on ingress policy and classification",
       "steps": [
-        "Configure QoS policy to mark traffic based on DSCP values", 
-        "Send traffic matching the DSCP values",
-        "Verify traffic is marked with expected DSCP values"
-      ]
+        "Apply ingress policy to classify certain traffic and mark with DSCP", 
+        "Send matching traffic and verify DSCP marking"
+      ],
+      "testdata": {
+        "policy_name": "INGRESS-POLICY",
+        "classifier_name": "VOICE-CLASS",
+        "dscp_codepoint": "ef"  
+      }
     },
     "testscript": {
-      "testname": "QoS Marking Test Script",
-      "objective": "Automate QoS Marking test case",
-      "file_name": "qos_marking_test.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install jnpr.junos"
+      "testname": "QoS Marking Test Script 1 for MX240",
+      "objective": "Automate QoS Marking Test case 1 for MX240",
+      "file_name": "qos_marking_test_1.py",
+      "init_scripts":[
+        "pip install junos-eznc",
+        "pip install paramiko"
       ],
       "script": """
-import logging
+import json
 from jnpr.junos import Device
 from jnpr.junos.utils.config import Config
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("QoSMarkingTest")
+# Initialize device connection
+dev = Device(host='192.168.1.1', user='test', password='password123')
+dev.open()
 
-device = Device(host='192.168.1.1', user='test', password='Password')
-device.open()
+# Load testdata from JSON 
+with open('testdata.json') as f:
+  testdata = json.load(f)
 
-cfg = Config(device)
-cfg.load('set class-of-service dscp af11 marking 50', format='set')
-cfg.pdiff()
+# Configure ingress policy and classifier  
+cfg = Config(dev)
+cfg.load('set policy-options policy-statement ' + testdata['policy_name'] + ' term 1 from class ' + testdata['classifier_name'], format='set')
+cfg.load('set class-of-service classifiers ' + testdata['classifier_name'] + ' dscp ' + testdata['dscp_codepoint'], format='set')
+cfg.commit()
 
-logger.info("Traffic configured with dscp af11 will be marked as DSCP 50") 
-      """,
-      "run_command": "python qos_marking_test.py", 
-      "expected_result": "Traffic with DSCP 10 is marked as DSCP 50"
+# Send test traffic and verify DSCP marking
+# Script for traffic generation and checking DSCP marks
+
+cfg.rollback()
+dev.close()
+""",
+      "run_command": "python qos_marking_test_1.py",
+      "expected_result": "Traffic received with expected DSCP marks matching testdata"
     }
-  }
-]
+  },
 
+  {
+    "testname": "QoS Marking Test case 2 for MX240",
+    "testcase": {
+      "testname": "QoS Marking Test case 2 for MX240",  
+      "objective": "Verify QoS Trust DSCP and rewrite",
+      "steps": [
+        "Configure ingress interface to trust DSCP",
+        "Send traffic marked with test DSCP values",
+        "Verify traffic received with same DSCP values"  
+      ],
+      "testdata": {
+        "interface_name": "ge-0/0/1",
+        "test_dscp": ["ef", "af41"]
+      }
+    },
+    "testscript": {
+      "testname": "QoS Marking Test Script 2 for MX240",
+      "objective": "Automate QoS Marking Test case 2 for MX240",
+      "file_name": "qos_marking_test_2.py",
+      "init_scripts":[
+        "pip install junos-eznc", 
+        "pip install scapy"
+      ],
+      "script": """
+import json
+from jnpr.junos import Device 
+from jnpr.junos.utils.config import Config
+
+# Initialize device connection
+dev = Device(host='192.168.1.1', user='test', password='password123') 
+dev.open()
+
+# Load testdata
+with open('testdata.json') as f:
+  testdata = json.load(f)  
+
+# Configure interface trust DSCP
+cfg = Config(dev)
+cfg.load('set class-of-service interfaces ' + testdata['interface_name'] + ' unit 0 family inet dscp-marking trust input', format='set')
+cfg.commit()
+
+# Send pre-marked traffic and verify DSCP values
+# Script for checking received DSCP 
+
+cfg.rollback()
+dev.close()
+""",
+      "run_command": "python qos_marking_test_2.py",
+      "expected_result": "Received traffic has same DSCP values as testdata"
+    }
+  } 
+]
 ###ENDLIST###
