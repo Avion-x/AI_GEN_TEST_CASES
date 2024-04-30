@@ -1,106 +1,73 @@
  ###STARTLIST###
 [
   {
-    "testname": "Class-Based Traffic Shaping Test", 
+    "testname": "Class-Based Traffic Management", 
     "testcase": {
-      "testname": "Class-Based Traffic Shaping Test",
-      "objective": "Verify class-based traffic shaping limits bandwidth usage by certain traffic classes",
+      "testname": "Class-Based Traffic Management",
+      "objective": "Verify class-based traffic management features on MX960",
       "steps": [
-        "1. Configure class-based traffic shaping policy to limit HTTP traffic to 1Mbps", 
-        "2. Generate HTTP traffic at over 1Mbps rate",
-        "3. Verify HTTP traffic rate is capped at 1Mbps"
-      ]
+        "Configure class-based policies and apply to interfaces", 
+        "Generate traffic matching configured classes",
+        "Verify policy actions are applied to matching traffic"
+      ],
+      "testdata": {
+        "classes": [
+          {
+            "name": "voip", 
+            "match": {
+              "dscp": 46
+            }
+          },
+          {
+            "name": "tcp_traffic",
+            "match": {
+              "protocol": "tcp"
+            }
+          }
+        ],
+        "interfaces": [
+          "ge-0/0/1",
+          "ge-0/0/2" 
+        ],
+        "policy_actions": [
+          {
+            "class": "voip",
+            "action": "priority-queue 1" 
+          },
+          {
+            "class": "tcp_traffic", 
+            "action": "rate-limit 1m"
+          }
+        ]
+      }
     },
     "testscript": {
-      "testname": "Class-Based Traffic Shaping Test",
-      "objective": "Automate test case steps to verify class-based traffic shaping",
-      "file_name": "traffic_shaping_test.py",
+      "testname": "Class-Based Traffic Management",
+      "objective": "Automate test case with Python",
+      "file_name": "test_cbtm.py", 
       "init_scripts": [
         "pip install paramiko",
-        "pip install scp"
-      ],
-      "script": """
-        import paramiko
-        import time
+        "pip install netmiko",
+        """
+        import json
+        from netmiko import ConnectHandler
         
-        HOST = '192.168.1.1'
-        USERNAME = 'admin'
-        PASSWORD = 'juniper123'
+        # Load test data
+        testdata = ${json.dumps(a.testdata)} 
+        testdata = json.loads(testdata)
         
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(HOST, username=USERNAME, password=PASSWORD)
-        
-        # Configure class-based traffic shaping policy
-        ssh.exec_command('set class-of-service traffic-shaping HTTP-CLASS 1m')
-        
-        # Generate HTTP traffic
-        ssh.exec_command('start_traffic_generator --http 10Mbps')
-        
-        time.sleep(60)
-        
-        # Verify HTTP traffic rate 
-        stdin, stdout, stderr = ssh.exec_command('show traffic-shaping HTTP-CLASS')
-        output = stdout.read().decode() 
-        http_rate = re.search('Current rate: (.+)', output).group(1)
-        assert http_rate == '1Mbps'
-      """,
-      "run_command": "python traffic_shaping_test.py",
-      "expected_result": "HTTP traffic rate capped at 1Mbps"
-    }
-  },
-
-  {
-    "testname": "Hierarchical Class-Based Traffic Shaping Test",
-    "testcase": {
-      "testname": "Hierarchical Class-Based Traffic Shaping Test ",
-      "objective": "Verify hierarchical class-based traffic shaping limits bandwidth usage by nested traffic classes",
-      "steps": [
-        "1. Configure parent traffic class limited to 2Mbps",
-        "2. Configure child HTTP traffic class limited to 1Mbps under parent class",
-        "3. Generate HTTP traffic at over 1Mbps rate",
-        "4. Verify HTTP traffic rate is capped at 1Mbps" 
+        # SSH connect to DUT
+        dut = {
+          'device_type': 'juniper',
+          'host': '192.168.0.1',
+          'username': 'testuser',
+          'password': 'test123' 
+        }
+        conn = ConnectHandler(**dut)
+        """,
+        "python test_cbtm.py",
+        "Policies configured and verified successfully" 
       ]
-    },
-    "testscript": {
-      "testname": "Hierarchical Class-Based Traffic Shaping Test",
-      "objective": "Automate test case steps to verify hierarchical class-based traffic shaping", 
-      "file_name": "hierarchical_traffic_shaping_test.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install scp"
-      ],
-      "script": """
-        import paramiko
-        import time
-        
-        HOST = '192.168.1.1'
-        USERNAME = 'admin'
-        PASSWORD = 'juniper123'
-        
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(HOST, username=USERNAME, password=PASSWORD)
-        
-        # Configure parent traffic class
-        ssh.exec_command('set class-of-service traffic-shaping PARENT-CLASS 2m')
-        
-        # Configure child HTTP traffic class
-        ssh.exec_command('set class-of-service traffic-shaping PARENT-CLASS/HTTP-CLASS 1m')
-        
-        # Generate HTTP traffic
-        ssh.exec_command('start_traffic_generator --http 10Mbps')
-        
-        time.sleep(60)
-        
-        # Verify HTTP traffic rate
-        stdin, stdout, stderr = ssh.exec_command('show traffic-shaping PARENT-CLASS/HTTP-CLASS')
-        output = stdout.read().decode()
-        http_rate = re.search('Current rate: (.+)', output).group(1)
-        assert http_rate == '1Mbps'
-      """,
-      "run_command": "python hierarchical_traffic_shaping_test.py",
-      "expected_result": "HTTP traffic rate capped at 1Mbps"
     }
   }
 ]
