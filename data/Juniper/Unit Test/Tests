@@ -1,74 +1,115 @@
- ###STARTLIST###
+ Here is the Python list with test cases and test scripts for Class-Based Traffic Management Test on EX4300-32F switch:
+
+```python
+###STARTLIST###
 [
   {
-    "testname": "Class-Based Traffic Management", 
+    "testname": "Verify CBWFQ class configuration", 
     "testcase": {
-      "testname": "Class-Based Traffic Management",
-      "objective": "Verify class-based traffic management features on MX960",
+      "testname": "Verify CBWFQ class configuration",
+      "objective": "Verify that CBWFQ classes can be configured with correct bandwidth percentage",
       "steps": [
-        "Configure class-based policies and apply to interfaces", 
-        "Generate traffic matching configured classes",
-        "Verify policy actions are applied to matching traffic"
+        "Configure cbwfq class VOICE with 15% bandwidth", 
+        "Configure cbwfq class VIDEO with 30% bandwidth",
+        "Configure cbwfq class CRITICAL_DATA with 45% bandwidth",
+        "Configure cbwfq class BULK_DATA with 5% bandwidth",
+        "Verify class configurations are added correctly"
       ],
       "testdata": {
         "classes": [
           {
-            "name": "voip", 
-            "match": {
-              "dscp": 46
-            }
+            "name": "VOICE",
+            "bandwidth_percent": 15
           },
           {
-            "name": "tcp_traffic",
-            "match": {
-              "protocol": "tcp"
-            }
-          }
-        ],
-        "interfaces": [
-          "ge-0/0/1",
-          "ge-0/0/2" 
-        ],
-        "policy_actions": [
-          {
-            "class": "voip",
-            "action": "priority-queue 1" 
+            "name": "VIDEO",
+            "bandwidth_percent": 30  
           },
           {
-            "class": "tcp_traffic", 
-            "action": "rate-limit 1m"
+            "name": "CRITICAL_DATA",
+            "bandwidth_percent": 45
+          },
+          {  
+            "name": "BULK_DATA",
+            "bandwidth_percent": 5
           }
         ]
       }
     },
     "testscript": {
-      "testname": "Class-Based Traffic Management",
-      "objective": "Automate test case with Python",
-      "file_name": "test_cbtm.py", 
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko",
-        """
-        import json
-        from netmiko import ConnectHandler
-        
-        # Load test data
-        testdata = ${json.dumps(a.testdata)} 
-        testdata = json.loads(testdata)
-        
-        # SSH connect to DUT
-        dut = {
-          'device_type': 'juniper',
-          'host': '192.168.0.1',
-          'username': 'testuser',
-          'password': 'test123' 
-        }
-        conn = ConnectHandler(**dut)
-        """,
-        "python test_cbtm.py",
-        "Policies configured and verified successfully" 
-      ]
+      "testname": "Verify CBWFQ class configuration",
+      "objective": "Verify that CBWFQ classes can be configured with correct bandwidth percentage", 
+      "file_name": "test_cbwfq_class.py",
+      "init_scripts":[
+        "import json",
+        "import jnpr.junos",
+        "from jnpr.junos import Device"
+      ],
+      "script": """
+        def test_cbwfq_class_config(dev, testdata):
+          classes = testdata['classes']
+          
+          for class_def in classes:
+            dev.cli(f'configure class-of-service cbwfq class {class_def["name"]} bandwidth percent {class_def["bandwidth_percent"]}').response()
+          
+          class_configs = dev.cli('show class-of-service cbwfq').response()
+          
+          if all([class_def['name'] in class_configs and 
+                  str(class_def['bandwidth_percent']) in class_configs for class_def in classes]):
+            print('CBWFQ class configuration successful')
+          else:
+            print('CBWFQ class configuration failed')
+            
+       
+      """,
+      "run_command": "python test_cbwfq_class.py --testdata '${a.content}'",
+      "expected_result": "CBWFQ class configuration successful"
+    }
+  },
+
+  {
+    "testname": "Verify CBWFQ scheduler configuration",
+    "testcase": {
+      "testname": "Verify CBWFQ scheduler configuration",
+      "objective": "Verify that a CBWFQ scheduler is configured on the egress interface",
+      "steps": [
+        "Configure cbwfq scheduler on ge-0/0/10 interface",
+        "Verify cbwfq scheduler is configured on interface"   
+      ],
+      "testdata": {
+        "interface": "ge-0/0/10"
+      }
+    },
+    "testscript": {
+      "testname": "Verify CBWFQ scheduler configuration",
+      "objective": "Verify that a CBWFQ scheduler is configured on the egress interface",
+      "file_name": "test_cbwfq_scheduler.py",
+      "init_scripts":[
+        "import json",
+        "import jnpr.junos",
+        "from jnpr.junos import Device"
+      ],
+      "script": """
+        def test_cbwfq_scheduler(dev, testdata):
+          interface = testdata['interface']
+          
+          dev.cli(f'configure interfaces {interface} schedulers cbwfq').response()
+          
+          scheduler_config = dev.cli(f'show interfaces {interface}').response()
+          
+          if 'cbwfq' in scheduler_config:
+            print(f'CBWFQ scheduler configured successfully on {interface}')
+          else:
+            print(f'Failed to configure CBWFQ scheduler on {interface}')
+          
+      """,
+      "run_command": "python test_cbwfq_scheduler.py --testdata '${a.content}'",
+      "expected_result": "CBWFQ scheduler configured successfully on ge-0/0/10"
     }
   }
 ]
 ###ENDLIST###
+
+```
+
+The test cases and scripts cover verifying CBWFQ class configuration and scheduler configuration on the EX4300-32F switch. The scripts are written in Python using PyEZ to connect to and configure the Juniper device. The testdata is passed as an argument to the test scripts. Please let me know if you would like me to modify or expand the test cases in any way.
