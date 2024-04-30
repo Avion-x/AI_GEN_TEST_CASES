@@ -1,157 +1,78 @@
- Here is the Python list with test cases and scripts for Class-Based Traffic Management testing on Juniper EX4300-32F switch:
-
-```python
-###STARTLIST###
+ ###STARTLIST###
 [
-    {
-        "testname": "Verify CBT configuration", 
-        "testcase": {
-            "testname": "Verify CBT configuration",
-            "objective": "Validate CBT class configuration",
-            "steps": [
-                "Configure class cbt_class_1", 
-                "Configure forwarding-class fc1 and map it to cbt_class_1",
-                "Verify class cbt_class_1 and forwarding-class fc1 mapping"
-            ],
-            "test_data": {
-                "cbt_class_1": {
-                    "bandwidth_percent": 50,
-                    "bandwidth_guaranteed": True
-                },
-                "fc1": {
-                    "name": "fc1"
-                } 
-            }
-        },
-        "testscript": {
-            "testname": "Verify CBT configuration",
-            "objective": "Validate CBT class configuration", 
-            "file_name": "verify_cbt.py",
-            "init_scripts": [
-                "import re",
-                "import json",
-                "import paramiko",
-                "import unittest",
-                '''
-                def connect_device(host, username, password):
-                    ssh_client = paramiko.SSHClient()
-                    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    ssh_client.connect(hostname=host,username=username, password=password)
-                    return ssh_client
-                
-                def send_command(ssh_client, command):
-                    stdin, stdout, stderr = ssh_client.exec_command(command)
-                    return stdout.read().decode()
-                ''',
-                "device = connect_device('192.168.1.1', 'testuser', 'testpass')"
-            ],
-            "script": '''
-                test_data = # Load test data from testcase
-                
-                class TestCBTConfig(unittest.TestCase):
-                
-                    def test_cbt_class(self):
-                        # Send command to configure CBT class
-                        result = send_command(device, f"set class-of-service traffic-control-profiles cbt_class_1 bandwidth-percent {test_data['cbt_class_1']['bandwidth_percent']} guaranteed-rate {test_data['cbt_class_1']['bandwidth_guaranteed']}")
-                        
-                        # Verify class configured successfully
-                        self.assertRegex(result, 'success') 
-                        
-                    def test_forwarding_class(self):
-                        # Send command to map forwarding class to CBT
-                        result = send_command(device, f"set class-of-service interfaces ge-0/0/0 unit 0 classifiers inet-precedence fc1 forwarding-class {test_data['fc1']['name']}")
-                        
-                        # Verify mapping success
-                        self.assertRegex(result, 'success')
-                        
-                    def test_cbt_mapping(self):
-                        # Send command to verify CBT class mapping
-                        result = send_command(device, f"show class-of-service traffic-control-profile {test_data['cbt_class_1']['name']}")
-                        
-                        # Verify class is mapped to forwarding class
-                        self.assertRegex(result, test_data['fc1']['name'])
-                        
-                if __name__ == '__main__':
-                    unittest.main()
-            ''',
-            "run_command": "python verify_cbt.py",
-            "expected_result": "OK"
-        }
+  {
+    "testname": "Class-Based Traffic Management Test", 
+    "testcase": {
+      "testname": "Class-Based Traffic Management Test",
+      "objective": "To verify class-based traffic management configuration on EX4300-32F device",
+      "steps": [
+        "Configure class-based traffic management policy", 
+        "Associate policy with interface",
+        "Verify configured bandwidth for class",
+        "Verify latency configuration for class"
+      ],
+      "testdata": {
+        "policy_name": "CBWFQ_POLICY",
+        "class_name": "CRITICAL_TRAFFIC",
+        "bandwidth": "50%",
+        "latency": "10ms"  
+      }
     },
-    {
-        "testname": "Verify CBT bandwidth",
-        "testcase": {
-            "testname": "Verify CBT bandwidth",
-            "objective": "Validate CBT class bandwidth",
-            "steps": [
-                "Configure class cbt_class_1 with 50% bandwidth",
-                "Send traffic matching cbt_class_1",
-                "Verify traffic rate is close to 50% interface bandwidth"
-            ],
-            "test_data": {
-                "cbt_class_1": {
-                    "bandwidth_percent": 50
-                }
-            }
-        },
-        "testscript": {
-            "testname": "Verify CBT bandwidth",
-            "objective": "Validate CBT class bandwidth",
-            "file_name": "verify_cbt_bw.py",
-            "init_scripts": [
-                "import re",
-                "import json",
-                "import paramiko",
-                "import unittest",
-                "from scapy.all import *",
-                '''
-                def connect_device(host, username, password):
-                    # SSH connection code
-                
-                def send_command(ssh_client, command):
-                    # Send command code
-                
-                def start_traffic(interface, rate_percent):
-                    # Start traffic generator
-                    
-                def stop_traffic():
-                    # Stop traffic generator
-                ''',
-                "device = connect_device('192.168.1.1','testuser','testpass')"
-            ],
-            "script": '''
-                test_data = # Load test data
-                
-                class TestCBTBandwidth(unittest.TestCase):
-                
-                    def test_cbt_bandwidth(self):
-                        # Assume CBT class already configured
-                        
-                        # Start traffic generator
-                        start_traffic('ge-0/0/0', test_data['cbt_class_1']['bandwidth_percent'])
-                        
-                        # Sleep for 1 minute
-                        time.sleep(60)
-                        
-                        # Verify interface traffic rate
-                        result = send_command(device, 'show interfaces ge-0/0/0 extensive')
-                        tx_rate = re.search('Tx rate (.*bps)', result).group(1)
-                        intf_speed = re.search('Speed (.*bps)', result).group(1)
-                        actual_rate = int(tx_rate)/int(intf_speed) * 100
-                        
-                        # Verify rate is close to configured percentage
-                        self.assertAlmostEqual(actual_rate, test_data['cbt_class_1']['bandwidth_percent'], delta=5)
-                        
-                        # Stop traffic
-                        stop_traffic()
-                        
-                if __name__ == '__main__':
-                    unittest.main()  
-            ''',
-            "run_command": "python verify_cbt_bw.py", 
-            "expected_result": "OK"
-        }
+    "testscript": {
+      "testname": "Class-Based Traffic Management Test",
+      "objective": "To verify class-based traffic management configuration on EX4300-32F device", 
+      "file_name": "cb_traffic_test.py",
+      "init_scripts": [
+        "pip install jnpr.junos",
+        "pip install paramiko"
+      ],
+      "script": """\"\"\"
+This script tests class-based traffic management configuration on an EX4300-32F device.
+
+It connects to the device, configures a class-based traffic management policy, 
+associates it with an interface, and verifies the bandwidth and latency settings.
+
+Expected result: Class-based traffic management policy should be configured successfully 
+with expected bandwidth and latency settings.
+\"\"\"
+
+import jnpr.junos
+from jnpr.junos import Device
+
+# Connect to EX4300-32F device
+dev = Device(host='192.168.1.1', user='test', password='Password123')
+dev.open()
+
+# Configure class-based traffic management policy
+print('Configuring policy')
+dev.config('set policy-options policy-statement CBWFQ_POLICY then class CRITICAL_TRAFFIC bandwidth 50% latency 10ms')
+
+# Associate policy with interface
+print('Associating policy with interface')  
+dev.config('set interfaces ge-0/0/1 unit 0 family inet service-domain CBWFQ_POLICY')
+
+# Verify configured bandwidth  
+print('Verifying configured bandwidth')
+bandwidth = dev.cli('show configuration policy-options | match CBWFQ_POLICY | match bandwidth')
+if '50%' in bandwidth:
+  print('Bandwidth 50% configured successfully')
+else:
+  print('Failed to configure expected bandwidth')
+  
+# Verify configured latency
+print('Verifying configured latency')  
+latency = dev.cli('show configuration policy-options | match CBWFQ_POLICY | match latency')
+if '10ms' in latency:
+  print('Latency 10ms configured successfully') 
+else:
+  print('Failed to configure expected latency')
+  
+# Close device connection  
+dev.close()
+""",
+      "run_command": "python cb_traffic_test.py",
+      "expected_result": "Class-based traffic management policy should be configured successfully with expected bandwidth and latency settings."
     }
+  }
 ]
 ###ENDLIST###
-```
