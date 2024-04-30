@@ -1,66 +1,109 @@
- ###STARTLIST###
+ Here is the Python list with separate JSON objects for each testcase and testscript for Juniper MX240 QoS monitoring test cases:
+
+```python
+###STARTLIST###
 [
   {
-    "testname": "QoS Marking Test", 
+    "testname": "Test MX240 QoS queue depth", 
     "testcase": {
-      "testname": "QoS Marking Test",
-      "objective": "Verify that traffic is marked correctly with QoS values", 
+      "testname": "Test MX240 QoS queue depth",
+      "objective": "Validate queue depth values in MX240 QoS",
       "steps": [
-        "Configure QoS policy to mark VoIP traffic to DSCP 46",
-        "Generate VoIP traffic from client", 
-        "Verify VoIP traffic is marked with DSCP 46 on the router interface"
+        "Verify queue depth values in show class-of-service interface output", 
+        "Values should match expected configured queue depth"
       ],
-      "test_data": {
-        "voip_source_ip": "192.168.1.5",
-        "voip_destination_ip": "10.1.1.2",
-        "voip_dscp_value": 46
+      "testdata": {
+        "interface": "ge-0/0/0",
+        "queue_depth": 1000
       }
     },
     "testscript": {
-      "testname": "QoS Marking Script",
-      "objective": "Automate QoS Marking Test",
-      "file_name": "qos_marking_test.py",
+      "testname": "Test MX240 QoS queue depth",
+      "objective": "Script to validate MX240 QoS queue depth",
+      "file_name": "test_mx240_qos_depth.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"  
+        "pip install ncclient",
+        "pip install junos-eznc"
       ],
       "script": """
-        import paramiko
-        import netmiko
+        import ncclient
+        import junos
+
+        # Connect to device
+        dev = Device(host='192.168.0.1', user='netconf', password='password')
+        dev.open()
         
-        ROUTER_IP = '192.168.1.1'
-        ROUTER_USERNAME = 'admin'
-        ROUTER_PASSWORD = 'passwd'
+        # Get QoS interface data
+        xml_filter = '<configuration><interfaces/></configuration>'
+        interface_config = dev.rpc.get_config(filter_xml=xml_filter)
         
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(hostname=ROUTER_IP,username=ROUTER_USERNAME,password=ROUTER_PASSWORD)
+        # Parse and validate queue depth
+        interface = interface_config.find(".//interface[name='{}']".format(testdata['interface']))
+        configured_depth = interface.find(".//flexible-queue-interface-scheduler").get('queue-depth')
+        if configured_depth != testdata['queue_depth']:
+            raise Exception("Configured queue depth does not match expected")
         
-        conn = ssh_client.invoke_shell()
-        
-        conn.send("configure terminal\\n")
-        conn.send("policy-map VOIP_POLICY\\n")
-        conn.send("class VOIP\\n")
-        conn.send("set dscp 46\\n")
-        conn.send("exit\\n")
-        
-        conn.send("interface ge-0/0/0\\n")
-        conn.send("service-policy input VOIP_POLICY\\n")
-        conn.send("end\\n")
-        
-        net_connect = netmiko.ConnectHandler(ip=ROUTER_IP, username=ROUTER_USERNAME, password=ROUTER_PASSWORD)
-        output = net_connect.send_command("show policy-options policy-statement VOIP_POLICY")
-        
-        if "dscp 46" in output:
-          print("QoS Marking Test Passed")
-        else:
-          print("QoS Marking Test Failed")
-        
-        ssh_client.close()
+        print("Queue depth validation passed")
       """,
-      "run_command": "python qos_marking_test.py",
-      "expected_result": "QoS Marking Test Passed"
+      "run_command": "python test_mx240_qos_depth.py",
+      "expected_result": "Queue depth validation passed"
+    }
+  },
+
+  {
+    "testname": "Test MX240 interface QoS statistics",
+    "testcase": {
+      "testname": "Test MX240 interface QoS statistics",  
+      "objective": "Validate QoS statistics on MX240 interface",
+      "steps": [
+        "Verify queue stats in show class-of-service interface output",
+        "Values should match expected traffic profile"  
+      ],
+      "testdata": {
+        "interface": "ge-0/0/1",
+        "expected_stats": {
+          "q0_drops": 10,
+          "q1_drops": 50
+        }
+      }
+    },  
+    "testscript": {
+      "testname": "Test MX240 interface QoS statistics",
+      "objective": "Script to validate MX240 interface QoS statistics",
+      "file_name": "test_mx240_qos_stats.py",
+      "init_scripts": [
+        "pip install ncclient",
+        "pip install junos-eznc"
+      ],
+      "script": """
+        import ncclient
+        import junos
+        
+        # Connect to device
+        dev = Device(host='192.168.0.1', user='netconf', password='password')
+        dev.open()
+        
+        # Get interface qos statistics
+        xml_filter = '<interfaces/><schedulers/></interfaces>'
+        interface_data = dev.rpc.get_config(filter_xml=xml_filter)
+        
+        # Parse and validate queue drops  
+        interface = interface_data.find(".//interface[name='{}']".format(testdata['interface']))
+        q0_drops = interface.findtext(".//queue[name='q0']/drops")
+        q1_drops = interface.findtext(".//queue[name='q1']/drops")
+        
+        if q0_drops != testdata['expected_stats']['q0_drops']:
+            raise Exception("Q0 drops does not match expected")
+            
+        if q1_drops != testdata['expected_stats']['q1_drops']:
+            raise Exception("Q1 drops does not match expected")
+        
+        print("Interface QoS statistics validation passed")
+      """,
+      "run_command": "python test_mx240_qos_stats.py",
+      "expected_result": "Interface QoS statistics validation passed"
     }
   }
 ]
 ###ENDLIST###
+```
