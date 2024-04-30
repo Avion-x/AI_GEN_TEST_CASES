@@ -1,63 +1,102 @@
- ###STARTLIST###
+ Here is the Python list with the JSON objects for Juniper MX240 QoS Marking test cases and scripts:
+
+```python
+###STARTLIST###
 [
   {
-    "testname": "QoS Marking Test", 
+    "testname": "Test DiffServ Marking", 
     "testcase": {
-      "testname": "QoS Marking Test",
-      "objective": "Validate that QoS marking is working as expected on MX240 device", 
+      "testname": "Test DiffServ Marking",
+      "objective": "Verify DiffServ marking by coloring packets",
       "steps": [
-        "Configure QoS policy to mark VoIP traffic to DSCP 46",
-        "Generate VoIP traffic", 
-        "Verify VoIP traffic is marked with DSCP 46"
+        "Configure class-of-service with remarking policy", 
+        "Send traffic matching CoS criteria",
+        "Verify marked DSCP values on egress interface"  
       ],
       "testdata": {
-        "qos_policy": "policy-options {\n    policy-statement voip-policy {\n        term 1 {\n            from {\n                protocol udp;\n                destination-port 5060;\n            }\n            then {\n                dscp 46;\n            }\n        }\n    }\n}",
-        "voip_traffic": {
-          "src_ip": "192.168.1.5", 
-          "dst_ip": "192.168.1.20",
-          "l4_proto": "udp",
-          "src_port": "3000",
-          "dst_port": "5060"
-        }
+        "cos_policy": "<cos-policydefinition>",
+        "class_definitions": "<classdefinitions>",
+        "traffic_profile": "<trafficprofile>"
       }
     },
     "testscript": {
-      "testname": "QoS Marking Python Script",
-      "objective": "Automate QoS Marking validation using Python",
-      "file_name": "qos_marking_test.py",
+      "testname": "test_diffserv_marking.py",
+      "objective": "Automated test for DiffServ marking",
+      "file_name": "test_diffserv_marking.py", 
       "init_scripts": [
         "pip install paramiko",
         "pip install netmiko"
       ],
       "script": """
-import paramiko
-import netmiko
+        import test_lib
+        import json
 
-# Initialize SSH connection to DUT
-ssh_conn = paramiko.SSHClient()
-ssh_conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh_conn.connect('192.168.1.1', username='pyuser', password='pypass')
+        config = test_lib.load_testconfig("diffserv_marking_config.json")
+        test_lib.apply_device_config(device, config)
 
-# Initialize Netmiko connection 
-net_conn = netmiko.ConnectHandler(ip='192.168.1.1', username='pyuser', password='pypass')
+        traffic = test_lib.start_traffic(device, config["traffic_profile"])
 
-# Configure QoS policy
-net_conn.send_config_set(qos_policy) 
+        results = test_lib.get_egress_dscp_values(device, config["egress_intf"])
 
-# Generate test VoIP traffic
-generate_voip_traffic(voip_traffic)  
+        test_lib.stop_traffic(traffic)
 
-# Verify QoS Marking
-output = net_conn.send_command('show policy')
-if 'dscp 46' in output:
-  print('QoS Marking Verified')
-else:
-  print('QoS Marking Failed')
+        test_lib.validate_results(results, config["expected_dscp"])
+      """,
+      "run_command": "python test_diffserv_marking.py",
+      "expected_result": "DiffServ marking validated successfully"
+    }
+  },
 
-""",
-      "run_command": "python qos_marking_test.py",
-      "expected_result": "QoS Marking Verified"
+  {
+    "testname": "Test QoS Scheduling",
+    "testcase": {
+      "testname": "Test QoS Scheduling",
+      "objective": "Validate QoS scheduler conformance",
+      "steps": [
+        "Configure QoS scheduler policy and classes",
+        "Send multiple traffic flows matching class criteria",
+        "Measure delay, jitter, loss per traffic flow"
+      ],
+      "testdata": {
+        "scheduler_policy": "<schedulerpolicy>",
+        "class_definitions": "<classdefinitions>",
+        "traffic_profiles": ["<profile1>", "<profile2>"]
+      }
+    },
+    "testscript": {
+      "testname": "test_qos_scheduling.py",
+      "objective": "Automated validation of QoS scheduler",
+      "file_name": "test_qos_scheduling.py",
+      "init_scripts": [ 
+        "pip install trafficgen",
+        "pip install pandas"
+      ],
+      "script": """
+        import test_lib
+        import trafficgen
+        import pandas as pd
+
+        config = test_lib.load_testconfig("qos_scheduler_config.json")
+        test_lib.apply_device_config(device, config)
+
+        traffic_profiles = config["traffic_profiles"]
+        traffic_instances = []
+
+        for profile in traffic_profiles:
+          traffic = testgen.start_traffic(device, profile)
+          traffic_instances.append(traffic)
+
+        perf_data = test_lib.collect_perf_data(device, config["collection_interval"])
+
+        test_lib.stop_traffic(traffic_instances)
+
+        perf_df = pd.DataFrame(perf_data)
+        test_lib.validate_perf_metrics(perf_df, config["perf_thresholds"])
+      """,
+      "run_command": "python test_qos_scheduling.py",
+      "expected_result": "QoS scheduler conformance validated"
     }
   }
 ]
 ###ENDLIST###
+```
