@@ -1,81 +1,63 @@
- Here is the Python list with test cases and test scripts for Juniper MX240 QoS marking tests:
-
-```python
-###STARTLIST###
+ ###STARTLIST###
 [
-{
-  "testname": "DSCP Marking Test",
-  "testcase": {
-    "testname": "DSCP Marking Test", 
-    "objective": "Verify DSCP marking of traffic",
-    "steps": [
-      "Configure DSCP marking policy",
-      "Generate test traffic",
-      "Verify DSCP values of packets using packet capture" 
-    ]
-  },
-  
-  "testscript": {
-    "testname": "DSCP Marking Test",
-    "objective": "Automate DSCP marking test",  
-    "file_name": "dscp_marking_test.py",
-    "init_scripts":[
-      "pip install paramiko",
-      "pip install scp"
-    ],
-    "script": """
-      import paramiko
-      import scp
-      
-      ssh = paramiko.SSHClient()
-      ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-      ssh.connect('192.168.0.1', username='testuser', password='testpass')
-      
-      scp.SCPClient(ssh.get_transport()).put('dscp_test.py', '/tmp/')
-      
-      stdin, stdout, stderr = ssh.exec_command('python /tmp/dscp_test.py')
-      print(stdout.read().decode('utf-8'))
-      
-      ssh.close()
-    """,
-    "run_command": "python dscp_marking_test.py", 
-    "expected_result": "DSCP marking verified successfully"
-  }
-},
+  {
+    "testname": "QoS Marking Test", 
+    "testcase": {
+      "testname": "QoS Marking Test",
+      "objective": "Validate that QoS marking is working as expected on MX240 device", 
+      "steps": [
+        "Configure QoS policy to mark VoIP traffic to DSCP 46",
+        "Generate VoIP traffic", 
+        "Verify VoIP traffic is marked with DSCP 46"
+      ],
+      "testdata": {
+        "qos_policy": "policy-options {\n    policy-statement voip-policy {\n        term 1 {\n            from {\n                protocol udp;\n                destination-port 5060;\n            }\n            then {\n                dscp 46;\n            }\n        }\n    }\n}",
+        "voip_traffic": {
+          "src_ip": "192.168.1.5", 
+          "dst_ip": "192.168.1.20",
+          "l4_proto": "udp",
+          "src_port": "3000",
+          "dst_port": "5060"
+        }
+      }
+    },
+    "testscript": {
+      "testname": "QoS Marking Python Script",
+      "objective": "Automate QoS Marking validation using Python",
+      "file_name": "qos_marking_test.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install netmiko"
+      ],
+      "script": """
+import paramiko
+import netmiko
 
-{
-  "testname": "Policer Testing",
-  "testcase": {
-    "testname": "Policer Testing",
-    "objective": "Verify policer enforcement",
-    "steps": [
-      "Configure policer policy",
-      "Generate traffic exceeding policer limit",
-      "Verify policer discards excess traffic"
-    ]
-  },
+# Initialize SSH connection to DUT
+ssh_conn = paramiko.SSHClient()
+ssh_conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh_conn.connect('192.168.1.1', username='pyuser', password='pypass')
 
-  "testscript": {
-    "testname": "Policer Testing",
-    "objective": "Automate policer test",
-    "file_name": "policer_test.py",
-    "init_scripts":[
-      "pip install scapy"
-    ],
-    "script": """
-      from scapy.all import *
-      
-      # configure policer
-      
-      # send traffic
-      
-      # verify drops
-      
-    """,
-    "run_command": "python policer_test.py",
-    "expected_result": "Policer dropping excess traffic" 
+# Initialize Netmiko connection 
+net_conn = netmiko.ConnectHandler(ip='192.168.1.1', username='pyuser', password='pypass')
+
+# Configure QoS policy
+net_conn.send_config_set(qos_policy) 
+
+# Generate test VoIP traffic
+generate_voip_traffic(voip_traffic)  
+
+# Verify QoS Marking
+output = net_conn.send_command('show policy')
+if 'dscp 46' in output:
+  print('QoS Marking Verified')
+else:
+  print('QoS Marking Failed')
+
+""",
+      "run_command": "python qos_marking_test.py",
+      "expected_result": "QoS Marking Verified"
+    }
   }
-}
 ]
 ###ENDLIST###
-```
