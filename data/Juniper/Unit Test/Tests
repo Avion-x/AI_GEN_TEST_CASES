@@ -1,56 +1,107 @@
- Here is a Python list with the JSON objects for test cases and scripts for QoS monitoring tests on Juniper MX240 devices using Python:
-
-```python
-###STARTLIST###
+ ###STARTLIST###
 [
-{
-  "testname": "QoS monitoring", 
-  "testcase": {
-    "testname": "Verify QoS queues",
-    "objective": "Validate QoS queues are configured properly",
-    "steps": ["Show QoS queues", "Verify queue names and bandwidth"]
+  {
+    "testname": "Class-Based Traffic Shaping Test", 
+    "testcase": {
+      "testname": "Class-Based Traffic Shaping Test",
+      "objective": "Verify class-based traffic shaping limits bandwidth usage by certain traffic classes",
+      "steps": [
+        "1. Configure class-based traffic shaping policy to limit HTTP traffic to 1Mbps", 
+        "2. Generate HTTP traffic at over 1Mbps rate",
+        "3. Verify HTTP traffic rate is capped at 1Mbps"
+      ]
+    },
+    "testscript": {
+      "testname": "Class-Based Traffic Shaping Test",
+      "objective": "Automate test case steps to verify class-based traffic shaping",
+      "file_name": "traffic_shaping_test.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install scp"
+      ],
+      "script": """
+        import paramiko
+        import time
+        
+        HOST = '192.168.1.1'
+        USERNAME = 'admin'
+        PASSWORD = 'juniper123'
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(HOST, username=USERNAME, password=PASSWORD)
+        
+        # Configure class-based traffic shaping policy
+        ssh.exec_command('set class-of-service traffic-shaping HTTP-CLASS 1m')
+        
+        # Generate HTTP traffic
+        ssh.exec_command('start_traffic_generator --http 10Mbps')
+        
+        time.sleep(60)
+        
+        # Verify HTTP traffic rate 
+        stdin, stdout, stderr = ssh.exec_command('show traffic-shaping HTTP-CLASS')
+        output = stdout.read().decode() 
+        http_rate = re.search('Current rate: (.+)', output).group(1)
+        assert http_rate == '1Mbps'
+      """,
+      "run_command": "python traffic_shaping_test.py",
+      "expected_result": "HTTP traffic rate capped at 1Mbps"
+    }
   },
-  "testscript": {
-    "testname": "QoS monitoring",
-    "objective": "Monitor QoS queues", 
-    "file_name": "qos_monitor.py",
-    "init_scripts": ["pip install paramiko"],
-    "script": """
-import paramiko
 
-ssh = paramiko.SSHClient()
-ssh.connect('192.168.1.1', username='admin', password='password')
-
-stdin, stdout, stderr = ssh.exec_command('show interfaces queue')
-print(stdout.read().decode())
-""",
-    "run_command": "python qos_monitor.py",
-    "expected_result": "Valid output from 'show interfaces queue' command"
+  {
+    "testname": "Hierarchical Class-Based Traffic Shaping Test",
+    "testcase": {
+      "testname": "Hierarchical Class-Based Traffic Shaping Test ",
+      "objective": "Verify hierarchical class-based traffic shaping limits bandwidth usage by nested traffic classes",
+      "steps": [
+        "1. Configure parent traffic class limited to 2Mbps",
+        "2. Configure child HTTP traffic class limited to 1Mbps under parent class",
+        "3. Generate HTTP traffic at over 1Mbps rate",
+        "4. Verify HTTP traffic rate is capped at 1Mbps" 
+      ]
+    },
+    "testscript": {
+      "testname": "Hierarchical Class-Based Traffic Shaping Test",
+      "objective": "Automate test case steps to verify hierarchical class-based traffic shaping", 
+      "file_name": "hierarchical_traffic_shaping_test.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install scp"
+      ],
+      "script": """
+        import paramiko
+        import time
+        
+        HOST = '192.168.1.1'
+        USERNAME = 'admin'
+        PASSWORD = 'juniper123'
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(HOST, username=USERNAME, password=PASSWORD)
+        
+        # Configure parent traffic class
+        ssh.exec_command('set class-of-service traffic-shaping PARENT-CLASS 2m')
+        
+        # Configure child HTTP traffic class
+        ssh.exec_command('set class-of-service traffic-shaping PARENT-CLASS/HTTP-CLASS 1m')
+        
+        # Generate HTTP traffic
+        ssh.exec_command('start_traffic_generator --http 10Mbps')
+        
+        time.sleep(60)
+        
+        # Verify HTTP traffic rate
+        stdin, stdout, stderr = ssh.exec_command('show traffic-shaping PARENT-CLASS/HTTP-CLASS')
+        output = stdout.read().decode()
+        http_rate = re.search('Current rate: (.+)', output).group(1)
+        assert http_rate == '1Mbps'
+      """,
+      "run_command": "python hierarchical_traffic_shaping_test.py",
+      "expected_result": "HTTP traffic rate capped at 1Mbps"
+    }
   }
-},
-{
-  "testname": "Bandwidth monitoring",
-  "testcase": {
-    "testname": "Verify interface bandwidth",
-    "objective": "Check interface bandwidth usage",
-    "steps": ["Show interface statistics", "Verify bandwidth usage"]    
-  },
-  "testscript": {
-    "testname": "Bandwidth monitoring",
-    "objective": "Monitor interface bandwidth usage",
-    "file_name": "bandwidth_monitor.py",
-    "init_scripts": ["pip install ncclient"], 
-    "script": """  
-from ncclient import manager
-
-m = manager(host='192.168.1.1', port=22, username='admin', password='password')
-
-print(m.get_config('interfaces'))
-""",
-    "run_command": "python bandwidth_monitor.py", 
-    "expected_result": "Valid XML output from 'get_config' RPC"
-  }
-}
 ]
 ###ENDLIST###
-```
