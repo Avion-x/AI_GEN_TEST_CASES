@@ -1,109 +1,56 @@
- Here is the Python list with separate JSON objects for each testcase and testscript for Juniper MX240 QoS monitoring test cases:
+ Here is a Python list with the JSON objects for test cases and scripts for QoS monitoring tests on Juniper MX240 devices using Python:
 
 ```python
 ###STARTLIST###
 [
-  {
-    "testname": "Test MX240 QoS queue depth", 
-    "testcase": {
-      "testname": "Test MX240 QoS queue depth",
-      "objective": "Validate queue depth values in MX240 QoS",
-      "steps": [
-        "Verify queue depth values in show class-of-service interface output", 
-        "Values should match expected configured queue depth"
-      ],
-      "testdata": {
-        "interface": "ge-0/0/0",
-        "queue_depth": 1000
-      }
-    },
-    "testscript": {
-      "testname": "Test MX240 QoS queue depth",
-      "objective": "Script to validate MX240 QoS queue depth",
-      "file_name": "test_mx240_qos_depth.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install junos-eznc"
-      ],
-      "script": """
-        import ncclient
-        import junos
-
-        # Connect to device
-        dev = Device(host='192.168.0.1', user='netconf', password='password')
-        dev.open()
-        
-        # Get QoS interface data
-        xml_filter = '<configuration><interfaces/></configuration>'
-        interface_config = dev.rpc.get_config(filter_xml=xml_filter)
-        
-        # Parse and validate queue depth
-        interface = interface_config.find(".//interface[name='{}']".format(testdata['interface']))
-        configured_depth = interface.find(".//flexible-queue-interface-scheduler").get('queue-depth')
-        if configured_depth != testdata['queue_depth']:
-            raise Exception("Configured queue depth does not match expected")
-        
-        print("Queue depth validation passed")
-      """,
-      "run_command": "python test_mx240_qos_depth.py",
-      "expected_result": "Queue depth validation passed"
-    }
+{
+  "testname": "QoS monitoring", 
+  "testcase": {
+    "testname": "Verify QoS queues",
+    "objective": "Validate QoS queues are configured properly",
+    "steps": ["Show QoS queues", "Verify queue names and bandwidth"]
   },
+  "testscript": {
+    "testname": "QoS monitoring",
+    "objective": "Monitor QoS queues", 
+    "file_name": "qos_monitor.py",
+    "init_scripts": ["pip install paramiko"],
+    "script": """
+import paramiko
 
-  {
-    "testname": "Test MX240 interface QoS statistics",
-    "testcase": {
-      "testname": "Test MX240 interface QoS statistics",  
-      "objective": "Validate QoS statistics on MX240 interface",
-      "steps": [
-        "Verify queue stats in show class-of-service interface output",
-        "Values should match expected traffic profile"  
-      ],
-      "testdata": {
-        "interface": "ge-0/0/1",
-        "expected_stats": {
-          "q0_drops": 10,
-          "q1_drops": 50
-        }
-      }
-    },  
-    "testscript": {
-      "testname": "Test MX240 interface QoS statistics",
-      "objective": "Script to validate MX240 interface QoS statistics",
-      "file_name": "test_mx240_qos_stats.py",
-      "init_scripts": [
-        "pip install ncclient",
-        "pip install junos-eznc"
-      ],
-      "script": """
-        import ncclient
-        import junos
-        
-        # Connect to device
-        dev = Device(host='192.168.0.1', user='netconf', password='password')
-        dev.open()
-        
-        # Get interface qos statistics
-        xml_filter = '<interfaces/><schedulers/></interfaces>'
-        interface_data = dev.rpc.get_config(filter_xml=xml_filter)
-        
-        # Parse and validate queue drops  
-        interface = interface_data.find(".//interface[name='{}']".format(testdata['interface']))
-        q0_drops = interface.findtext(".//queue[name='q0']/drops")
-        q1_drops = interface.findtext(".//queue[name='q1']/drops")
-        
-        if q0_drops != testdata['expected_stats']['q0_drops']:
-            raise Exception("Q0 drops does not match expected")
-            
-        if q1_drops != testdata['expected_stats']['q1_drops']:
-            raise Exception("Q1 drops does not match expected")
-        
-        print("Interface QoS statistics validation passed")
-      """,
-      "run_command": "python test_mx240_qos_stats.py",
-      "expected_result": "Interface QoS statistics validation passed"
-    }
+ssh = paramiko.SSHClient()
+ssh.connect('192.168.1.1', username='admin', password='password')
+
+stdin, stdout, stderr = ssh.exec_command('show interfaces queue')
+print(stdout.read().decode())
+""",
+    "run_command": "python qos_monitor.py",
+    "expected_result": "Valid output from 'show interfaces queue' command"
   }
+},
+{
+  "testname": "Bandwidth monitoring",
+  "testcase": {
+    "testname": "Verify interface bandwidth",
+    "objective": "Check interface bandwidth usage",
+    "steps": ["Show interface statistics", "Verify bandwidth usage"]    
+  },
+  "testscript": {
+    "testname": "Bandwidth monitoring",
+    "objective": "Monitor interface bandwidth usage",
+    "file_name": "bandwidth_monitor.py",
+    "init_scripts": ["pip install ncclient"], 
+    "script": """  
+from ncclient import manager
+
+m = manager(host='192.168.1.1', port=22, username='admin', password='password')
+
+print(m.get_config('interfaces'))
+""",
+    "run_command": "python bandwidth_monitor.py", 
+    "expected_result": "Valid XML output from 'get_config' RPC"
+  }
+}
 ]
 ###ENDLIST###
 ```
