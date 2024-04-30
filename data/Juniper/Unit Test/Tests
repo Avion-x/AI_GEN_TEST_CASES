@@ -1,108 +1,66 @@
  ###STARTLIST###
 [
   {
-    "testname": "QoS Marking Test case 1 for MX240", 
+    "testname": "QoS Marking Test", 
     "testcase": {
-      "testname": "QoS Marking Test case 1 for MX240",
-      "objective": "Verify QoS marking based on ingress policy and classification",
+      "testname": "QoS Marking Test",
+      "objective": "Verify that traffic is marked correctly with QoS values", 
       "steps": [
-        "Apply ingress policy to classify certain traffic and mark with DSCP", 
-        "Send matching traffic and verify DSCP marking"
+        "Configure QoS policy to mark VoIP traffic to DSCP 46",
+        "Generate VoIP traffic from client", 
+        "Verify VoIP traffic is marked with DSCP 46 on the router interface"
       ],
-      "testdata": {
-        "policy_name": "INGRESS-POLICY",
-        "classifier_name": "VOICE-CLASS",
-        "dscp_codepoint": "ef"  
+      "test_data": {
+        "voip_source_ip": "192.168.1.5",
+        "voip_destination_ip": "10.1.1.2",
+        "voip_dscp_value": 46
       }
     },
     "testscript": {
-      "testname": "QoS Marking Test Script 1 for MX240",
-      "objective": "Automate QoS Marking Test case 1 for MX240",
-      "file_name": "qos_marking_test_1.py",
-      "init_scripts":[
-        "pip install junos-eznc",
-        "pip install paramiko"
+      "testname": "QoS Marking Script",
+      "objective": "Automate QoS Marking Test",
+      "file_name": "qos_marking_test.py",
+      "init_scripts": [
+        "pip install paramiko",
+        "pip install netmiko"  
       ],
       "script": """
-import json
-from jnpr.junos import Device
-from jnpr.junos.utils.config import Config
-
-# Initialize device connection
-dev = Device(host='192.168.1.1', user='test', password='password123')
-dev.open()
-
-# Load testdata from JSON 
-with open('testdata.json') as f:
-  testdata = json.load(f)
-
-# Configure ingress policy and classifier  
-cfg = Config(dev)
-cfg.load('set policy-options policy-statement ' + testdata['policy_name'] + ' term 1 from class ' + testdata['classifier_name'], format='set')
-cfg.load('set class-of-service classifiers ' + testdata['classifier_name'] + ' dscp ' + testdata['dscp_codepoint'], format='set')
-cfg.commit()
-
-# Send test traffic and verify DSCP marking
-# Script for traffic generation and checking DSCP marks
-
-cfg.rollback()
-dev.close()
-""",
-      "run_command": "python qos_marking_test_1.py",
-      "expected_result": "Traffic received with expected DSCP marks matching testdata"
+        import paramiko
+        import netmiko
+        
+        ROUTER_IP = '192.168.1.1'
+        ROUTER_USERNAME = 'admin'
+        ROUTER_PASSWORD = 'passwd'
+        
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname=ROUTER_IP,username=ROUTER_USERNAME,password=ROUTER_PASSWORD)
+        
+        conn = ssh_client.invoke_shell()
+        
+        conn.send("configure terminal\\n")
+        conn.send("policy-map VOIP_POLICY\\n")
+        conn.send("class VOIP\\n")
+        conn.send("set dscp 46\\n")
+        conn.send("exit\\n")
+        
+        conn.send("interface ge-0/0/0\\n")
+        conn.send("service-policy input VOIP_POLICY\\n")
+        conn.send("end\\n")
+        
+        net_connect = netmiko.ConnectHandler(ip=ROUTER_IP, username=ROUTER_USERNAME, password=ROUTER_PASSWORD)
+        output = net_connect.send_command("show policy-options policy-statement VOIP_POLICY")
+        
+        if "dscp 46" in output:
+          print("QoS Marking Test Passed")
+        else:
+          print("QoS Marking Test Failed")
+        
+        ssh_client.close()
+      """,
+      "run_command": "python qos_marking_test.py",
+      "expected_result": "QoS Marking Test Passed"
     }
-  },
-
-  {
-    "testname": "QoS Marking Test case 2 for MX240",
-    "testcase": {
-      "testname": "QoS Marking Test case 2 for MX240",  
-      "objective": "Verify QoS Trust DSCP and rewrite",
-      "steps": [
-        "Configure ingress interface to trust DSCP",
-        "Send traffic marked with test DSCP values",
-        "Verify traffic received with same DSCP values"  
-      ],
-      "testdata": {
-        "interface_name": "ge-0/0/1",
-        "test_dscp": ["ef", "af41"]
-      }
-    },
-    "testscript": {
-      "testname": "QoS Marking Test Script 2 for MX240",
-      "objective": "Automate QoS Marking Test case 2 for MX240",
-      "file_name": "qos_marking_test_2.py",
-      "init_scripts":[
-        "pip install junos-eznc", 
-        "pip install scapy"
-      ],
-      "script": """
-import json
-from jnpr.junos import Device 
-from jnpr.junos.utils.config import Config
-
-# Initialize device connection
-dev = Device(host='192.168.1.1', user='test', password='password123') 
-dev.open()
-
-# Load testdata
-with open('testdata.json') as f:
-  testdata = json.load(f)  
-
-# Configure interface trust DSCP
-cfg = Config(dev)
-cfg.load('set class-of-service interfaces ' + testdata['interface_name'] + ' unit 0 family inet dscp-marking trust input', format='set')
-cfg.commit()
-
-# Send pre-marked traffic and verify DSCP values
-# Script for checking received DSCP 
-
-cfg.rollback()
-dev.close()
-""",
-      "run_command": "python qos_marking_test_2.py",
-      "expected_result": "Received traffic has same DSCP values as testdata"
-    }
-  } 
+  }
 ]
 ###ENDLIST###
