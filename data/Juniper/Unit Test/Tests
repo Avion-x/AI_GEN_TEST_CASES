@@ -1,115 +1,157 @@
- Here is the Python list with test cases and test scripts for Class-Based Traffic Management Test on EX4300-32F switch:
+ Here is the Python list with test cases and scripts for Class-Based Traffic Management testing on Juniper EX4300-32F switch:
 
 ```python
 ###STARTLIST###
 [
-  {
-    "testname": "Verify CBWFQ class configuration", 
-    "testcase": {
-      "testname": "Verify CBWFQ class configuration",
-      "objective": "Verify that CBWFQ classes can be configured with correct bandwidth percentage",
-      "steps": [
-        "Configure cbwfq class VOICE with 15% bandwidth", 
-        "Configure cbwfq class VIDEO with 30% bandwidth",
-        "Configure cbwfq class CRITICAL_DATA with 45% bandwidth",
-        "Configure cbwfq class BULK_DATA with 5% bandwidth",
-        "Verify class configurations are added correctly"
-      ],
-      "testdata": {
-        "classes": [
-          {
-            "name": "VOICE",
-            "bandwidth_percent": 15
-          },
-          {
-            "name": "VIDEO",
-            "bandwidth_percent": 30  
-          },
-          {
-            "name": "CRITICAL_DATA",
-            "bandwidth_percent": 45
-          },
-          {  
-            "name": "BULK_DATA",
-            "bandwidth_percent": 5
-          }
-        ]
-      }
+    {
+        "testname": "Verify CBT configuration", 
+        "testcase": {
+            "testname": "Verify CBT configuration",
+            "objective": "Validate CBT class configuration",
+            "steps": [
+                "Configure class cbt_class_1", 
+                "Configure forwarding-class fc1 and map it to cbt_class_1",
+                "Verify class cbt_class_1 and forwarding-class fc1 mapping"
+            ],
+            "test_data": {
+                "cbt_class_1": {
+                    "bandwidth_percent": 50,
+                    "bandwidth_guaranteed": True
+                },
+                "fc1": {
+                    "name": "fc1"
+                } 
+            }
+        },
+        "testscript": {
+            "testname": "Verify CBT configuration",
+            "objective": "Validate CBT class configuration", 
+            "file_name": "verify_cbt.py",
+            "init_scripts": [
+                "import re",
+                "import json",
+                "import paramiko",
+                "import unittest",
+                '''
+                def connect_device(host, username, password):
+                    ssh_client = paramiko.SSHClient()
+                    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    ssh_client.connect(hostname=host,username=username, password=password)
+                    return ssh_client
+                
+                def send_command(ssh_client, command):
+                    stdin, stdout, stderr = ssh_client.exec_command(command)
+                    return stdout.read().decode()
+                ''',
+                "device = connect_device('192.168.1.1', 'testuser', 'testpass')"
+            ],
+            "script": '''
+                test_data = # Load test data from testcase
+                
+                class TestCBTConfig(unittest.TestCase):
+                
+                    def test_cbt_class(self):
+                        # Send command to configure CBT class
+                        result = send_command(device, f"set class-of-service traffic-control-profiles cbt_class_1 bandwidth-percent {test_data['cbt_class_1']['bandwidth_percent']} guaranteed-rate {test_data['cbt_class_1']['bandwidth_guaranteed']}")
+                        
+                        # Verify class configured successfully
+                        self.assertRegex(result, 'success') 
+                        
+                    def test_forwarding_class(self):
+                        # Send command to map forwarding class to CBT
+                        result = send_command(device, f"set class-of-service interfaces ge-0/0/0 unit 0 classifiers inet-precedence fc1 forwarding-class {test_data['fc1']['name']}")
+                        
+                        # Verify mapping success
+                        self.assertRegex(result, 'success')
+                        
+                    def test_cbt_mapping(self):
+                        # Send command to verify CBT class mapping
+                        result = send_command(device, f"show class-of-service traffic-control-profile {test_data['cbt_class_1']['name']}")
+                        
+                        # Verify class is mapped to forwarding class
+                        self.assertRegex(result, test_data['fc1']['name'])
+                        
+                if __name__ == '__main__':
+                    unittest.main()
+            ''',
+            "run_command": "python verify_cbt.py",
+            "expected_result": "OK"
+        }
     },
-    "testscript": {
-      "testname": "Verify CBWFQ class configuration",
-      "objective": "Verify that CBWFQ classes can be configured with correct bandwidth percentage", 
-      "file_name": "test_cbwfq_class.py",
-      "init_scripts":[
-        "import json",
-        "import jnpr.junos",
-        "from jnpr.junos import Device"
-      ],
-      "script": """
-        def test_cbwfq_class_config(dev, testdata):
-          classes = testdata['classes']
-          
-          for class_def in classes:
-            dev.cli(f'configure class-of-service cbwfq class {class_def["name"]} bandwidth percent {class_def["bandwidth_percent"]}').response()
-          
-          class_configs = dev.cli('show class-of-service cbwfq').response()
-          
-          if all([class_def['name'] in class_configs and 
-                  str(class_def['bandwidth_percent']) in class_configs for class_def in classes]):
-            print('CBWFQ class configuration successful')
-          else:
-            print('CBWFQ class configuration failed')
-            
-       
-      """,
-      "run_command": "python test_cbwfq_class.py --testdata '${a.content}'",
-      "expected_result": "CBWFQ class configuration successful"
+    {
+        "testname": "Verify CBT bandwidth",
+        "testcase": {
+            "testname": "Verify CBT bandwidth",
+            "objective": "Validate CBT class bandwidth",
+            "steps": [
+                "Configure class cbt_class_1 with 50% bandwidth",
+                "Send traffic matching cbt_class_1",
+                "Verify traffic rate is close to 50% interface bandwidth"
+            ],
+            "test_data": {
+                "cbt_class_1": {
+                    "bandwidth_percent": 50
+                }
+            }
+        },
+        "testscript": {
+            "testname": "Verify CBT bandwidth",
+            "objective": "Validate CBT class bandwidth",
+            "file_name": "verify_cbt_bw.py",
+            "init_scripts": [
+                "import re",
+                "import json",
+                "import paramiko",
+                "import unittest",
+                "from scapy.all import *",
+                '''
+                def connect_device(host, username, password):
+                    # SSH connection code
+                
+                def send_command(ssh_client, command):
+                    # Send command code
+                
+                def start_traffic(interface, rate_percent):
+                    # Start traffic generator
+                    
+                def stop_traffic():
+                    # Stop traffic generator
+                ''',
+                "device = connect_device('192.168.1.1','testuser','testpass')"
+            ],
+            "script": '''
+                test_data = # Load test data
+                
+                class TestCBTBandwidth(unittest.TestCase):
+                
+                    def test_cbt_bandwidth(self):
+                        # Assume CBT class already configured
+                        
+                        # Start traffic generator
+                        start_traffic('ge-0/0/0', test_data['cbt_class_1']['bandwidth_percent'])
+                        
+                        # Sleep for 1 minute
+                        time.sleep(60)
+                        
+                        # Verify interface traffic rate
+                        result = send_command(device, 'show interfaces ge-0/0/0 extensive')
+                        tx_rate = re.search('Tx rate (.*bps)', result).group(1)
+                        intf_speed = re.search('Speed (.*bps)', result).group(1)
+                        actual_rate = int(tx_rate)/int(intf_speed) * 100
+                        
+                        # Verify rate is close to configured percentage
+                        self.assertAlmostEqual(actual_rate, test_data['cbt_class_1']['bandwidth_percent'], delta=5)
+                        
+                        # Stop traffic
+                        stop_traffic()
+                        
+                if __name__ == '__main__':
+                    unittest.main()  
+            ''',
+            "run_command": "python verify_cbt_bw.py", 
+            "expected_result": "OK"
+        }
     }
-  },
-
-  {
-    "testname": "Verify CBWFQ scheduler configuration",
-    "testcase": {
-      "testname": "Verify CBWFQ scheduler configuration",
-      "objective": "Verify that a CBWFQ scheduler is configured on the egress interface",
-      "steps": [
-        "Configure cbwfq scheduler on ge-0/0/10 interface",
-        "Verify cbwfq scheduler is configured on interface"   
-      ],
-      "testdata": {
-        "interface": "ge-0/0/10"
-      }
-    },
-    "testscript": {
-      "testname": "Verify CBWFQ scheduler configuration",
-      "objective": "Verify that a CBWFQ scheduler is configured on the egress interface",
-      "file_name": "test_cbwfq_scheduler.py",
-      "init_scripts":[
-        "import json",
-        "import jnpr.junos",
-        "from jnpr.junos import Device"
-      ],
-      "script": """
-        def test_cbwfq_scheduler(dev, testdata):
-          interface = testdata['interface']
-          
-          dev.cli(f'configure interfaces {interface} schedulers cbwfq').response()
-          
-          scheduler_config = dev.cli(f'show interfaces {interface}').response()
-          
-          if 'cbwfq' in scheduler_config:
-            print(f'CBWFQ scheduler configured successfully on {interface}')
-          else:
-            print(f'Failed to configure CBWFQ scheduler on {interface}')
-          
-      """,
-      "run_command": "python test_cbwfq_scheduler.py --testdata '${a.content}'",
-      "expected_result": "CBWFQ scheduler configured successfully on ge-0/0/10"
-    }
-  }
 ]
 ###ENDLIST###
-
 ```
-
-The test cases and scripts cover verifying CBWFQ class configuration and scheduler configuration on the EX4300-32F switch. The scripts are written in Python using PyEZ to connect to and configure the Juniper device. The testdata is passed as an argument to the test scripts. Please let me know if you would like me to modify or expand the test cases in any way.
