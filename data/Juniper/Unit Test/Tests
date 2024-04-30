@@ -1,99 +1,81 @@
- Here is the Python list with the JSON test cases and test scripts for VPN Bandwidth Management testing on Juniper MX240 device:
+ Here is the Python list with test cases and test scripts for Juniper MX240 QoS marking tests:
 
 ```python
 ###STARTLIST###
 [
-  {
-    "testname": "VPN Bandwidth Limit Test", 
-    "testcase": {
-      "testname": "VPN Bandwidth Limit Test",
-      "objective": "Verify VPN bandwidth limit can be configured and functions as expected",
-      "steps": [
-        "1. Configure VPN bandwidth limit to 500mbps", 
-        "2. Generate traffic over 500mbps",
-        "3. Verify traffic policing works and only 500mbps of traffic is allowed"
-      ]
-    },
-    "testscript": {
-      "testname": "VPN Bandwidth Limit Test",
-      "objective": "Automate VPN bandwidth limit test",
-      "file_name": "vpn_bandwidth_limit_test.py",
-      "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
-      ],
-      "script": """
-        import paramiko
-        import netmiko
-        
-        HOST = '192.168.0.1'
-        USERNAME = 'admin'
-        PASSWORD = 'Juniper!123'
-        
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(HOST, username=USERNAME, password=PASSWORD)
-        
-        connection = ssh.invoke_shell()
-        connection.send("configure\\n")
-        connection.send("set interfaces ge-0/0/0 bandwidth 500m \\n")
-        connection.send("commit and-quit \\n")
-        
-        # Send traffic over 500mbps
-        # Verify only 500mbps traffic passes
-        
-        ssh.close()
-      """,
-      "run_command": "python vpn_bandwidth_limit_test.py",
-      "expected_result": "VPN bandwidth should be limited to 500mbps"
-    }
+{
+  "testname": "DSCP Marking Test",
+  "testcase": {
+    "testname": "DSCP Marking Test", 
+    "objective": "Verify DSCP marking of traffic",
+    "steps": [
+      "Configure DSCP marking policy",
+      "Generate test traffic",
+      "Verify DSCP values of packets using packet capture" 
+    ]
+  },
+  
+  "testscript": {
+    "testname": "DSCP Marking Test",
+    "objective": "Automate DSCP marking test",  
+    "file_name": "dscp_marking_test.py",
+    "init_scripts":[
+      "pip install paramiko",
+      "pip install scp"
+    ],
+    "script": """
+      import paramiko
+      import scp
+      
+      ssh = paramiko.SSHClient()
+      ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+      ssh.connect('192.168.0.1', username='testuser', password='testpass')
+      
+      scp.SCPClient(ssh.get_transport()).put('dscp_test.py', '/tmp/')
+      
+      stdin, stdout, stderr = ssh.exec_command('python /tmp/dscp_test.py')
+      print(stdout.read().decode('utf-8'))
+      
+      ssh.close()
+    """,
+    "run_command": "python dscp_marking_test.py", 
+    "expected_result": "DSCP marking verified successfully"
+  }
+},
+
+{
+  "testname": "Policer Testing",
+  "testcase": {
+    "testname": "Policer Testing",
+    "objective": "Verify policer enforcement",
+    "steps": [
+      "Configure policer policy",
+      "Generate traffic exceeding policer limit",
+      "Verify policer discards excess traffic"
+    ]
   },
 
-  {
-    "testname": "VPN QoS Bandwidth Test",
-    "testcase": {
-      "testname": "VPN QoS Bandwidth Test",
-      "objective": "Verify VPN QoS bandwidth settings work as configured",
-      "steps": [
-        "1. Configure VPN with QoS bandwidth of 1gbps",
-        "2. Generate traffic over 1gbps", 
-        "3. Verify traffic above 1gbps is dropped"
-      ]
-    },
-    "testscript": {
-      "testname": "VPN QoS Bandwidth Test",
-      "objective": "Automate VPN QoS bandwidth test",
-      "file_name": "vpn_qos_bandwidth_test.py",
-      "init_scripts": [
-        "pip install netmiko",
-        "pip install trafficgen"
-      ],
-      "script": """
-        import netmiko
-        from trafficgen import TrafficGen
-        
-        HOST = '192.168.0.1'
-        USERNAME = 'admin'
-        PASSWORD = 'Juniper!123'
-        
-        connection = netmiko.ConnectHandler(ip=HOST, username=USERNAME, password=PASSWORD)
-        
-        connection.send_config_set([
-            "set class-of-service interfaces ge-0/0/0 unit 0 classifiers inet-precedence vpn bandwidth 1g"
-        ])
-        
-        # Generate 1.5gbps test traffic
-        traffic_gen = TrafficGen()
-        traffic_gen.generate(rate_mbps=1500)
-        
-        # Verify only 1gbps traffic passes
-        results = traffic_gen.results()
-        assert results['tx_rate_mbps'] == 1000
-      """,
-      "run_command": "python vpn_qos_bandwidth_test.py",
-      "expected_result": "Only 1gbps traffic should pass"
-    }
+  "testscript": {
+    "testname": "Policer Testing",
+    "objective": "Automate policer test",
+    "file_name": "policer_test.py",
+    "init_scripts":[
+      "pip install scapy"
+    ],
+    "script": """
+      from scapy.all import *
+      
+      # configure policer
+      
+      # send traffic
+      
+      # verify drops
+      
+    """,
+    "run_command": "python policer_test.py",
+    "expected_result": "Policer dropping excess traffic" 
   }
+}
 ]
 ###ENDLIST###
 ```
