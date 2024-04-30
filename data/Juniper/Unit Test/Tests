@@ -1,65 +1,55 @@
- Here is the Python list with the JSON test cases and scripts as requested:
-
-```python
-###STARTLIST###
+ ###STARTLIST###
 [
   {
-    "testname": "VPN Policy Enforcement Test", 
+    "testname": "Route Leaking Verification Test", 
     "testcase": {
-      "testname": "VPN Policy Enforcement Test",
-      "objective": "Validate that VPN policies are properly enforced on the EX4300-32F",
+      "testname": "Route Leaking Verification Test",
+      "objective": "Verify route leaking between Routing Instances on Juniper EX4300",
       "steps": [
-        "Configure VPN policy to allow VPN traffic from Site A", 
-        "Verify VPN traffic from Site A passes",
-        "Configure VPN policy to deny VPN traffic from Site B",
-        "Verify VPN traffic from Site B is blocked"
-      ]
+        "Configure two Routing Instances on the Juniper device",
+        "Redistribute routes between the Routing Instances", 
+        "Verify routes from Routing Instance A show up in Routing Instance B routing table"
+      ],
+      "test_data": {
+        "routing_instance_a": "cust1",
+        "routing_instance_b": "cust2",
+        "redistribution_policy": "redist_cust1_to_cust2" 
+      }
     },
     "testscript": {
-      "testname": "VPN Policy Enforcement Test",
-      "objective": "Automated test script to validate VPN policy enforcement",
-      "file_name": "vpn_policy_test.py",
+      "testname": "Route Leaking Verification Test",
+      "objective": "Automate Route Leaking Verification Test",
+      "file_name": "route_leak_verification.py",
       "init_scripts": [
-        "pip install paramiko",
-        "pip install netmiko"
+        "pip install junos-eznc",
+        "pip install jsnapy"
       ],
       "script": """
-        import paramiko
-        import netmiko
+        import logging
+        from junos import Junos_Context
+        from jsnapy import SnapAdmin
         
-        HOST = '10.1.1.1'
-        USERNAME = 'admin'
-        PASSWORD = 'Juniper123'
+        # Initialize device connection
+        dev = Device(host='10.10.10.1', user='netconf', password='pwd123')
+        dev.open()
         
-        def test_vpn_policy():
-          net_connect = netmiko.ConnectHandler(ip=HOST, username=USERNAME, password=PASSWORD)
+        # Configure Routing Instances
+        dev.cu.load(template_path="cust1_routing_instance.conf")
+        dev.cu.load(template_path="cust2_routing_instance.conf")
+        dev.cu.commit()
         
-          # Configure VPN policy to allow Site A
-          net_connect.send_config_set(['vpn policy allow-site-a']) 
+        # Configure route redistribution policy
+        dev.cu.load(template_path="redist_cust1_to_cust2.conf")
+        dev.cu.commit()
         
-          # Verify Site A VPN traffic passes
-          output = net_connect.send_command('show vpn traffic')
-          if 'Site A VPN Traffic: Allowed' in output:
-            print('Site A VPN traffic test passed')
-          else:
-            raise Exception('Site A VPN traffic test failed')
-          
-          # Configure VPN policy to deny Site B  
-          net_connect.send_config_set(['vpn policy deny-site-b'])
-          
-          # Verify Site B VPN traffic blocked
-          output = net_connect.send_command('show vpn traffic')
-          if 'Site B VPN Traffic: Blocked' in output:
-            print('Site B VPN traffic test passed')
-          else:
-            raise Exception('Site B VPN traffic test failed')
-            
-        test_vpn_policy()
-      """,
-      "run_command": "python vpn_policy_test.py",
-      "expected_result": "Prints 'Site A VPN traffic test passed' and 'Site B VPN traffic test passed' if policies enforced correctly"
+        # Verify leaked routes
+        test = SnapAdmin()
+        test.snap(dev, "verify_route_leak")
+        test.run_test(dev, "verify_route_leak")
+        """,
+      "run_command": "python route_leak_verification.py",
+      "expected_result": "No failures in test verification"
     }
   }
 ]
 ###ENDLIST###
-```
