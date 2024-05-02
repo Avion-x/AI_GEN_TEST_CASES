@@ -1,224 +1,197 @@
- Here are the QoS test cases and scripts for MX480 in Python list format:
+ ###STARTLIST###
 
-```python
-###STARTLIST###
 [
-{
-  "testname": "QoS Policy Configuration Test",
-  "testcase": {
-    "testname": "QoS Policy Configuration Test", 
-    "objective": "Validate QoS policy configuration",
-    "steps": [
-      "Configure QoS policy",
-      "Verify policy shows in configuration",
-      "Validate bandwidth settings"
-    ],
-    "testdata": {
-      "policy_name": "TEST-POLICY",
-      "bandwidth_settings": {
-        "class1": 1000000,
-        "class2": 500000
+  {
+    "testname": "Port Channel Creation Test",
+    "testcase": {
+      "testname": "Port Channel Creation Test", 
+      "objective": "Verify Port Channel can be created and configured correctly",
+      "steps": [
+        "Configure Port Channel interface", 
+        "Verify Port Channel interface is up/up",
+        "Verify Port Channel configuration"
+      ],
+      "testdata": {
+        "interface_name": "ae0",
+        "member_interfaces": ["ge-0/0/1", "ge-0/0/2"] 
       }
+    },
+    "testscript": {
+      "testname": "Port Channel Creation Test",
+      "objective": "Python script to test Port Channel creation",
+      "file_name": "test_po_creation.py",
+      "init_scripts": "pip install netmiko",
+      "script": """
+      import netmiko
+      
+      def test_po_creation(interface_name, member_interfaces):
+        
+        device = {
+          'device_type': 'juniper',
+          'host': '192.168.0.1',
+          'username': 'admin',
+          'password': 'juniper123' 
+        }
+        
+        net_connect = netmiko.ConnectHandler(**device)
+        
+        config_commands = [
+          f'interfaces {interface_name} unit 0',
+          'family ethernet-switching',
+          f'members {member_interfaces}'
+        ]
+        
+        net_connect.send_config_set(config_commands)
+      
+        print(net_connect.send_command("show interfaces terse"))
+        
+        net_connect.disconnect()
+        
+      test_po_creation(**testdata)
+      """,
+      "run_command": "python test_po_creation.py",
+      "expected_result": "Port Channel interface ae0 status should be up/up"  
     }
   },
 
-  "testscript": {
-    "testname": "QoS Policy Configuration Test",
-    "objective": "Validate QoS policy configuration",  
-    "filename": "test_qos_policy_config.py",
-    "init_scripts": [
-      "pip install pyez",
-      "from jnpr.junos import Device"
-    ],
-    "script": """
-      dev = Device(host='1.1.1.1', user='testuser', password='password123')
-      dev.open()
-      
-      # Apply QoS policy configuration
-      dev.config('set policy-options policy-statement TEST-POLICY term T1 then bandwidth class class1 1000000')
-      dev.config('set policy-options policy-statement TEST-POLICY term T2 then bandwidth class class2 500000')
-      
-      # Verify policy
-      assert dev.cli('show configuration policy-options | match TEST-POLICY')
-      
-      # Validate bandwidth settings
-      bw_settings = dev.rpc.get_qos_config()
-      assert bw_settings['class1'] == 1000000
-      assert bw_settings['class2'] == 500000
-
-      dev.close()
-    """,
-    "run_command": "python test_qos_policy_config.py",
-    "expected_result": "All assertions passed, QoS policy configured and validated successfully."
-  }
-},
-
-{
-  "testname": "Bandwidth Limit Test",
-  "testcase": {
-    "testname": "Bandwidth Limit Test",
-    "objective": "Validate bandwidth limiting functionality",
-    "steps": [
-      "Configure bandwidth limit on interface", 
-      "Generate traffic load",
-      "Verify interface limited to configured bandwidth"
-    ],
-    "testdata": {
-      "interface": "ge-0/0/1",
-      "bandwidth_limit": "5m" 
-    }
-  },
-  
-  "testscript": {
-    "testname": "Bandwidth Limit Test",
-    "objective": "Validate bandwidth limiting functionality",
-    "filename": "test_bw_limit.py",  
-    "init_scripts": [
-      "pip install pyez",
-      "from jnpr.junos import Device", 
-      "from jnpr.junos.utils.start_shell import StartShell" 
-    ],
-    "script": """
-      dev = Device('1.1.1.1', 'testuser', 'password123')
-      dev.open()
-      
-      dev.cli('set interfaces ge-0/0/1 schedulers bandwidth 5m')
-      
-      shell = StartShell(dev)
-      shell.open()
-      shell.send('traffic_generator --rate 10mbps --interface ge-0/0/1 &')
-
-      # Verify interface limited to 5mbps
-      traffic = dev.rpc.get_interface_information(interface_name='ge-0/0/1')
-      assert traffic.rx_rate < 5000000
-
-      shell.close()
-      dev.close()
-    """,
-    "run_command": "python test_bw_limit.py",
-    "expected_result": "Traffic rate limited to 5mbps, bandwidth limit test passed."
-  }
-},
-
-{
-  "testname": "Traffic Classification Test",
-  "testcase": {
-    "testname": "Traffic Classification Test",
-    "objective": "Validate traffic classification based on DSCP values",
-    "steps": [
-      "Configure traffic classification policy",
-      "Generate traffic with specific DSCP values",
-      "Verify traffic classified into correct forwarding classes" 
-    ],
-    "testdata": {
-      "dscp_map": {
-        "ef": 46,
-        "af41": 34,
-        "af42": 36 
-      },
-      "classes": ["class1", "class2"] 
-    }
-  },
-
-  "testscript": {
-    "testname": "Traffic Classification Test", 
-    "objective": "Validate traffic classification based on DSCP values",
-    "filename": "test_traffic_class.py",
-    "init_scripts": [
-      "pip install pyez",
-      "from jnpr.junos import Device",
-      "from jnpr.junos.utils.start_shell import StartShell"
-    ],
-    "script": """
-      dev = Device('1.1.1.1', 'testuser', 'password123')
-      dev.open()
-      
-      # Configure DSCP to class mapping
-      dev.config('set class-of-service dscp-traffic-class ef class class1')
-      dev.config('set class-of-service dscp-traffic-class af41 class class2')
-      
-      shell = StartShell(dev)
-      shell.open()
-      
-      # Generate traffic
-      shell.send('traffic_gen --dscp ef --count 1000 --interface ge-0/0/1 &')
-      shell.send('traffic_gen --dscp af41 --count 1000 --interface ge-0/0/1 &')
-
-      # Verify traffic classified correctly 
-      counters = dev.rpc.get_forwarding_class_counters()
-      assert counters['class1'] > 0
-      assert counters['class2'] > 0
-
-      shell.close()
-      dev.close()
-    """,
-    "run_command": "python test_traffic_class.py", 
-    "expected_result": "Traffic classified correctly based on DSCP values."
-  }
-},
-
-{
-  "testname": "Priority Queuing Test",
-  "testcase": {
-    "testname": "Priority Queuing Test",
-    "objective": "Validate priority queuing functionality",
-    "steps": [
-      "Configure priority queue on interface",
-      "Generate priority and non-priority traffic",
-      "Verify priority traffic gets precedence" 
-    ],
-    "testdata": {
-      "interface": "ge-0/0/1",
-      "priority_traffic": {
-        "dscp": "ef", 
-        "rate": "1mbps"
-      },
-      "non_priority_traffic": {
-        "dscp": "be",
-        "rate": "5mbps" 
+  {
+    "testname": "Port Channel Member Addition Test",
+    "testcase": {
+      "testname": "Port Channel Member Addition Test",
+      "objective": "Verify new member interfaces can be added to Port Channel",
+      "steps": [
+        "Add new member interface to Port Channel",
+        "Verify new member comes up in Port Channel" 
+      ],
+      "testdata": {
+        "interface_name": "ae0",
+        "member_interfaces": ["ge-0/0/3"]
       }
+    },
+    "testscript": {
+      "testname": "Port Channel Member Addition Test",
+      "objective": "Python script to test adding new member to Port Channel",
+      "file_name": "test_po_member_add.py", 
+      "init_scripts": "pip install netmiko",
+      "script": """
+      import netmiko
+      
+      def test_po_member_add(interface_name, member_interfaces):
+      
+        device = {
+          'device_type': 'juniper',
+          'host': '192.168.0.1',
+          'username': 'admin',
+          'password': 'juniper123'
+        }
+        
+        net_connect = netmiko.ConnectHandler(**device)
+        
+        config_commands = [
+          f'interfaces {interface_name} unit 0',
+          'family ethernet-switching',
+          f'members {member_interfaces}' 
+        ]
+        
+        net_connect.send_config_set(config_commands)
+        
+        print(net_connect.send_command("show interfaces terse"))
+        
+        net_connect.disconnect()
+        
+      test_po_member_add(**testdata)
+      """,
+      "run_command": "python test_po_member_add.py",
+      "expected_result": "New member interface ge-0/0/3 should be up in Port Channel ae0"
     }
   },
 
-  "testscript": {
-    "testname": "Priority Queuing Test",
-    "objective": "Validate priority queuing functionality",
-    "filename": "test_priority_queue.py",
-    "init_scripts": [
-      "pip install pyez",
-      "from jnpr.junos import Device",
-      "from jnpr.junos.utils.start_shell import StartShell"  
-    ],
-    "script": """
-      dev = Device('1.1.1.1', 'testuser', 'password123')
-      dev.open()
+  {
+    "testname": "Port Channel Load Balancing Test",
+    "testcase": {
+      "testname": "Port Channel Load Balancing Test",
+      "objective": "Verify traffic is load balanced across Port Channel member links",
+      "steps": [
+        "Generate test traffic destined to Port Channel interface",
+        "Verify traffic is distributed across member links"  
+      ],
+      "testdata": {
+        "interface_name": "ae0",
+        "member_interfaces": ["ge-0/0/1", "ge-0/0/2", "ge-0/0/3"],
+        "traffic_rate": "100 mbps",
+        "duration": "60 seconds"
+      } 
+    },
+    "testscript": {
+      "testname": "Port Channel Load Balancing Test",
+      "objective": "Python script to test Port Channel load balancing",
+      "file_name": "test_po_load_balancing.py",
+      "init_scripts": "pip install trafficgen",
+      "script": """
+      import trafficgen
       
-      dev.cli('set class-of-service interfaces ge-0/0/1 scheduler-map PQ')
-      dev.cli('set class-of-service scheduler-maps PQ forwarding-class expedited scheduler priority')
+      def test_po_load_balancing(interface_name, member_interfaces, traffic_rate, duration):
       
-      shell = StartShell(dev)
-      shell.open()
-      
-      # Generate priority and non-priority traffic
-      shell.send('traffic_gen --dscp ef --rate 1mbps --count 1000 --interface ge-0/0/1 &') 
-      shell.send('traffic_gen --dscp be --rate 5mbps --count 1000 --interface ge-0/0/1 &')
+        traffic_gen = trafficgen.TrafficGen()
+        traffic_gen.generate(dest_interface=interface_name, rate=traffic_rate, time=duration)
+        
+        for interface in member_interfaces:
+          stats = traffic_gen.get_interface_stats(interface)
+          tx_rate = stats['tx_rate']
+          print(f"{interface} tx rate: {tx_rate}")
+          
+      test_po_load_balancing(**testdata)
+      """,
+      "run_command": "python test_po_load_balancing.py", 
+      "expected_result": "Traffic should be distributed across all member links"
+    }
+  },
 
-      # Get interface counters
-      counters = dev.rpc.get_interface_information(interface_name='ge-0/0/1')
+  {
+    "testname": "Port Channel Failover Test",
+    "testcase": {
+      "testname": "Port Channel Failover Test",
+      "objective": "Verify traffic fails over to remaining links when member link goes down",
+      "steps": [
+        "Generate test traffic destined to Port Channel",
+        "Take down one member interface",
+        "Verify traffic redistributes across remaining links"
+      ],
+      "testdata": {
+        "interface_name": "ae0",
+        "member_interfaces": ["ge-0/0/1", "ge-0/0/2", "ge-0/0/3"],
+        "disabled_interface": "ge-0/0/1",
+        "traffic_rate": "100 mbps",
+        "duration": "60 seconds"  
+      }
+    },
+    "testscript": {
+      "testname": "Port Channel Failover Test",
+      "objective": "Python script to test Port Channel failover",
+      "file_name": "test_po_failover.py",
+      "init_scripts": "pip install trafficgen",
+      "script": """
+      import trafficgen
       
-      # Verify priority traffic precedenced  
-      assert counters.tx_bytes > 1000000
-
-      shell.close()
-      dev.close()
-    """,
-    "run_command": "python test_priority_queue.py",
-    "expected_result": "Priority traffic takes precedence over non-priority traffic." 
+      def test_po_failover(interface_name, member_interfaces, disabled_interface, traffic_rate, duration):
+      
+        traffic_gen = trafficgen.TrafficGen()
+        traffic_gen.generate(dest_interface=interface_name, rate=traffic_rate, time=duration)
+        
+        traffic_gen.interface_down(disabled_interface)
+        
+        for interface in member_interfaces:
+          if interface != disabled_interface:
+            stats = traffic_gen.get_interface_stats(interface)
+            tx_rate = stats['tx_rate']
+            print(f"{interface} tx rate: {tx_rate}")
+            
+      test_po_failover(**testdata)
+      """,
+      "run_command": "python test_po_failover.py",
+      "expected_result": "Traffic should redistribute to remaining operational links" 
+    }
   }
-}
-
 ]
-###ENDLIST###
-```
 
-The above generates QoS test cases and scripts for MX480 device covering areas like policy configuration, bandwidth limiting, traffic classification, priority queuing etc. Each test case and script is encapsulated as a JSON object within a Python list. The scripts use PyEZ for interacting with the Junos device. Let me know if you need any clarification or have additional requirements.
+###ENDLIST###
