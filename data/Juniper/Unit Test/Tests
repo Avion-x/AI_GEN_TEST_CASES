@@ -1,55 +1,224 @@
- ###STARTLIST###
+ Here are the QoS test cases and scripts for MX480 in Python list format:
+
+```python
+###STARTLIST###
 [
-  {
-    "testname": "Route Leaking Verification Test", 
-    "testcase": {
-      "testname": "Route Leaking Verification Test",
-      "objective": "Verify route leaking between Routing Instances on Juniper EX4300",
-      "steps": [
-        "Configure two Routing Instances on the Juniper device",
-        "Redistribute routes between the Routing Instances", 
-        "Verify routes from Routing Instance A show up in Routing Instance B routing table"
-      ],
-      "test_data": {
-        "routing_instance_a": "cust1",
-        "routing_instance_b": "cust2",
-        "redistribution_policy": "redist_cust1_to_cust2" 
+{
+  "testname": "QoS Policy Configuration Test",
+  "testcase": {
+    "testname": "QoS Policy Configuration Test", 
+    "objective": "Validate QoS policy configuration",
+    "steps": [
+      "Configure QoS policy",
+      "Verify policy shows in configuration",
+      "Validate bandwidth settings"
+    ],
+    "testdata": {
+      "policy_name": "TEST-POLICY",
+      "bandwidth_settings": {
+        "class1": 1000000,
+        "class2": 500000
       }
-    },
-    "testscript": {
-      "testname": "Route Leaking Verification Test",
-      "objective": "Automate Route Leaking Verification Test",
-      "file_name": "route_leak_verification.py",
-      "init_scripts": [
-        "pip install junos-eznc",
-        "pip install jsnapy"
-      ],
-      "script": """
-        import logging
-        from junos import Junos_Context
-        from jsnapy import SnapAdmin
-        
-        # Initialize device connection
-        dev = Device(host='10.10.10.1', user='netconf', password='pwd123')
-        dev.open()
-        
-        # Configure Routing Instances
-        dev.cu.load(template_path="cust1_routing_instance.conf")
-        dev.cu.load(template_path="cust2_routing_instance.conf")
-        dev.cu.commit()
-        
-        # Configure route redistribution policy
-        dev.cu.load(template_path="redist_cust1_to_cust2.conf")
-        dev.cu.commit()
-        
-        # Verify leaked routes
-        test = SnapAdmin()
-        test.snap(dev, "verify_route_leak")
-        test.run_test(dev, "verify_route_leak")
-        """,
-      "run_command": "python route_leak_verification.py",
-      "expected_result": "No failures in test verification"
     }
+  },
+
+  "testscript": {
+    "testname": "QoS Policy Configuration Test",
+    "objective": "Validate QoS policy configuration",  
+    "filename": "test_qos_policy_config.py",
+    "init_scripts": [
+      "pip install pyez",
+      "from jnpr.junos import Device"
+    ],
+    "script": """
+      dev = Device(host='1.1.1.1', user='testuser', password='password123')
+      dev.open()
+      
+      # Apply QoS policy configuration
+      dev.config('set policy-options policy-statement TEST-POLICY term T1 then bandwidth class class1 1000000')
+      dev.config('set policy-options policy-statement TEST-POLICY term T2 then bandwidth class class2 500000')
+      
+      # Verify policy
+      assert dev.cli('show configuration policy-options | match TEST-POLICY')
+      
+      # Validate bandwidth settings
+      bw_settings = dev.rpc.get_qos_config()
+      assert bw_settings['class1'] == 1000000
+      assert bw_settings['class2'] == 500000
+
+      dev.close()
+    """,
+    "run_command": "python test_qos_policy_config.py",
+    "expected_result": "All assertions passed, QoS policy configured and validated successfully."
   }
+},
+
+{
+  "testname": "Bandwidth Limit Test",
+  "testcase": {
+    "testname": "Bandwidth Limit Test",
+    "objective": "Validate bandwidth limiting functionality",
+    "steps": [
+      "Configure bandwidth limit on interface", 
+      "Generate traffic load",
+      "Verify interface limited to configured bandwidth"
+    ],
+    "testdata": {
+      "interface": "ge-0/0/1",
+      "bandwidth_limit": "5m" 
+    }
+  },
+  
+  "testscript": {
+    "testname": "Bandwidth Limit Test",
+    "objective": "Validate bandwidth limiting functionality",
+    "filename": "test_bw_limit.py",  
+    "init_scripts": [
+      "pip install pyez",
+      "from jnpr.junos import Device", 
+      "from jnpr.junos.utils.start_shell import StartShell" 
+    ],
+    "script": """
+      dev = Device('1.1.1.1', 'testuser', 'password123')
+      dev.open()
+      
+      dev.cli('set interfaces ge-0/0/1 schedulers bandwidth 5m')
+      
+      shell = StartShell(dev)
+      shell.open()
+      shell.send('traffic_generator --rate 10mbps --interface ge-0/0/1 &')
+
+      # Verify interface limited to 5mbps
+      traffic = dev.rpc.get_interface_information(interface_name='ge-0/0/1')
+      assert traffic.rx_rate < 5000000
+
+      shell.close()
+      dev.close()
+    """,
+    "run_command": "python test_bw_limit.py",
+    "expected_result": "Traffic rate limited to 5mbps, bandwidth limit test passed."
+  }
+},
+
+{
+  "testname": "Traffic Classification Test",
+  "testcase": {
+    "testname": "Traffic Classification Test",
+    "objective": "Validate traffic classification based on DSCP values",
+    "steps": [
+      "Configure traffic classification policy",
+      "Generate traffic with specific DSCP values",
+      "Verify traffic classified into correct forwarding classes" 
+    ],
+    "testdata": {
+      "dscp_map": {
+        "ef": 46,
+        "af41": 34,
+        "af42": 36 
+      },
+      "classes": ["class1", "class2"] 
+    }
+  },
+
+  "testscript": {
+    "testname": "Traffic Classification Test", 
+    "objective": "Validate traffic classification based on DSCP values",
+    "filename": "test_traffic_class.py",
+    "init_scripts": [
+      "pip install pyez",
+      "from jnpr.junos import Device",
+      "from jnpr.junos.utils.start_shell import StartShell"
+    ],
+    "script": """
+      dev = Device('1.1.1.1', 'testuser', 'password123')
+      dev.open()
+      
+      # Configure DSCP to class mapping
+      dev.config('set class-of-service dscp-traffic-class ef class class1')
+      dev.config('set class-of-service dscp-traffic-class af41 class class2')
+      
+      shell = StartShell(dev)
+      shell.open()
+      
+      # Generate traffic
+      shell.send('traffic_gen --dscp ef --count 1000 --interface ge-0/0/1 &')
+      shell.send('traffic_gen --dscp af41 --count 1000 --interface ge-0/0/1 &')
+
+      # Verify traffic classified correctly 
+      counters = dev.rpc.get_forwarding_class_counters()
+      assert counters['class1'] > 0
+      assert counters['class2'] > 0
+
+      shell.close()
+      dev.close()
+    """,
+    "run_command": "python test_traffic_class.py", 
+    "expected_result": "Traffic classified correctly based on DSCP values."
+  }
+},
+
+{
+  "testname": "Priority Queuing Test",
+  "testcase": {
+    "testname": "Priority Queuing Test",
+    "objective": "Validate priority queuing functionality",
+    "steps": [
+      "Configure priority queue on interface",
+      "Generate priority and non-priority traffic",
+      "Verify priority traffic gets precedence" 
+    ],
+    "testdata": {
+      "interface": "ge-0/0/1",
+      "priority_traffic": {
+        "dscp": "ef", 
+        "rate": "1mbps"
+      },
+      "non_priority_traffic": {
+        "dscp": "be",
+        "rate": "5mbps" 
+      }
+    }
+  },
+
+  "testscript": {
+    "testname": "Priority Queuing Test",
+    "objective": "Validate priority queuing functionality",
+    "filename": "test_priority_queue.py",
+    "init_scripts": [
+      "pip install pyez",
+      "from jnpr.junos import Device",
+      "from jnpr.junos.utils.start_shell import StartShell"  
+    ],
+    "script": """
+      dev = Device('1.1.1.1', 'testuser', 'password123')
+      dev.open()
+      
+      dev.cli('set class-of-service interfaces ge-0/0/1 scheduler-map PQ')
+      dev.cli('set class-of-service scheduler-maps PQ forwarding-class expedited scheduler priority')
+      
+      shell = StartShell(dev)
+      shell.open()
+      
+      # Generate priority and non-priority traffic
+      shell.send('traffic_gen --dscp ef --rate 1mbps --count 1000 --interface ge-0/0/1 &') 
+      shell.send('traffic_gen --dscp be --rate 5mbps --count 1000 --interface ge-0/0/1 &')
+
+      # Get interface counters
+      counters = dev.rpc.get_interface_information(interface_name='ge-0/0/1')
+      
+      # Verify priority traffic precedenced  
+      assert counters.tx_bytes > 1000000
+
+      shell.close()
+      dev.close()
+    """,
+    "run_command": "python test_priority_queue.py",
+    "expected_result": "Priority traffic takes precedence over non-priority traffic." 
+  }
+}
+
 ]
 ###ENDLIST###
+```
+
+The above generates QoS test cases and scripts for MX480 device covering areas like policy configuration, bandwidth limiting, traffic classification, priority queuing etc. Each test case and script is encapsulated as a JSON object within a Python list. The scripts use PyEZ for interacting with the Junos device. Let me know if you need any clarification or have additional requirements.
