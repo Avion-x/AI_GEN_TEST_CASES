@@ -1,65 +1,111 @@
- Here is the Python list containing JSON objects for LAG test cases and scripts for Juniper MX480 devices:
+ Here are the Python test scripts for HSRP, VRRP and GLBP configuration and functionality testing on MX480 devices:
 
 ```python
 ###STARTLIST###
 [
-{"testname":"LAG Configuration Validation","testcase":{"testname":"LAG Configuration Validation","objective":"Validate LAG interface configuration","steps":["Verify LAG interface configured","Verify member links added","Verify LAG protocol","Verify LAG load balancing algorithm"],"testdata":{"interface":"ae0","links":["ge-0/0/1","ge-0/0/2"],"protocol":"lacp","algorithm":"ip-hash"}},
-"testscript":{"testname":"LAG Configuration Validation","objective":"Validate LAG interface configuration","file_name":"test_lag_config.py","init_scripts":"pip install junos-eznc","script":"""
-import jnpr.junos as pyro
-from pprint import pprint
+{
+  "testname": "HSRP Configuration Test",
+  "testcase": {
+    "testname": "HSRP Configuration Test", 
+    "objective": "Validate HSRP configuration on MX480 devices",
+    "steps": ["Verify HSRP groups are configured", "Verify HSRP priority is set", "Verify HSRP preemption is enabled"],
+    "test_data": {"hsrp_group": 1, "hsrp_priority": 100, "hsrp_preempt": True}
+  },
+  "testscript": {
+    "testname": "HSRP Configuration Test",
+    "objective": "Validate HSRP configuration on MX480 devices using Python",  
+    "file_name": "hsrp_config_test.py",
+    "init_scripts": ["pip install pyats.tron"],
+    "script": """
+import pyats.tron as tron
 
-dev = pyro.Device(host='1.1.1.1', user='test', password='password123')
-dev.open()
+hsrp_group = 1
+hsrp_priority = 100 
+hsrp_preempt = True
 
-pprint(dev.rpc.get_interface_information(interface_name='ae0'))
+testbed = tron.load('testbed.yaml')
+device = testbed.devices['MX480']
 
-dev.close()
+config = device.parse('show configuration')
+
+assert f'group {hsrp_group}' in config
+assert f'priority {hsrp_priority}' in config 
+assert 'preempt' in config
 """,
-"run_command":"python test_lag_config.py","expected_result":"LAG interface ae0 should be configured with specified member links, protocol and load balancing algorithm"
-}
+    "run_command": "python hsrp_config_test.py",
+    "expected_result": "HSRP configuration validated successfully"
+  }
 },
 
-{"testname":"LAG Load Balancing Test","testcase":{"testname":"LAG Load Balancing Test","objective":"Validate LAG load balancing between member links","steps":["Generate test traffic","Verify traffic balancing as per algorithm","Modify load balancing algorithm","Verify new traffic balancing"],"testdata":{"interface":"ae0","links":["ge-0/0/1","ge-0/0/2"],"algorithm":"ip-hash","new_algorithm":"mac-hash"}},  
-"testscript":{"testname":"LAG Load Balancing Test","objective":"Validate LAG load balancing between member links","file_name":"test_lag_loadbalancing.py","init_scripts":"pip install scapy","script":"""
-from scapy.all import *
-
-# Generate test traffic
-pkt1 = Ether()/IP(src="10.1.1.1",dst="10.1.1.2")/TCP()/"PAYLOAD"
-pkt2 = Ether()/IP(src="10.2.1.1",dst="10.2.1.2")/TCP()/"PAYLOAD"
-
-# Send traffic and verify balancing
-sendp(pkt1,iface="ge-0/0/1")
-sendp(pkt2,iface="ge-0/0/2")
-
-# Modify load balancing algorithm
-# Verify new traffic balancing
-
-""",  
-"run_command":"sudo python test_lag_loadbalancing.py","expected_result":"Traffic should be balanced between member links as per configured load balancing algorithm. After changing algorithm, traffic balancing should change accordingly."
-}
+{
+  "testname": "VRRP Configuration Test",
+  "testcase": {
+    "testname": "VRRP Configuration Test",
+    "objective": "Validate VRRP configuration on MX480 devices", 
+    "steps": ["Verify VRRP groups are configured", "Verify VRRP priority is set", "Verify VRRP preemption is enabled"],
+    "test_data": {"vrrp_group": 2, "vrrp_priority": 110, "vrrp_preempt": True}
+  },
+  "testscript": {  
+    "testname": "VRRP Configuration Test",
+    "objective": "Validate VRRP configuration on MX480 devices using Python",
+    "file_name": "vrrp_config_test.py",
+    "init_scripts": ["pip install pyats.tron"],
+    "script": """  
+import pyats.tron as tron
+      
+vrrp_group = 2
+vrrp_priority = 110
+vrrp_preempt = True
+      
+testbed = tron.load('testbed.yaml')
+device = testbed.devices['MX480']
+  
+config = device.parse('show configuration')
+  
+assert f'group {vrrp_group}' in config  
+assert f'priority {vrrp_priority}' in config
+assert 'preempt' in config
+""",
+    "run_command": "python vrrp_config_test.py", 
+    "expected_result": "VRRP configuration validated successfully"
+  }
 },
 
-{"testname":"LAG Failover Test","testcase":{"testname":"LAG Failover Test","objective":"Validate traffic failover between member links","steps":["Send traffic over LAG","Bring down member link","Verify traffic failover","Bring up member link","Verify traffic balancing"],"testdata":{"interface":"ae0","links":["ge-0/0/1","ge-0/0/2"]}},
-"testscript":{"testname":"LAG Failover Test","objective":"Validate traffic failover between member links","file_name":"test_lag_failover.py","init_scripts":"pip install scapy","script":"""  
-from scapy.all import *
+{
+  "testname": "GLBP Configuration Test",
+  "testcase": {
+    "testname": "GLBP Configuration Test",
+    "objective": "Validate GLBP configuration on MX480 devices",
+    "steps": ["Verify GLBP groups are configured", "Verify GLBP priority is set", "Verify GLBP preemption is enabled"], 
+    "test_data": {"glbp_group": 3, "glbp_priority": 120, "glbp_preempt": True}
+  },
+  "testscript": {
+    "testname": "GLBP Configuration Test",
+    "objective": "Validate GLBP configuration on MX480 devices using Python",
+    "file_name": "glbp_config_test.py",
+    "init_scripts": ["pip install pyats.tron"],
+    "script": """
+import pyats.tron as tron
 
-# Send traffic over LAG
-pkt1 = Ether()/IP(src="10.1.1.1",dst="10.1.1.2")/TCP()/"PAYLOAD"
-sendp(pkt1,iface="ae0")
+glbp_group = 3  
+glbp_priority = 120
+glbp_preempt = True
 
-# Bring down member link
-# Verify traffic failover
+testbed = tron.load('testbed.yaml')
+device = testbed.devices['MX480']
 
-# Bring up member link  
-# Verify traffic balancing
+config = device.parse('show configuration')
 
-""",
-"run_command":"sudo python test_lag_failover.py","expected_result":"Traffic should failover and load balance between remaining member links when a member link goes down. When failed link comes up, traffic should be load balanced across all links again."  
+assert f'group {glbp_group}' in config
+assert f'priority {glbp_priority}' in config
+assert 'preempt' in config
+    """,
+    "run_command": "python glbp_config_test.py",
+    "expected_result": "GLBP configuration validated successfully"
+  }
 }
-}
-
 ]
 ###ENDLIST###
 ```
 
-The above Python list contains sample JSON objects for LAG configuration validation, load balancing, failover and other key test cases along with skeleton test scripts to automate those test cases. Please let me know if you would like me to modify or expand the test cases and scripts further.
+This provides a starting point for FHRP configuration and functionality testing on MX480 devices using Python and pyATS test scripts. The scripts can be extended to include additional test cases and validation as needed.
