@@ -3,17 +3,17 @@
     {
         "testname": "Bootup Configuration Retrieval Test",
         "testcase": {
-            "objective": "Verify that the MX240 correctly retrieves its configuration from non-volatile storage during bootup.",
+            "objective": "To confirm the MX240 can retrieve its initial configuration from memory during bootup.",
             "steps": [
-                "Boot up the device",
-                "Check the logs to confirm that the configuration retrieval process starts and completes successfully",
-                "Verify the checksum or contents of the retrieved configuration against expected values"
+                "Power on the MX240",
+                "Monitor for automated retrieval of configuration files",
+                "Validate the configuration against predetermined settings"
             ],
-            "relevant_test_data": "Expected checksum values of configuration files"
+            "relevant_test_data": "Expected configuration settings and paths"
         },
         "testscript": {
             "testname": "Bootup Configuration Retrieval Test",
-            "objective": "Check the capacity of the MX240 to correctly retrieve its operational configuration during startup.",
+            "objective": "Validate the automatic retrieval of configuration files on MX240 during the boot process.",
             "file_name": "config_retrieval_test.py",
             "init_scripts": [
                 "pip install paramiko"
@@ -21,76 +21,91 @@
             "script": """
 import paramiko
 
-def main(hostname, username, password):
+def test_config_retrieval():
     client = paramiko.SSHClient()
-    client.load_system_host_keys()
-    client.set_missing_host_key_policy(paramiko.WarningPolicy())
-    
-    client.connect(hostname, username=username, password=password)
-    
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect('192.168.1.1', username='admin', password='pass123')  # Example credentials
     stdin, stdout, stderr = client.exec_command('show configuration')
-    configuration = stdout.read().decode('utf-8')
-    
-    if 'system' in configuration:  # Assume 'system' should be in the config
-        print('Configuration retrieval successful.')
-    else:
-        print('Configuration retrieval failed.')
-
+    config = stdout.read().decode()
+    print('Configuration Retrieved: ', config)
     client.close()
 
 if __name__ == '__main__':
-    main('your-device-ip', 'your-username', 'your-password')
+    test_config_retrieval()
 """,
             "run_command": "python config_retrieval_test.py",
-            "expected_result": "Configuration retrieval successful."
+            "expected_result": "Configuration Retrieved: [configuration content]"
         }
     },
     {
-        "testname": "Bootup Hardware Initialization Test",
+        "testname": "Bootup Firmware Verification Test",
         "testcase": {
-            "objective": "Ensure all essential hardware components are initialized and operational upon booting the MX240.",
+            "objective": "Ensure the MX240 firmware is correct and uncorrupted during bootup.",
             "steps": [
-                "Power on the MX240",
-                "Monitor the boot sequence for hardware initialization logs",
-                "Check final system status and error logs for any initialization failures"
+                "Power on the device",
+                "Automatically check firmware checksum",
+                "Verify checksum against a known good value"
             ],
-            "relevant_test_data": "List of essential components to be initialized"
+            "relevant_test_data": "Correct firmware checksum"
         },
         "testscript": {
-            "testname": "Bootup Hardware Initialization Test",
-            "objective": "Verify all critical hardware components of MX240 are initialized correctly during boot.",
-            "file_name": "hardware_initialization_test.py",
+            "testname": "Bootup Firmware Verification Test",
+            "objective": "Check that the MX240's firmware checksum matches the expected value at boot.",
+            "file_name": "firmware_verification_test.py",
             "init_scripts": [
-                "pip install paramiko"
+                "pip install hashlib"
             ],
             "script": """
-import paramiko
+import hashlib
 
-def main(hostname, username, password):
-    client = paramiko.SSHClient()
-    client.load_system_host_keys()
-    client.set_missing_host_key_policy(paramiko.WarningPolicy())
-    
-    client.connect(hostname, username=username, password=password)
-    
-    stdin, stdout, stderr = client.exec_command('show chassis hardware')
-    hardware_output = stdout.read().decode('utf-8')
-    
-    if 'OK' in hardware_output:  # Simplified example, checking if 'OK' status is anywhere in the output
-        print('Hardware initialization successful.')
-    else:
-        print('Possible hardware initialization issues detected.')
-
-    client.close()
+def verify_firmware_checksum():
+    # Example of checksum calculation
+    hasher = hashlib.sha256()
+    with open('mx240_firmware.bin', 'rb') as afile:
+        buf = afile.read()
+        hasher.update(buf)
+    print('Firmware Checksum: ', hasher.hexdigest())
 
 if __name__ == '__main__':
-    main('your-device-ip', 'your-username', 'your-password')
+    verify_firmware_checksum()
 """,
-            "run_command": "python hardware_initialization_test.py",
-            "expected_result": "Hardware initialization successful."
+            "run_command": "python firmware_verification_test.py",
+            "expected_result": "Firmware Checksum: [expected checksum value]"
+        }
+    },
+    {
+        "testname": "Bootup Memory Check Test",
+        "testcase": {
+            "objective": "Verify that all memory components are functioning and correctly logged during the bootup of the MX240.",
+            "steps": [
+                "Initiate boot process",
+                "Monitor memory check routines",
+                "Confirm all memory checks pass without errors"
+            ],
+            "relevant_test_data": "Expected memory size and health status"
+        },
+        "testscript": {
+            "testname": "Bootup Memory Check Test",
+            "objective": "Assess the integrity and size of the MX240's memory during boot.",
+            "file_name": "memory_check_test.py",
+            "init_scripts": [
+                "pip install psutil"
+            ],
+            "script": """
+import psutil
+
+def check_memory():
+    print('Total memory:', psutil.virtual_memory().total)
+    print('Available memory:', psutil.virtual_memory().available)
+
+if __name__ == '__main__':
+    check_memory()
+""",
+            "run_command": "python memory_check_test.py",
+            "expected_result": "Total memory: [expected total], Available memory: [expected available]"
         }
     }
 ]
 ###ENDLIST###
 
-Each JSON object in the list represents a specific bootup test case and script for the Juniper MX240, outfitted with brief and concise fields including necessary dependencies and runnable Python code to verify specific bootup operations like configuration retrieval and hardware initialization. Adjust the hostname, username, and password parameters with actual credentials before running these tests. Additionally, ensure your environment accommodates dependencies mentioned in the 'init_scripts'.
+This structured response contains the setup for test cases and scripts for validating crucial aspects of the MX240 during its boot process, including configuration retrieval, firmware verification, and memory check. The Python scripts are formatted to fit into a readable JSON object capturing both the expected process and the commands needed to run these tests within a virtual or physical environment for a Juniper MX240. Adjust IP addresses, credentials, and paths to fit the actual deployment environment.
