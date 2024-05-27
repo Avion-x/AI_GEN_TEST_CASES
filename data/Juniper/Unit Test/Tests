@@ -1,86 +1,84 @@
 ###STARTLIST###
 [
     {
-        "testname": "Bootup Firmware Verification Test",
+        "testname": "Bootup Configuration Retrieval Test",
         "testcase": {
-            "objective": "To verify the integrity and version of the firmware on the MX240 at boot.",
+            "objective": "To verify that the MX240 retrieves and loads its initial configuration correctly on bootup.",
             "steps": [
-                "Reboot the MX240 router",
-                "During bootup, automatically check the firmware version and integrity",
-                "Validate the output against expected firmware version and checksum"
+                "Initiate the boot process of the MX240.",
+                "Monitor the logs to ensure the configuration is retrieved from storage.",
+                "Verify the correctness of the loaded configuration against expected values."
             ],
-            "relevant_test_data": "Expected firmware version and checksum"
+            "relevant_test_data": "Paths and checksums of configuration files"
         },
         "testscript": {
-            "testname": "Bootup Firmware Verification Test",
-            "objective": "Ensure the router boots with the correct and uncorrupted firmware.",
-            "file_name": "firmware_verification_test.py",
+            "testname": "Bootup Configuration Retrieval Test",
+            "objective": "Validate that the router correctly retrieves its startup configuration.",
+            "file_name": "config_retrieval_test.py",
             "init_scripts": [
                 "pip install paramiko"
             ],
             "script": """
 import paramiko
 
-def verify_firmware(server_ip, username, password):
-    command = 'show version and haiku'
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server_ip, username=username, password=password)
-    stdin, stdout, stderr = ssh.exec_command(command)
-    result = stdout.read().decode()
-    if 'expected_firmware_version' in result and 'expected_checksum' in result:
-        return 'Firmware check passed.'
-    return 'Firmware check failed.'
+def check_configuration(hostname, username, password):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(hostname, username=username, password=password)
+    stdin, stdout, stderr = client.exec_command('show configuration')
+    config = stdout.read().decode('utf-8')
+    if 'expected_configuration_value' in config:
+        return 'Configuration retrieval success'
+    else:
+        return 'Configuration retrieval failure'
 
 if __name__ == '__main__':
-    output = verify_firmware('192.168.1.1', 'admin', 'admin')
-    print(output)
+    print(check_configuration('192.168.1.1', 'admin', 'password'))
 """,
-            "run_command": "python firmware_verification_test.py",
-            "expected_result": "Firmware check passed."
+            "run_command": "python config_retrieval_test.py",
+            "expected_result": "Configuration retrieval success"
         }
     },
     {
-        "testname": "Bootup Interface Initialization Test",
+        "testname": "Bootup Hardware Initialization Test",
         "testcase": {
-            "objective": "Ensure all network interfaces are correctly initialized during bootup.",
+            "objective": "Ensure that all hardware components are initialized correctly during the bootup of the MX240.",
             "steps": [
-                "Start the MX240 router",
-                "Check the operational status of all interfaces",
-                "Ensure no errors are reported for any interfaces"
+                "Power on the device.",
+                "Monitor hardware initialization messages in the console output.",
+                "Check final status for any hardware errors."
             ],
-            "relevant_test_data": "List of interface names to be checked"
+            "relevant_test_data": "List of MX240 hardware components to initialize"
         },
         "testscript": {
-            "testname": "Bootup Interface Initialization Test",
-            "objective": "To confirm that all network interfaces initialize correctly on boot.",
-            "file_name": "interface_initialization_test.py",
+            "testname": "Bootup Hardware Initialization Test",
+            "objective": "Confirm that all necessary hardware components initialize without errors.",
+            "file_name": "hardware_init_test.py",
             "init_scripts": [
                 "pip install paramiko"
             ],
             "script": """
 import paramiko
 
-def check_interfaces(server_ip, username, password):
-    command = 'show interfaces status'
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server_ip, username=username, password=password)
-    stdin, stdout, stderr = ssh.exec_command(command)
-    result = stdout.read().decode()
-    if 'up' in result and 'error' not in result:
-        return 'All interfaces are initialized properly.'
-    return 'Interface initialization error.'
+def check_hardware_init(hostname, username, password):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(hostname, username=username, password=password)
+    stdin, stdout, stderr = client.exec_command('show chassis hardware')
+    hardware_info = stdout.read().decode('utf-8')
+    if 'Hardware initialization complete' in hardware_info:
+        return 'Hardware initialization success'
+    else:
+        return 'Hardware initialization failure'
 
 if __name__ == '__main__':
-    output = check_interfaces('192.168.1.1', 'admin', 'admin')
-    print(output)
+    print(check_hardware_init('192.168.1.1', 'admin', 'password'))
 """,
-            "run_command": "python interface_initialization_test.py",
-            "expected_result": "All interfaces are initialized properly."
+            "run_command": "python hardware_init_test.py",
+            "expected_result": "Hardware initialization success"
         }
     }
 ]
-###ENDLIST### 
+###ENDLIST###
 
-This structured list contains example test configurations for two bootup scenarios for the Juniper MX240: Firmware Verification and Interface Initialization tests. Each JSON object defines a coherent, executable test scenario encapsulated under a unified "testname", ensuring distinct identity and operational parameters. To perform each test effectively, ensure that the script is run in an environment with the specified dependencies installed and with access to the router via network credentials, adjusting placeholders as necessary for real-world implementation.
+This JSON formatted list of test cases and scripts is prepared for the Juniper MX240 router, focusing on the initial configuration retrieval and hardware initialization during bootup. Each test script is self-contained with prerequisites noted in the 'init_scripts'. Be sure to substitute placeholders like IP addresses, usernames, and passwords with actual values suitable for your network environment before execution. Additionally, each python script should be executed in an environment where the necessary Python packages are installed and operational.
