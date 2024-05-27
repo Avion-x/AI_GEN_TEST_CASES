@@ -1,133 +1,96 @@
 ###STARTLIST###
 [
     {
-        "testname": "Bootup Firmware Upgrade Test",
+        "testname": "Bootup Configuration Retrieval Test",
         "testcase": {
-            "objective": "Ensure the firmware upgrade process completes successfully during bootup.",
+            "objective": "Verify that the MX240 correctly retrieves its configuration from non-volatile storage during bootup.",
             "steps": [
-                "Trigger the firmware upgrade process on boot",
-                "Monitor the progress and completion of the firmware upgrade",
-                "Check for any errors or warnings in the system logs"
+                "Boot up the device",
+                "Check the logs to confirm that the configuration retrieval process starts and completes successfully",
+                "Verify the checksum or contents of the retrieved configuration against expected values"
             ],
-            "relevant_test_data": "Firmware file path, expected firmware version after upgrade"
+            "relevant_test_data": "Expected checksum values of configuration files"
         },
         "testscript": {
-            "testname": "Bootup Firmware Upgrade Test",
-            "objective": "To verify the success of the firmware upgrade process on boot.",
-            "file_name": "firmware_upgrade_test.py",
+            "testname": "Bootup Configuration Retrieval Test",
+            "objective": "Check the capacity of the MX240 to correctly retrieve its operational configuration during startup.",
+            "file_name": "config_retrieval_test.py",
             "init_scripts": [
                 "pip install paramiko"
             ],
             "script": """
 import paramiko
-import sys
 
-def upgrade_firmware(hostname, username, password, firmware_path):
-    try:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname, username=username, password=password)
-        command = f'upgrade firmware {firmware_path} verify'
-        stdin, stdout, stderr = client.exec_command(command)
-        result = stdout.read().decode() + stderr.read().decode()
-        if 'Upgrade successful' in result:
-            return 'Firmware upgrade was successful'
-        else:
-            return 'Firmware upgrade failed: ' + result
-    finally:
-        client.close()
+def main(hostname, username, password):
+    client = paramiko.SSHClient()
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.WarningPolicy())
+    
+    client.connect(hostname, username=username, password=password)
+    
+    stdin, stdout, stderr = client.exec_command('show configuration')
+    configuration = stdout.read().decode('utf-8')
+    
+    if 'system' in configuration:  # Assume 'system' should be in the config
+        print('Configuration retrieval successful.')
+    else:
+        print('Configuration retrieval failed.')
+
+    client.close()
 
 if __name__ == '__main__':
-    hostname = sys.argv[1]
-    username = sys.argv[2]
-    password = sys.argv[3]
-    firmware_path = sys.argv[4]
-    print(upgrade_firmware(hostname, username, password, firmware_path))
+    main('your-device-ip', 'your-username', 'your-password')
 """,
-            "run_command": "python firmware_upgrade_test.py <hostname> <username> <password> <firmware_path>",
-            "expected_result": "Firmware upgrade was successful"
+            "run_command": "python config_retrieval_test.py",
+            "expected_result": "Configuration retrieval successful."
         }
     },
     {
-        "testname": "Bootup System Health Check Test",
+        "testname": "Bootup Hardware Initialization Test",
         "testcase": {
-            "objective": "Verify that all critical system health parameters are within normal ranges at boot.",
+            "objective": "Ensure all essential hardware components are initialized and operational upon booting the MX240.",
             "steps": [
-                "Boot the system",
-                "Execute a comprehensive system health check",
-                "Record and analyze the output for any abnormalities"
+                "Power on the MX240",
+                "Monitor the boot sequence for hardware initialization logs",
+                "Check final system status and error logs for any initialization failures"
             ],
-            "relevant_test_data": "Threshold values for CPU, Memory, Disk usage"
+            "relevant_test_data": "List of essential components to be initialized"
         },
         "testscript": {
-            "testname": "Bootup System Health Check Test",
-            "objective": "To ensure all system health metrics are within acceptable limits during bootup.",
-            "file_name": "system_health_check_test.py",
+            "testname": "Bootup Hardware Initialization Test",
+            "objective": "Verify all critical hardware components of MX240 are initialized correctly during boot.",
+            "file_name": "hardware_initialization_test.py",
             "init_scripts": [
-                "pip install psutil"
+                "pip install paramiko"
             ],
             "script": """
-import psutil
-import sys
+import paramiko
 
-def check_system_health():
-    cpu_usage = psutil.cpu_percent(interval=1)
-    if cpu_usage > 80:
-        return 'CPU usage is too high'
-    memory_info = psutil.virtual_memory()
-    if memory_info.percent > 80:
-        return 'Memory usage is too high'
-    disk_usage = psutil.disk_usage('/')
-    if disk_usage.percent > 90:
-        return 'Disk usage is too high'
-    return 'System health is normal'
+def main(hostname, username, password):
+    client = paramiko.SSHClient()
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.WarningPolicy())
+    
+    client.connect(hostname, username=username, password=password)
+    
+    stdin, stdout, stderr = client.exec_command('show chassis hardware')
+    hardware_output = stdout.read().decode('utf-8')
+    
+    if 'OK' in hardware_output:  # Simplified example, checking if 'OK' status is anywhere in the output
+        print('Hardware initialization successful.')
+    else:
+        print('Possible hardware initialization issues detected.')
 
-if __name__ == '__main__':
-    print(check_system_health())
-""",
-            "run_command": "python system_health_check_test.py",
-            "expected_result": "System health is normal"
-        }
-    },
-    {
-        "testname": "Bootup Logging Initialization Test",
-        "testcase": {
-            "objective": "Verify that all logging mechanisms are initialized and operational at boot.",
-            "steps": [
-                "Boot the MX240",
-                "Confirm that logging services start correctly",
-                "Check log files for initial entries"
-            ],
-            "relevant_test_data": "Log file paths and initial log messages"
-        },
-        "testJSONObject": {
-            "testname": "Bootup Logging Initialization Test",
-            "objective": "To test the initialization and readiness of system logging functions at startup.",
-            "file_name": "logging_init_test.py",
-            "init_scripts": [
-                "pip install logging"
-            ],
-            "script": """
-import logging
-import sys
-
-def init_logging():
-    logging.basicConfig(filename='system.log', level=logging.INFO)
-    logger = logging.getLogger()
-    logger.info('Starting system logging...')
-    entries = logger.handlers[0].baseFilename
-    if 'Starting system logging...' in open(entries).read():
-        return 'Logging initialization successful'
-    return 'Logging initialization failed'
+    client.close()
 
 if __name__ == '__main__':
-    print(init_logging())
+    main('your-device-ip', 'your-username', 'your-password')
 """,
-            "run_command": "python logging_init_test.py",
-            "expected_result": "Logging initialization successful"
+            "run_command": "python hardware_initialization_test.py",
+            "expected_result": "Hardware initialization successful."
         }
     }
 ]
-###ENDLIST### 
+###ENDLIST###
 
-This Python list of JSON objects provides test configurations for various bootup tests of the Juniper MX240 device, including firmware upgrade, system health check, and logging initialization. Each test script includes Python code with specified functionality and is ready for deployment with provided command line usage instructions.
+Each JSON object in the list represents a specific bootup test case and script for the Juniper MX240, outfitted with brief and concise fields including necessary dependencies and runnable Python code to verify specific bootup operations like configuration retrieval and hardware initialization. Adjust the hostname, username, and password parameters with actual credentials before running these tests. Additionally, ensure your environment accommodates dependencies mentioned in the 'init_scripts'.
