@@ -3,117 +3,140 @@
     {
         "testname": "Bootup Configuration Retrieval Test",
         "testcase": {
-            "testname": "Bootup Configuration Retrieval Test",
-            "objective": "To verify that the system retrieves the correct bootup configuration from the storage.",
+            "objective": "Verify that the system correctly retrieves its initial configuration during bootup.",
             "steps": [
-                "Power on the device",
-                "Check if the device retrieves the bootup configuration",
-                "Verify if the retrieved configuration matches the expected configuration"
+                "Boot up the MX240",
+                "Check that the configuration retrieval process initiates",
+                "Verify the system logs for successful retrieval messages"
             ],
-            "relevant_test_data": {
-                "expected_configuration": "Configurations stored in NVRAM"
-            }
+            "relevant_test_data": "Default configuration file paths and contents"
         },
         "testscript": {
             "testname": "Bootup Configuration Retrieval Test",
-            "objective": "Verify correct retrieval of boot configurations",
-            "file_name": "configuration_retrieval_test.py",
+            "objective": "To ensure the router retrieves initial configuration correctly on boot.",
+            "file_name": "config_retrieval_test.py",
             "init_scripts": [
-                "pip install pyez",
-                "pip install paramiko"
+                "pip install pyserial"
             ],
             "script": """
-import paramiko
-from jnpr.junos import Device
+import serial
+import sys
 
-def test_retrieved_config_matches_expected():
-    # Assume IP and credentials are correctly configured
-    with Device(host='192.168.1.1', user='admin', passwd='password') as dev:
-        config = dev.rpc.get_configuration()
-        with open('expected_config.set') as file:
-            expected_config = file.read()
-            assert config == expected_config, "Configuration does not match!"
-            """,
-            "run_command": "python configuration_retrieval_test.py",
-            "expected_result": "No assertion error indicating a match"
+def verify_config_retrieval(port):
+    try:
+        ser = serial.Serial(port, timeout=1)
+        ser.write(b'\\n')
+        output = ser.read_until(b'Complete').decode()
+        if 'retrieval successful' in output:
+            return 'Configuration retrieval successful'
+        else:
+            return 'Configuration retrieval failed'
+    except serial.SerialException as e:
+        return str(e)
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: python config_retrieval_test.py PORT")
+    else:
+        result = verify_config_retrieval(sys.argv[1])
+        print(result)
+""",
+            "run_command": "python config_retrieval_test.py COM3",
+            "expected_result": "Configuration retrieval successful"
         }
     },
     {
         "testname": "Bootup Hardware Initialization Test",
         "testcase": {
-            "testname": "Bootup Hardware Initialization Test",
-            "objective": "To verify that all hardware components are initialized properly during bootup.",
+            "objective": "Ensure all hardware components are initialized correctly during bootup.",
             "steps": [
-                "Power on the device",
-                "Check all hardware components are listed in the initialized state",
-                "No error logs related to hardware initialization"
+                "Power on the MX240",
+                "Monitor the initialization process of all hardware components",
+                "Check system logs for any hardware errors"
             ],
-            "relevant_test_data": {
-                "hardware_components": ["CPU", "Memory", "Storage", "Ports"]
-            }
+            "relevant_test_data": "List of hardware components to be initialized"
         },
         "testscript": {
             "testname": "Bootup Hardware Initialization Test",
-            "objective": "Verify hardware components initialization",
-            "file_name": "hardware_initialization_test.py",
+            "objective": "To check if all hardware components are initialized properly on boot.",
+            "file_name": "hardware_init_test.py",
             "init_scripts": [
-                "pip install pyez",
-                "pip install unittest"
+                "pip install pyserial"
             ],
             "script": """
-import unittest
-from jnpr.junos import Device
+import serial
+import sys
 
-class TestHardwareInitialization(unittest.TestCase):
-    def test_hardware_init(self):
-        dev = Device(host='192.168.1.1', user='admin', passwd='password')
-        dev.open()
-        components = dev.facts['hardware_components']
-        expected_components = ['CPU', 'Memory', 'Storage', 'Ports']
-        self.assertEqual(set(components), set(expected_components), 'Mismatch in hardware components')
+def check_hardware_init(port):
+    try:
+        ser = serial.Serial(port, timeout=1)
+        ser.write(b'\\n')
+        output = ser.read_until(b'Hardware Ready').decode()
+        if 'initialization successful' in output:
+            return 'Hardware initialization successful'
+        else:
+            return 'Hardware initialization failed'
+    except serial.SerialException as e:
+        return str(e)
 
 if __name__ == '__main__':
-    unittest.main()
-            """,
-            "run_command": "python hardware_initialization_test.py",
-            "expected_result": "Tests pass with no assertion errors"
+    if len(sys.argv) != 2:
+        print("Usage: python hardware_init_test.py PORT")
+    else:
+        result = check_hardware_init(sys.argv[1])
+        print(result)
+""",
+            "run_command": "python hardware_init_test.py COM3",
+            "expected_result": "Hardware initialization successful"
         }
     },
     {
         "testname": "Bootup Firmware Verification Test",
         "testcase": {
-            "testname": "Bootup Firmware Verification Test",
-            "objective": "To ensure the firmware loaded during bootup is the verified and intended version.",
+            "objective": "Confirm that the device's firmware is the correct version and has not been tampered with.",
             "steps": [
-                "Power on the device",
-                "Retrieve the firmware version",
-                "Compare the version with the expected version"
+                "Boot up the MX240",
+                "Verify firmware version and integrity",
+                "Check system logs for firmware validation confirmation"
             ],
-            "relevant_test_data": {
-                "expected_firmware_version": "v5.20"
-            }
+            "relevant_test_data": "Expected firmware version and checksum values"
         },
         "testscript": {
             "testname": "Bootup Firmware Verification Test",
-            "objective": "Ensure correct firmware version is loaded",
+            "objective": "To ensure the firmware on boot is verified and correct.",
             "file_name": "firmware_verification_test.py",
             "init_scripts": [
-                "pip install pyez"
+                "pip install hashlib"
             ],
             "script": """
-from jnpr.junos import Device
+import hashlib
+import sys
 
-def check_firmware_version():
-    with Device(host='192.168.1.1', user='admin', passwd='password') as dev:
-        firmware_version = dev.facts['version']
-        assert firmware_version == 'v5.20', 'Firmware version mismatch!'
+def verify_firmware(firmware_path, expected_checksum):
+    hash_md5 = hashlib.md5()
+    try:
+        with open(firmware_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        if hash_md5.hexdigest() == expected_checksum:
+            return 'Firmware verification successful'
+        else:
+            return 'Firmware verification failed'
+    except Exception as e:
+        return str(e)
 
 if __name__ == '__main__':
-    check_firmware_version()
-            """,
-            "run_command": "python firmware_verification_test.py",
-            "expected_result": "Firmware version matches the expected version"
+    if len(sys.argv) != 3:
+        print("Usage: python firmware_verification_test.py FIRMWARE_PATH EXPECTED_CHECKSUM")
+    else:
+        result = verify_firmware(sys.argv[1], sys.argv[2])
+        print(result)
+""",
+            "run_command": "python firmware_verification_test.py /path/to/firmware.img 9e107d9d372bb6826bd81d3542a419d6",
+            "expected_result": "Firmware verification successful"
         }
     }
 ]
-###ENDLIST###
+###ENDLIST### 
+
+Note: This response includes the first three test script entries. More entries can be added similarly. These scripts need physical or simulated environment setup and real test data to be fully functional.
