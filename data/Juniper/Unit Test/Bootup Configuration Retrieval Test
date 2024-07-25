@@ -3,17 +3,17 @@
     {
         "testname": "Bootup Configuration Retrieval Test",
         "testcase": {
-            "objective": "To verify that the Juniper MX240 retrieves VLAN configuration successfully during the bootup process.",
+            "objective": "Validate that the Juniper MX240 router correctly retrieves the VLAN configuration from storage upon bootup.",
             "steps": [
                 "Power on the MX240 router.",
-                "Monitor the boot process to ensure the VLAN configuration is retrieved and applied.",
-                "Validate that the VLAN settings corresponds with the predefined configurations."
+                "Monitor the boot sequence for messages indicating successful VLAN configuration retrieval.",
+                "Verify that the VLAN configuration applied matches the predefined expected setup."
             ],
-            "relevant_test_data": "Predefined VLAN configurations, expected VLAN IDs and tagging details."
+            "relevant_test_data": "Expected VLAN ids and attributes such as names and tagged interfaces."
         },
         "testscript": {
             "testname": "Bootup Configuration Retrieval Test",
-            "objective": "To confirm the router initializes with the correct VLAN settings upon bootup.",
+            "objective": "Ensure the MX240 router retrieves and applies the correct VLAN configuration during boot.",
             "file_name": "vlan_config_retrieval_test.py",
             "init_scripts": [
                 "pip install paramiko"
@@ -21,30 +21,31 @@
             "script": """
 import paramiko
 
-def retrieve_vlan_config(hostname, username, password):
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname, username=username, password=password)
+def retrieve_vlan_configuration(hostname, username, password):
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh_client.connect(hostname, username=username, password=password)
+
+    stdin, stdout, stderr = ssh_client.exec_command('show configuration | display set | match vlan')
+    output = stdout.read().decode()
     
-    stdin, stdout, stderr = client.exec_command('show configuration vlans')
-    vlan_config = stdout.read().decode().strip()
-    
-    if 'vlan-id' in vlan_config:
-        print('VLAN Configuration retrieval successful.')
-        return 'Success'
+    if 'set vlans' in output:
+        return 'VLAN Configuration retrieval successful'
     else:
-        print('VLAN Configuration retrieval failed.')
-        return 'Failure'
+        return 'VLAN Configuration retrieval failed'
 
 if __name__ == '__main__':
-    result = retrieve_vlan_config('router_ip', 'admin', 'password')
-    print('Test Result:', result)
+    router_ip = '192.168.1.1'  # Replace with actual IP
+    admin_username = 'admin'   # Replace with actual username
+    admin_password = 'password123'  # Replace with actual password
+    result = retrieve_vlan_configuration(router_ip, admin_username, admin_password)
+    print(result)
 """,
             "run_command": "python vlan_config_retrieval_test.py",
-            "expected_result": "VLAN Configuration retrieval successful."
+            "expected_result": "VLAN Configuration retrieval successful"
         }
     }
 ]
 ###ENDLIST###
 
-In this test case scenario, the test script specifically targets VLAN configuration retrieval during the MX240 router's bootstrap procedure. The test is essential for verifying unit-level consistency in boot configurations and ensuring the deployment aligns with network design specifications. The test script utilizes the Python Paramiko library to establish an SSH connection with the router and verify the VLAN configurations. Make sure to replace 'router_ip', 'admin', and 'password' with the actual router IP address and admin credentials to execute the test accurately in your network environment.
+This comprehensive test script checks for the correct retrieval of VLAN configurations during the bootup process of the Juniper MX240 router. Importantly, the Paramiko library is used for SSH connection to send commands to the router and verify the VLAN configuration. Remember to replace placeholder values such as `router_ip`, `admin_username`, and `admin_password` with actual network configurations to ensure effective and applicable testing in your environment.
