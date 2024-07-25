@@ -3,49 +3,54 @@
     {
         "testname": "Bootup Configuration Retrieval Test",
         "testcase": {
-            "objective": "Validate that the Juniper MX240 router correctly retrieves the VLAN configuration from storage upon bootup.",
+            "objective": "To verify the Juniper MX240 router retrieves its VLAN configuration correctly during the bootup process.",
             "steps": [
                 "Power on the MX240 router.",
-                "Monitor the boot sequence for messages indicating successful VLAN configuration retrieval.",
-                "Verify that the VLAN configuration applied matches the predefined expected setup."
+                "Monitor the system logs for entries that confirm the VLAN configuration has been loaded.",
+                "Confirm that the VLAN configuration matches the expected settings configured for unit testing."
             ],
-            "relevant_test_data": "Expected VLAN ids and attributes such as names and tagged interfaces."
+            "relevant_test_data": "Expected VLAN configuration details such as VLAN IDs, assigned interfaces, and tagging information."
         },
         "testscript": {
             "testname": "Bootup Configuration Retrieval Test",
-            "objective": "Ensure the MX240 router retrieves and applies the correct VLAN configuration during boot.",
-            "file_name": "vlan_config_retrieval_test.py",
+            "objective": "Ensure the router loads and applies the correct VLAN configuration settings from its storage during the boot sequence.",
+            "file_name": "bootup_vlan_config_test.py",
             "init_scripts": [
                 "pip install paramiko"
             ],
             "script": """
 import paramiko
 
-def retrieve_vlan_configuration(hostname, username, password):
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(hostname, username=username, password=password)
-
-    stdin, stdout, stderr = ssh_client.exec_command('show configuration | display set | match vlan')
-    output = stdout.read().decode()
+def test_vlan_config(hostname, username, password):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(hostname, username=username, password=password)
     
-    if 'set vlans' in output:
-        return 'VLAN Configuration retrieval successful'
+    command = 'show configuration vlans'
+    stdin, stdout, stderr = client.exec_command(command)
+    results = stdout.read().decode()
+    
+    # Assuming 'VLAN100' should be present in the output if correctly retrieved
+    if 'VLAN100' in results:
+        print('Bootup Configuration Retrieval Test Passed')
+        return 'Test Passed'
     else:
-        return 'VLAN Configuration retrieval failed'
+        print('Bootup Configuration Retrieval Test Failed')
+        return 'Test Failed'
 
 if __name__ == '__main__':
-    router_ip = '192.168.1.1'  # Replace with actual IP
-    admin_username = 'admin'   # Replace with actual username
-    admin_password = 'password123'  # Replace with actual password
-    result = retrieve_vlan_configuration(router_ip, admin_username, admin_password)
+    # Example IP and credentials
+    router_ip = '192.168.1.254'
+    user = 'admin'
+    password = 'admin123'
+    result = test_vlan_config(router_ip, user, password)
     print(result)
 """,
-            "run_command": "python vlan_config_retrieval_test.py",
-            "expected_result": "VLAN Configuration retrieval successful"
+            "run_command": "python bootup_vlan_config_test.py",
+            "expected_result": "Test Passed"
         }
     }
 ]
 ###ENDLIST###
 
-This comprehensive test script checks for the correct retrieval of VLAN configurations during the bootup process of the Juniper MX240 router. Importantly, the Paramiko library is used for SSH connection to send commands to the router and verify the VLAN configuration. Remember to replace placeholder values such as `router_ip`, `admin_username`, and `admin_password` with actual network configurations to ensure effective and applicable testing in your environment.
+This script is designated for a unit test involving the Juniper MX240 router to verify retrieval of VLAN configurations at boot. Modify the IP and login credentials accordingly. The presence of specific VLAN data in the config retrieval confirms successful load during startup. Ensure all dependency packages are installed using the provided `pip install` commands before running this script. Adjust script details such as VLAN identifiers or other conditions matching your test environment's setup.
